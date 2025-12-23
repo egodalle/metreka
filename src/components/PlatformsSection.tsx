@@ -1,4 +1,4 @@
-import { Check, ShoppingBag, Store, Package, Building, Layers } from "lucide-react";
+import { Check, ShoppingBag, Music, Store, ShoppingCart, Package } from "lucide-react";
 
 const platforms = [
   {
@@ -11,40 +11,40 @@ const platforms = [
     streams: ["Orders", "Products", "Customers", "Inventory", "Transactions", "Fulfillments"],
   },
   {
-    name: "WooCommerce",
-    icon: Store,
-    marketShare: "23%",
+    name: "TikTok Shop",
+    icon: Music,
+    marketShare: "18%",
     priority: "P0",
-    color: "from-purple/20 to-purple/5",
-    borderColor: "border-purple/30",
-    streams: ["Orders", "Products", "Customers", "Coupons", "Categories", "Variations"],
+    color: "from-pink-500/20 to-pink-500/5",
+    borderColor: "border-pink-500/30",
+    streams: ["Orders", "Products", "Creators", "Videos", "Analytics", "Promotions"],
   },
   {
     name: "Amazon Seller",
     icon: Package,
     marketShare: "22%",
-    priority: "P1",
+    priority: "P0",
     color: "from-accent/20 to-accent/5",
     borderColor: "border-accent/30",
     streams: ["Orders", "Order Items", "Inventory", "Financial Events", "Returns"],
   },
   {
-    name: "BigCommerce",
-    icon: Building,
-    marketShare: "3%",
+    name: "Lazada",
+    icon: Store,
+    marketShare: "15%",
     priority: "P1",
-    color: "from-primary/20 to-primary/5",
-    borderColor: "border-primary/30",
-    streams: ["Orders", "Products", "Customers", "Brands", "Categories"],
+    color: "from-purple/20 to-purple/5",
+    borderColor: "border-purple/30",
+    streams: ["Orders", "Products", "Inventory", "Promotions", "Reviews"],
   },
   {
-    name: "Magento",
-    icon: Layers,
-    marketShare: "2%",
-    priority: "P2",
+    name: "Shopee",
+    icon: ShoppingCart,
+    marketShare: "16%",
+    priority: "P1",
     color: "from-orange/20 to-orange/5",
     borderColor: "border-orange/30",
-    streams: ["Orders", "Products", "Customers", "Categories", "Inventory"],
+    streams: ["Orders", "Products", "Inventory", "Vouchers", "Chat", "Logistics"],
   },
 ];
 
@@ -67,7 +67,7 @@ const PlatformsSection = () => {
             One Dashboard, <span className="text-gradient-primary">All Your Stores</span>
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Native integrations with the top 5 e-commerce platforms covering 79% of the market
+            Native integrations with top e-commerce platforms across global and SEA markets
           </p>
         </div>
 
