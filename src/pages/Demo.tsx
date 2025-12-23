@@ -5,17 +5,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, Key, Link2, ShoppingBag, Music, Package, Store, ShoppingCart, TrendingUp, DollarSign, Users, ShoppingBasket, LayoutDashboard } from "lucide-react";
+import { ShopifyLogo, TikTokLogo, AmazonLogo, LazadaLogo, ShopeeLogo, StoreLogo } from "@/components/StoreLogos";
+import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, Key, Link2, TrendingUp, DollarSign, Users, ShoppingBasket, LayoutDashboard } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 type DemoStep = "login" | "stores" | "connect" | "dashboard";
 
 const stores = [
-  { id: "shopify", name: "Shopify", icon: ShoppingBag, color: "bg-green-500", authType: "oauth" },
-  { id: "tiktok", name: "TikTok Shop", icon: Music, color: "bg-pink-500", authType: "oauth" },
-  { id: "amazon", name: "Amazon Seller", icon: Package, color: "bg-orange-500", authType: "api" },
-  { id: "lazada", name: "Lazada", icon: Store, color: "bg-purple-500", authType: "api" },
-  { id: "shopee", name: "Shopee", icon: ShoppingCart, color: "bg-orange-600", authType: "api" },
+  { id: "shopify", name: "Shopify", logo: ShopifyLogo, bgColor: "bg-[#96bf48]", authType: "oauth" },
+  { id: "tiktok", name: "TikTok Shop", logo: TikTokLogo, bgColor: "bg-black", authType: "oauth" },
+  { id: "amazon", name: "Amazon Seller", logo: AmazonLogo, bgColor: "bg-[#ff9900]", authType: "api" },
+  { id: "lazada", name: "Lazada", logo: LazadaLogo, bgColor: "bg-[#0f146d]", authType: "api" },
+  { id: "shopee", name: "Shopee", logo: ShopeeLogo, bgColor: "bg-[#ee4d2d]", authType: "api" },
 ];
 
 const Demo = () => {
@@ -165,8 +166,8 @@ const Demo = () => {
                     onClick={() => handleStoreSelect(store.id)}
                   >
                     <CardContent className="flex items-center gap-4 p-4">
-                      <div className={`w-12 h-12 rounded-lg ${store.color} flex items-center justify-center`}>
-                        <store.icon className="w-6 h-6 text-white" />
+                      <div className={`w-12 h-12 rounded-lg ${store.bgColor} flex items-center justify-center p-2`}>
+                        <store.logo className="w-7 h-7 text-white" />
                       </div>
                       <div className="flex-1">
                         <h3 className="font-semibold">{store.name}</h3>
@@ -192,8 +193,8 @@ const Demo = () => {
           {step === "connect" && selectedStoreData && (
             <Card className="border-border/50 bg-card/50 backdrop-blur">
               <CardHeader className="text-center">
-                <div className={`w-16 h-16 rounded-xl ${selectedStoreData.color} flex items-center justify-center mx-auto mb-4`}>
-                  <selectedStoreData.icon className="w-8 h-8 text-white" />
+                <div className={`w-16 h-16 rounded-xl ${selectedStoreData.bgColor} flex items-center justify-center mx-auto mb-4 p-3`}>
+                  <selectedStoreData.logo className="w-9 h-9 text-white" />
                 </div>
                 <CardTitle>Connect {selectedStoreData.name}</CardTitle>
                 <CardDescription>
@@ -324,8 +325,8 @@ const Demo = () => {
 
               {/* Connected Store Badge */}
               <div className="flex justify-center">
-                <Badge className={`${selectedStoreData.color} text-white px-4 py-2 text-sm`}>
-                  <selectedStoreData.icon className="w-4 h-4 mr-2" />
+                <Badge className={`${selectedStoreData.bgColor} text-white px-4 py-2 text-sm flex items-center gap-2`}>
+                  <StoreLogo store={selectedStoreData.id} className="w-4 h-4" />
                   {selectedStoreData.name} Connected
                 </Badge>
               </div>
