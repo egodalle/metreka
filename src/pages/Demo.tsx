@@ -4,7 +4,8 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, Key, Link2, ShoppingBag, Music, Package, Store, ShoppingCart, TrendingUp, DollarSign, Users, ShoppingBasket } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
+import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, Key, Link2, ShoppingBag, Music, Package, Store, ShoppingCart, TrendingUp, DollarSign, Users, ShoppingBasket, LayoutDashboard } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 type DemoStep = "login" | "stores" | "connect" | "dashboard";
@@ -72,10 +73,15 @@ const Demo = () => {
             <ArrowLeft className="w-4 h-4" />
             Back to Home
           </Button>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-4">
+            <Button variant="outline" onClick={() => navigate("/demo/dashboard")} className="gap-2">
+              <LayoutDashboard className="w-4 h-4" />
+              View Full Dashboard
+            </Button>
             <Badge variant="outline" className="text-primary border-primary/30">
               Demo Mode
             </Badge>
+            <ThemeToggle />
           </div>
         </div>
       </div>
