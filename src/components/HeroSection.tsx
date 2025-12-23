@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Play, TrendingUp, Users, ShoppingCart, DollarSign } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const AnimatedCounter = ({ end, duration = 2000, prefix = "", suffix = "" }: { end: number; duration?: number; prefix?: string; suffix?: string }) => {
   const [count, setCount] = useState(0);
@@ -22,6 +23,8 @@ const AnimatedCounter = ({ end, duration = 2000, prefix = "", suffix = "" }: { e
 };
 
 const HeroSection = () => {
+  const navigate = useNavigate();
+  
   const stats = [
     { icon: TrendingUp, value: 50, suffix: "+", label: "KPIs Tracked" },
     { icon: ShoppingCart, value: 5, suffix: "", label: "Platforms" },
@@ -68,7 +71,7 @@ const HeroSection = () => {
               Start Free Trial
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </Button>
-            <Button variant="hero-outline" size="xl" className="group">
+            <Button variant="hero-outline" size="xl" className="group" onClick={() => navigate("/demo")}>
               <Play className="w-5 h-5" />
               Watch Demo
             </Button>
