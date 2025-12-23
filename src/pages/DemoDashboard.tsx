@@ -5,16 +5,17 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { ShopifyLogo, TikTokLogo, StoreLogo } from "@/components/StoreLogos";
 import { 
-  ArrowLeft, ShoppingBag, Music, TrendingUp, TrendingDown, DollarSign, 
-  Users, ShoppingCart, Package, Eye, RotateCcw, Star, Clock, 
-  ArrowUpRight, ArrowDownRight, BarChart3, PieChart, Activity, Bell, Settings, Search, Plus
+  ArrowLeft, TrendingUp, TrendingDown, DollarSign, 
+  Users, ShoppingCart, Package, Eye, RotateCcw, Star, 
+  ArrowUpRight, ArrowDownRight, BarChart3, Activity, Bell, Settings, Search, Plus
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const stores = [
-  { id: "shopify", name: "Shopify", icon: ShoppingBag, color: "bg-green-500" },
-  { id: "tiktok", name: "TikTok Shop", icon: Music, color: "bg-pink-500" },
+  { id: "shopify", name: "Shopify", logo: ShopifyLogo, bgColor: "bg-[#96bf48]" },
+  { id: "tiktok", name: "TikTok Shop", logo: TikTokLogo, bgColor: "bg-black" },
 ];
 
 // Mock data for KPIs
@@ -135,8 +136,8 @@ const DemoDashboard = () => {
               {/* Connected Stores */}
               <div className="flex items-center gap-2">
                 {stores.map((store) => (
-                  <div key={store.id} className={`w-8 h-8 rounded-lg ${store.color} flex items-center justify-center`}>
-                    <store.icon className="w-4 h-4 text-white" />
+                  <div key={store.id} className={`w-8 h-8 rounded-lg ${store.bgColor} flex items-center justify-center p-1.5`}>
+                    <store.logo className="w-5 h-5 text-white" />
                   </div>
                 ))}
               </div>
@@ -193,11 +194,11 @@ const DemoDashboard = () => {
               Overview
             </TabsTrigger>
             <TabsTrigger value="shopify" className="gap-2">
-              <ShoppingBag className="w-4 h-4" />
+              <ShopifyLogo className="w-4 h-4" />
               Shopify
             </TabsTrigger>
             <TabsTrigger value="tiktok" className="gap-2">
-              <Music className="w-4 h-4" />
+              <TikTokLogo className="w-4 h-4" />
               TikTok Shop
             </TabsTrigger>
           </TabsList>
@@ -221,11 +222,11 @@ const DemoDashboard = () => {
                 <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle className="text-lg">Revenue Trend</CardTitle>
                   <div className="flex gap-2">
-                    <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/30">
-                      <ShoppingBag className="w-3 h-3 mr-1" /> Shopify
+                    <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/30 flex items-center gap-1">
+                      <ShopifyLogo className="w-3 h-3" /> Shopify
                     </Badge>
-                    <Badge variant="outline" className="bg-pink-500/10 text-pink-500 border-pink-500/30">
-                      <Music className="w-3 h-3 mr-1" /> TikTok
+                    <Badge variant="outline" className="bg-pink-500/10 text-pink-500 border-pink-500/30 flex items-center gap-1">
+                      <TikTokLogo className="w-3 h-3" /> TikTok
                     </Badge>
                   </div>
                 </CardHeader>
@@ -304,8 +305,8 @@ const DemoDashboard = () => {
                   {recentOrders.map((order) => (
                     <div key={order.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
                       <div className="flex items-center gap-4">
-                        <div className={`w-8 h-8 rounded-lg ${order.store === "shopify" ? "bg-green-500" : "bg-pink-500"} flex items-center justify-center`}>
-                          {order.store === "shopify" ? <ShoppingBag className="w-4 h-4 text-white" /> : <Music className="w-4 h-4 text-white" />}
+                        <div className={`w-8 h-8 rounded-lg ${order.store === "shopify" ? "bg-[#96bf48]" : "bg-black"} flex items-center justify-center p-1.5`}>
+                          <StoreLogo store={order.store} className="w-5 h-5 text-white" />
                         </div>
                         <div>
                           <p className="font-medium">{order.id}</p>
@@ -331,8 +332,8 @@ const DemoDashboard = () => {
           {/* Shopify Tab */}
           <TabsContent value="shopify" className="space-y-6">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-xl bg-green-500 flex items-center justify-center">
-                <ShoppingBag className="w-6 h-6 text-white" />
+              <div className="w-12 h-12 rounded-xl bg-[#96bf48] flex items-center justify-center p-2">
+                <ShopifyLogo className="w-7 h-7 text-white" />
               </div>
               <div>
                 <h3 className="text-xl font-bold">Shopify Store</h3>
@@ -383,8 +384,8 @@ const DemoDashboard = () => {
           {/* TikTok Tab */}
           <TabsContent value="tiktok" className="space-y-6">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-xl bg-pink-500 flex items-center justify-center">
-                <Music className="w-6 h-6 text-white" />
+              <div className="w-12 h-12 rounded-xl bg-black flex items-center justify-center p-2">
+                <TikTokLogo className="w-7 h-7 text-white" />
               </div>
               <div>
                 <h3 className="text-xl font-bold">TikTok Shop</h3>

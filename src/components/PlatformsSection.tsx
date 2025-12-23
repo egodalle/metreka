@@ -1,49 +1,55 @@
-import { Check, ShoppingBag, Music, Store, ShoppingCart, Package } from "lucide-react";
+import { Check } from "lucide-react";
+import { ShopifyLogo, TikTokLogo, AmazonLogo, LazadaLogo, ShopeeLogo } from "@/components/StoreLogos";
 
 const platforms = [
   {
     name: "Shopify",
-    icon: ShoppingBag,
+    logo: ShopifyLogo,
     marketShare: "29%",
     priority: "P0",
     color: "from-green/20 to-green/5",
     borderColor: "border-green/30",
+    bgColor: "bg-[#96bf48]",
     streams: ["Orders", "Products", "Customers", "Inventory", "Transactions", "Fulfillments"],
   },
   {
     name: "TikTok Shop",
-    icon: Music,
+    logo: TikTokLogo,
     marketShare: "18%",
     priority: "P0",
     color: "from-pink-500/20 to-pink-500/5",
     borderColor: "border-pink-500/30",
+    bgColor: "bg-black",
     streams: ["Orders", "Products", "Creators", "Videos", "Analytics", "Promotions"],
   },
   {
     name: "Amazon Seller",
-    icon: Package,
+    logo: AmazonLogo,
     marketShare: "22%",
     priority: "P0",
     color: "from-accent/20 to-accent/5",
     borderColor: "border-accent/30",
+    bgColor: "bg-[#ff9900]",
     streams: ["Orders", "Order Items", "Inventory", "Financial Events", "Returns"],
   },
   {
     name: "Lazada",
-    icon: Store,
+    logo: LazadaLogo,
     marketShare: "15%",
     priority: "P1",
     color: "from-purple/20 to-purple/5",
     borderColor: "border-purple/30",
+    bgColor: "bg-[#0f146d]",
     streams: ["Orders", "Products", "Inventory", "Promotions", "Reviews"],
   },
   {
     name: "Shopee",
-    icon: ShoppingCart,
+    logo: ShopeeLogo,
     marketShare: "16%",
     priority: "P1",
     color: "from-orange/20 to-orange/5",
     borderColor: "border-orange/30",
+    bgColor: "bg-[#ee4d2d]",
     streams: ["Orders", "Products", "Inventory", "Vouchers", "Chat", "Logistics"],
   },
 ];
@@ -82,8 +88,8 @@ const PlatformsSection = () => {
               {/* Header */}
               <div className="flex items-start justify-between mb-6">
                 <div className="flex items-center gap-3">
-                  <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${platform.color} flex items-center justify-center`}>
-                    <platform.icon className="w-6 h-6 text-foreground" />
+                  <div className={`w-12 h-12 rounded-xl ${platform.bgColor} flex items-center justify-center p-2`}>
+                    <platform.logo className="w-7 h-7 text-white" />
                   </div>
                   <div>
                     <h3 className="font-bold text-lg text-foreground">{platform.name}</h3>
