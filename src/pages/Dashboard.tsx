@@ -434,12 +434,12 @@ const Dashboard = () => {
                   />
                   <KPICard 
                     title="Platforms"
-                    value={dashboardData?.platforms?.length || 0}
+                    value={filteredData.platforms?.length || 0}
                     icon={Package}
                   />
                   <KPICard 
                     title="Today's Orders"
-                    value={dashboardData?.recent_days?.[0]?.total_orders || 0}
+                    value={filteredData.recentDays?.[0]?.total_orders || 0}
                     icon={Activity}
                   />
                 </>
@@ -497,10 +497,10 @@ const Dashboard = () => {
                         <div className="relative w-40 h-40">
                           <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
                             <circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" strokeWidth="20" className="text-muted/20" />
-                            {dashboardData?.platforms?.map((platform, i) => {
-                              const totalRevenue = dashboardData.platforms.reduce((acc, p) => acc + parseFloat(p.total_revenue_usd), 0);
+                            {filteredData.platforms?.map((platform, i) => {
+                              const totalRevenue = filteredData.platforms.reduce((acc, p) => acc + parseFloat(p.total_revenue_usd), 0);
                               const percentage = (parseFloat(platform.total_revenue_usd) / totalRevenue) * 100;
-                              const offset = dashboardData.platforms
+                              const offset = filteredData.platforms
                                 .slice(0, i)
                                 .reduce((acc, p) => acc + ((parseFloat(p.total_revenue_usd) / totalRevenue) * 100 * 2.51), 0);
                               const colors = ["text-green-500", "text-orange-500", "text-red-500", "text-blue-500"];
@@ -520,14 +520,14 @@ const Dashboard = () => {
                           </svg>
                           <div className="absolute inset-0 flex items-center justify-center">
                             <span className="text-xl font-bold">
-                              {formatCurrency(dashboardData?.total_revenue_usd || 0)}
+                              {formatCurrency(filteredData.totalRevenue || 0)}
                             </span>
                           </div>
                         </div>
                       </div>
                       <div className="space-y-3">
-                        {dashboardData?.platforms?.map((platform, i) => {
-                          const totalRevenue = dashboardData.platforms.reduce((acc, p) => acc + parseFloat(p.total_revenue_usd), 0);
+                        {filteredData.platforms?.map((platform, i) => {
+                          const totalRevenue = filteredData.platforms.reduce((acc, p) => acc + parseFloat(p.total_revenue_usd), 0);
                           const percentage = ((parseFloat(platform.total_revenue_usd) / totalRevenue) * 100).toFixed(1);
                           const colors = ["bg-green-500", "bg-orange-500", "bg-red-500", "bg-blue-500"];
                           return (
@@ -562,7 +562,7 @@ const Dashboard = () => {
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      {dashboardData?.platforms?.map((platform) => (
+                      {filteredData.platforms?.map((platform) => (
                         <PlatformRow key={platform.platform} platform={platform} />
                       ))}
                     </div>
