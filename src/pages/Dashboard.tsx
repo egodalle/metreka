@@ -148,6 +148,57 @@ const Dashboard = () => {
 
   const isConnected = healthData?.status === "healthy";
 
+  // Get filtered data based on active tab
+  const getFilteredData = () => {
+    if (!dashboardData || activeTab === "overview") {
+      return {
+        totalRevenue: dashboardData?.total_revenue_usd || "0",
+        totalOrders: dashboardData?.total_orders || 0,
+        avgOrderValue: dashboardData?.avg_order_value_usd || "0",
+        revenueGrowth: dashboardData?.revenue_growth_pct,
+        ordersGrowth: dashboardData?.orders_growth_pct,
+        platforms: dashboardData?.platforms || [],
+        recentDays: dashboardData?.recent_days || [],
+      };
+    }
+
+    // Find the selected platform
+    const platform = dashboardData.platforms?.find(p => p.platform === activeTab);
+    if (!platform) {
+      return {
+        totalRevenue: "0",
+        totalOrders: 0,
+        avgOrderValue: "0",
+        revenueGrowth: undefined,
+        ordersGrowth: undefined,
+        platforms: [],
+        recentDays: [],
+      };
+    }
+
+    // Map recent days to platform-specific data
+    const platformRevenueKey = `${activeTab}_revenue_usd` as keyof DailyData;
+    const platformOrdersKey = `${activeTab}_orders` as keyof DailyData;
+
+    const platformDays = dashboardData.recent_days?.map(day => ({
+      ...day,
+      total_revenue_usd: String(day[platformRevenueKey] || "0"),
+      total_orders: Number(day[platformOrdersKey] || 0),
+    })) || [];
+
+    return {
+      totalRevenue: platform.total_revenue_usd,
+      totalOrders: platform.total_orders,
+      avgOrderValue: platform.avg_order_value_usd,
+      revenueGrowth: platform.revenue_mom_growth_pct,
+      ordersGrowth: parseFloat(platform.orders_mom_growth_pct),
+      platforms: [platform],
+      recentDays: platformDays,
+    };
+  };
+
+  const filteredData = getFilteredData();
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -260,47 +311,59 @@ const Dashboard = () => {
 
           <TabsContent value={activeTab} className="space-y-6">
             {/* KPI Grid */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
               {isLoading ? (
-                Array.from({ length: 6 }).map((_, i) => (
+                Array.from({ length: 5 }).map((_, i) => (
                   <KPICard key={i} title="" value="" icon={Activity} isLoading />
                 ))
               ) : (
                 <>
                   <KPICard 
-                    title="Total Revenue"
-                    value={dashboardData?.total_revenue_usd || "0"}
-                    change={dashboardData?.revenue_growth_pct}
+                    title={activeTab === "overview" ? "Total Revenue" : `${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Revenue`}
+                    value={filteredData.totalRevenue}
+                    change={filteredData.revenueGrowth}
                     icon={DollarSign}
                     isCurrency
                   />
                   <KPICard 
-                    title="Total Orders"
-                    value={dashboardData?.total_orders || 0}
-                    change={dashboardData?.orders_growth_pct}
+                    title={activeTab === "overview" ? "Total Orders" : `${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Orders`}
+                    value={filteredData.totalOrders}
+                    change={filteredData.ordersGrowth}
                     icon={ShoppingCart}
                   />
                   <KPICard 
                     title="Avg Order Value"
-                    value={dashboardData?.avg_order_value_usd || "0"}
+                    value={filteredData.avgOrderValue}
                     icon={TrendingUp}
                     isCurrency
                   />
-                  <KPICard 
-                    title="Platforms"
-                    value={dashboardData?.platforms?.length || 0}
-                    icon={Package}
-                  />
-                  <KPICard 
-                    title="Total Customers"
-                    value={dashboardData?.total_customers || 0}
-                    icon={Users}
-                  />
-                  <KPICard 
-                    title="Today's Orders"
-                    value={dashboardData?.recent_days?.[0]?.total_orders || 0}
-                    icon={Activity}
-                  />
+                  {activeTab === "overview" ? (
+                    <>
+                      <KPICard 
+                        title="Platforms"
+                        value={dashboardData?.platforms?.length || 0}
+                        icon={Package}
+                      />
+                      <KPICard 
+                        title="Today's Orders"
+                        value={dashboardData?.recent_days?.[0]?.total_orders || 0}
+                        icon={Activity}
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <KPICard 
+                        title="This Month Orders"
+                        value={filteredData.platforms[0]?.orders_this_month || 0}
+                        icon={Package}
+                      />
+                      <KPICard 
+                        title="Today's Orders"
+                        value={filteredData.platforms[0]?.orders_today || 0}
+                        icon={Activity}
+                      />
+                    </>
+                  )}
                 </>
               )}
             </div>
@@ -310,15 +373,18 @@ const Dashboard = () => {
               {/* Revenue Chart */}
               <Card className="border-border/50 bg-card/80">
                 <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle className="text-lg">Revenue Trend (Last 7 Days)</CardTitle>
+                  <CardTitle className="text-lg">
+                    {activeTab === "overview" ? "Revenue Trend (Last 7 Days)" : `${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Revenue (Last 7 Days)`}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   {isLoading ? (
                     <Skeleton className="h-48 w-full" />
                   ) : (
                     <div className="h-48 flex items-end gap-2">
-                      {dashboardData?.recent_days?.slice().reverse().map((day, i) => {
-                        const maxRevenue = Math.max(...(dashboardData.recent_days?.map(d => parseFloat(d.total_revenue_usd)) || [1]));
+                      {filteredData.recentDays?.slice().reverse().map((day, i) => {
+                        const revenues = filteredData.recentDays.map(d => parseFloat(d.total_revenue_usd));
+                        const maxRevenue = Math.max(...revenues, 1);
                         const height = (parseFloat(day.total_revenue_usd) / maxRevenue) * 100;
                         return (
                           <div 
@@ -339,17 +405,19 @@ const Dashboard = () => {
                 </CardContent>
               </Card>
 
-              {/* Store Breakdown */}
+              {/* Store Breakdown or Platform Details */}
               <Card className="border-border/50 bg-card/80">
                 <CardHeader>
-                  <CardTitle className="text-lg">Revenue by Platform</CardTitle>
+                  <CardTitle className="text-lg">
+                    {activeTab === "overview" ? "Revenue by Platform" : `${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Metrics`}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   {isLoading ? (
                     <div className="flex items-center justify-center">
                       <Skeleton className="w-40 h-40 rounded-full" />
                     </div>
-                  ) : (
+                  ) : activeTab === "overview" ? (
                     <>
                       <div className="flex items-center justify-center">
                         <div className="relative w-40 h-40">
@@ -400,37 +468,82 @@ const Dashboard = () => {
                         })}
                       </div>
                     </>
+                  ) : (
+                    // Platform-specific metrics
+                    <div className="space-y-4">
+                      {filteredData.platforms[0] && (
+                        <>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="p-4 rounded-lg bg-muted/30">
+                              <p className="text-sm text-muted-foreground">Payment Rate</p>
+                              <p className="text-2xl font-bold">{parseFloat(filteredData.platforms[0].payment_rate || "0").toFixed(1)}%</p>
+                            </div>
+                            <div className="p-4 rounded-lg bg-muted/30">
+                              <p className="text-sm text-muted-foreground">Fulfillment Rate</p>
+                              <p className="text-2xl font-bold">{parseFloat(filteredData.platforms[0].fulfillment_rate || "0").toFixed(1)}%</p>
+                            </div>
+                            <div className="p-4 rounded-lg bg-muted/30">
+                              <p className="text-sm text-muted-foreground">Cancellation Rate</p>
+                              <p className="text-2xl font-bold">{parseFloat(filteredData.platforms[0].cancellation_rate || "0").toFixed(1)}%</p>
+                            </div>
+                            <div className="p-4 rounded-lg bg-muted/30">
+                              <p className="text-sm text-muted-foreground">Avg Items/Order</p>
+                              <p className="text-2xl font-bold">{parseFloat(filteredData.platforms[0].avg_items_per_order || "0").toFixed(1)}</p>
+                            </div>
+                          </div>
+                          <div className="p-4 rounded-lg bg-muted/30">
+                            <p className="text-sm text-muted-foreground mb-2">Month over Month</p>
+                            <div className="flex justify-between">
+                              <div>
+                                <p className="text-xs text-muted-foreground">This Month</p>
+                                <p className="font-semibold">{formatCurrency(filteredData.platforms[0].revenue_this_month_usd)}</p>
+                                <p className="text-sm">{filteredData.platforms[0].orders_this_month} orders</p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-xs text-muted-foreground">Last Month</p>
+                                <p className="font-semibold">{formatCurrency(filteredData.platforms[0].revenue_last_month_usd)}</p>
+                                <p className="text-sm">{filteredData.platforms[0].orders_last_month} orders</p>
+                              </div>
+                            </div>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   )}
                 </CardContent>
               </Card>
             </div>
 
-            {/* Platform Details */}
+            {/* Platform Details / Daily Summary */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              <Card className="border-border/50 bg-card/80">
-                <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle className="text-lg">Platform Performance</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {isLoading ? (
-                    <div className="space-y-3">
-                      {Array.from({ length: 4 }).map((_, i) => (
-                        <Skeleton key={i} className="h-16 w-full" />
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {dashboardData?.platforms?.map((platform) => (
-                        <PlatformRow key={platform.platform} platform={platform} />
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
+              {activeTab === "overview" && (
+                <Card className="border-border/50 bg-card/80">
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <CardTitle className="text-lg">Platform Performance</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {isLoading ? (
+                      <div className="space-y-3">
+                        {Array.from({ length: 4 }).map((_, i) => (
+                          <Skeleton key={i} className="h-16 w-full" />
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        {dashboardData?.platforms?.map((platform) => (
+                          <PlatformRow key={platform.platform} platform={platform} />
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              )}
 
-              <Card className="border-border/50 bg-card/80">
+              <Card className={`border-border/50 bg-card/80 ${activeTab !== "overview" ? "lg:col-span-2" : ""}`}>
                 <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle className="text-lg">Daily Summary</CardTitle>
+                  <CardTitle className="text-lg">
+                    {activeTab === "overview" ? "Daily Summary" : `${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Daily Summary`}
+                  </CardTitle>
                 </CardHeader>
                 <CardContent>
                   {isLoading ? (
@@ -440,18 +553,15 @@ const Dashboard = () => {
                       ))}
                     </div>
                   ) : (
-                    <div className="space-y-3">
-                      {dashboardData?.recent_days?.slice(0, 5).map((day) => (
+                    <div className={`space-y-3 ${activeTab !== "overview" ? "grid grid-cols-1 md:grid-cols-2 gap-3" : ""}`}>
+                      {filteredData.recentDays?.slice(0, activeTab === "overview" ? 5 : 7).map((day) => (
                         <div key={day.order_date} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
                           <div>
                             <p className="font-medium">{day.order_date}</p>
-                            <p className="text-sm text-muted-foreground">{day.total_orders} orders • {day.unique_customers} customers</p>
+                            <p className="text-sm text-muted-foreground">{day.total_orders} orders</p>
                           </div>
                           <div className="text-right">
                             <p className="font-semibold">{formatCurrency(day.total_revenue_usd)}</p>
-                            <span className={`text-sm ${parseFloat(day.revenue_dod_change) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                              {formatPercent(day.revenue_dod_change)} DoD
-                            </span>
                           </div>
                         </div>
                       ))}
