@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/table";
 import { 
   DollarSign, TrendingUp, TrendingDown, PieChart, BarChart3,
-  Percent, Package, Truck, Target, Minus
+  Percent, Package, Truck, Target, Minus, Store
 } from "lucide-react";
 import { ProfitabilityData, ProfitabilityBySegment } from "@/lib/api";
 
@@ -25,6 +25,8 @@ interface ProfitabilitySectionProps {
   isLoading?: boolean;
   period?: 'daily' | 'weekly' | 'monthly';
   onPeriodChange?: (period: 'daily' | 'weekly' | 'monthly') => void;
+  selectedStore?: string;
+  onStoreChange?: (store: string) => void;
 }
 
 const formatCurrency = (value: number) => 
@@ -68,12 +70,15 @@ export function ProfitabilitySection({
   segmentData, 
   isLoading,
   period = 'monthly',
-  onPeriodChange
+  onPeriodChange,
+  selectedStore = "all",
+  onStoreChange
 }: ProfitabilitySectionProps) {
   const [activeTab, setActiveTab] = useState("overview");
   const [segmentType, setSegmentType] = useState<'category' | 'platform' | 'region'>('category');
 
   const profitData = data && data.length > 0 ? data : mockProfitabilityData;
+  const platforms = ["shopify", "amazon", "shopee", "lazada"];
   
   const getSegmentData = () => {
     if (segmentData && segmentData.length > 0) return segmentData;
@@ -179,6 +184,19 @@ export function ProfitabilitySection({
           </TabsList>
 
           <div className="flex items-center gap-3">
+            <Select value={selectedStore} onValueChange={onStoreChange}>
+              <SelectTrigger className="w-40">
+                <Store className="w-4 h-4 mr-2" />
+                <SelectValue placeholder="All Stores" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Stores</SelectItem>
+                {platforms.map(platform => (
+                  <SelectItem key={platform} value={platform} className="capitalize">{platform}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
             <Select value={period} onValueChange={(v) => onPeriodChange?.(v as 'daily' | 'weekly' | 'monthly')}>
               <SelectTrigger className="w-32">
                 <SelectValue placeholder="Period" />

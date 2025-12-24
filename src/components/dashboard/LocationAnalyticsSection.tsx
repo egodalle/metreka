@@ -13,7 +13,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { 
-  Globe, MapPin, TrendingUp, Users, Package, Truck, Clock
+  Globe, MapPin, TrendingUp, Users, Package, Truck, Clock, Store
 } from "lucide-react";
 import { LocationData } from "@/lib/api";
 
@@ -22,6 +22,8 @@ interface LocationAnalyticsSectionProps {
   isLoading?: boolean;
   granularity?: 'country' | 'region' | 'city';
   onGranularityChange?: (granularity: 'country' | 'region' | 'city') => void;
+  selectedStore?: string;
+  onStoreChange?: (store: string) => void;
 }
 
 const formatCurrency = (value: number) => 
@@ -83,11 +85,14 @@ export function LocationAnalyticsSection({
   data, 
   isLoading,
   granularity = 'country',
-  onGranularityChange
+  onGranularityChange,
+  selectedStore = "all",
+  onStoreChange
 }: LocationAnalyticsSectionProps) {
   const [selectedZone, setSelectedZone] = useState("all");
 
   const locations = data && data.length > 0 ? data : mockLocationData;
+  const platforms = ["shopify", "amazon", "shopee", "lazada"];
   
   const zones = [...new Set(locations.map(l => l.shippingZone).filter(Boolean))];
   
@@ -176,6 +181,19 @@ export function LocationAnalyticsSection({
       {/* Controls */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
+          <Select value={selectedStore} onValueChange={onStoreChange}>
+            <SelectTrigger className="w-40">
+              <Store className="w-4 h-4 mr-2" />
+              <SelectValue placeholder="All Stores" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Stores</SelectItem>
+              {platforms.map(platform => (
+                <SelectItem key={platform} value={platform} className="capitalize">{platform}</SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           <Select value={granularity} onValueChange={(v) => onGranularityChange?.(v as 'country' | 'region' | 'city')}>
             <SelectTrigger className="w-40">
               <MapPin className="w-4 h-4 mr-2" />

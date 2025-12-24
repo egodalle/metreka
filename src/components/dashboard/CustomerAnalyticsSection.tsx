@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -12,7 +13,7 @@ import {
 } from "@/components/ui/table";
 import { 
   Users, UserPlus, Repeat, DollarSign, TrendingUp, TrendingDown,
-  Heart, Calendar, Target, Zap
+  Heart, Calendar, Target, Zap, Store
 } from "lucide-react";
 import { CustomerMetrics, CustomerCohort, CustomerSegment } from "@/lib/api";
 
@@ -21,6 +22,8 @@ interface CustomerAnalyticsSectionProps {
   cohorts?: CustomerCohort[];
   segments?: CustomerSegment[];
   isLoading?: boolean;
+  selectedStore?: string;
+  onStoreChange?: (store: string) => void;
 }
 
 const formatCurrency = (value: number) => 
@@ -66,10 +69,11 @@ const mockSegments: CustomerSegment[] = [
   { segment: "Hibernating", description: "Last purchase was long ago", customerCount: 6387, totalRevenue: 45670, avgOrderValue: 32.10, purchaseFrequency: 0.8, color: "#6b7280" },
 ];
 
-export function CustomerAnalyticsSection({ metrics, cohorts, segments, isLoading }: CustomerAnalyticsSectionProps) {
+export function CustomerAnalyticsSection({ metrics, cohorts, segments, isLoading, selectedStore = "all", onStoreChange }: CustomerAnalyticsSectionProps) {
   const data = metrics || mockMetrics;
   const cohortData = cohorts && cohorts.length > 0 ? cohorts : mockCohorts;
   const segmentData = segments && segments.length > 0 ? segments : mockSegments;
+  const platforms = ["shopify", "amazon", "shopee", "lazada"];
 
   const totalSegmentCustomers = segmentData.reduce((acc, s) => acc + s.customerCount, 0);
 
@@ -88,6 +92,22 @@ export function CustomerAnalyticsSection({ metrics, cohorts, segments, isLoading
 
   return (
     <div className="space-y-6">
+      {/* Store Filter */}
+      <div className="flex items-center gap-3">
+        <Select value={selectedStore} onValueChange={onStoreChange}>
+          <SelectTrigger className="w-40">
+            <Store className="w-4 h-4 mr-2" />
+            <SelectValue placeholder="All Stores" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Stores</SelectItem>
+            {platforms.map(platform => (
+              <SelectItem key={platform} value={platform} className="capitalize">{platform}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       {/* Summary KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="border-border/50 bg-card/80">
