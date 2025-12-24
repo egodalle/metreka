@@ -1,5 +1,5 @@
 import { useQuery } from '@tanstack/react-query';
-import api, { DashboardData, Product, RevenueData } from '@/lib/api';
+import api, { DashboardData, PlatformData, DailyData, Product } from '@/lib/api';
 
 // Main dashboard data
 export function useDashboard() {
@@ -13,7 +13,7 @@ export function useDashboard() {
 
 // Platforms breakdown
 export function usePlatforms() {
-  return useQuery<{ store: string; revenue: number; orders: number; percentage: number }[]>({
+  return useQuery<PlatformData[]>({
     queryKey: ['platforms'],
     queryFn: () => api.getPlatforms(),
     staleTime: 30000,
@@ -22,7 +22,7 @@ export function usePlatforms() {
 
 // Daily data for charts
 export function useDaily(days: number = 30) {
-  return useQuery<RevenueData[]>({
+  return useQuery<DailyData[]>({
     queryKey: ['daily', days],
     queryFn: () => api.getDaily(days),
     staleTime: 30000,

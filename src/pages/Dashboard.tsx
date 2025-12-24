@@ -14,33 +14,42 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useDashboard, useHealthCheck } from "@/hooks/useDashboardData";
-import { KPI, Order, Product } from "@/lib/api";
+import { PlatformData, DailyData } from "@/lib/api";
 
 const stores = [
   { id: "shopify", name: "Shopify", logo: ShopifyLogo, bgColor: "bg-[#96bf48]" },
-  { id: "tiktok", name: "TikTok Shop", logo: TikTokLogo, bgColor: "bg-black" },
+  { id: "amazon", name: "Amazon", logo: TikTokLogo, bgColor: "bg-[#ff9900]" },
+  { id: "shopee", name: "Shopee", logo: TikTokLogo, bgColor: "bg-[#ee4d2d]" },
+  { id: "lazada", name: "Lazada", logo: TikTokLogo, bgColor: "bg-[#0f146d]" },
 ];
 
-const formatCurrency = (value: number) => 
-  new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
+const formatCurrency = (value: number | string) => {
+  const num = typeof value === 'string' ? parseFloat(value) : value;
+  return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(num);
+};
 
 const formatNumber = (value: number) => 
   new Intl.NumberFormat('en-US').format(value);
+
+const formatPercent = (value: number | string) => {
+  const num = typeof value === 'string' ? parseFloat(value) : value;
+  return `${num >= 0 ? '+' : ''}${num.toFixed(2)}%`;
+};
 
 const KPICard = ({ 
   title, 
   value, 
   change, 
-  changeType, 
   icon: Icon, 
-  isLoading 
+  isLoading,
+  isCurrency = false
 }: {
   title: string;
   value: string | number;
-  change?: number;
-  changeType?: 'increase' | 'decrease';
+  change?: number | string;
   icon: React.ElementType;
   isLoading?: boolean;
+  isCurrency?: boolean;
 }) => {
   if (isLoading) {
     return (
@@ -57,6 +66,9 @@ const KPICard = ({
     );
   }
 
+  const changeNum = typeof change === 'string' ? parseFloat(change) : change;
+  const isPositive = changeNum !== undefined && changeNum >= 0;
+
   return (
     <Card className="border-border/50 bg-card/80 backdrop-blur hover:shadow-lg transition-all duration-300">
       <CardContent className="p-6">
@@ -64,15 +76,15 @@ const KPICard = ({
           <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
             <Icon className="w-5 h-5 text-primary" />
           </div>
-          {change !== undefined && (
-            <div className={`flex items-center gap-1 text-sm font-medium ${changeType === "increase" ? "text-green-500" : "text-red-500"}`}>
-              {changeType === "increase" ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
-              {Math.abs(change)}%
+          {changeNum !== undefined && (
+            <div className={`flex items-center gap-1 text-sm font-medium ${isPositive ? "text-green-500" : "text-red-500"}`}>
+              {isPositive ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
+              {Math.abs(changeNum).toFixed(2)}%
             </div>
           )}
         </div>
         <p className="text-2xl font-bold text-foreground">
-          {typeof value === 'number' ? formatCurrency(value) : value}
+          {isCurrency ? formatCurrency(value) : (typeof value === 'number' ? formatNumber(value) : value)}
         </p>
         <p className="text-sm text-muted-foreground mt-1">{title}</p>
       </CardContent>
@@ -80,41 +92,36 @@ const KPICard = ({
   );
 };
 
-const OrderRow = ({ order }: { order: Order }) => (
-  <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
-    <div className="flex items-center gap-4">
-      <div className={`w-8 h-8 rounded-lg ${order.store === "shopify" ? "bg-[#96bf48]" : "bg-black"} flex items-center justify-center p-1.5`}>
-        <StoreLogo store={order.store} className="w-5 h-5 text-white" />
-      </div>
-      <div>
-        <p className="font-medium">{order.orderNumber}</p>
-        <p className="text-sm text-muted-foreground">{order.customer}</p>
-      </div>
-    </div>
-    <div className="text-right">
-      <p className="font-semibold">{formatCurrency(order.total)}</p>
-      <Badge 
-        variant={order.status === "delivered" ? "default" : order.status === "shipped" ? "secondary" : "outline"} 
-        className="text-xs capitalize"
-      >
-        {order.status}
-      </Badge>
-    </div>
-  </div>
-);
+const PlatformRow = ({ platform }: { platform: PlatformData }) => {
+  const platformColors: Record<string, string> = {
+    shopify: "bg-[#96bf48]",
+    amazon: "bg-[#ff9900]",
+    shopee: "bg-[#ee4d2d]",
+    lazada: "bg-[#0f146d]",
+  };
 
-const ProductRow = ({ product, index }: { product: Product; index: number }) => (
-  <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
-    <div className="flex items-center gap-4">
-      <span className="text-lg font-bold text-muted-foreground w-6">#{index + 1}</span>
-      <div>
-        <p className="font-medium">{product.name}</p>
-        <p className="text-sm text-muted-foreground">{product.unitsSold} units sold</p>
+  return (
+    <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+      <div className="flex items-center gap-4">
+        <div className={`w-8 h-8 rounded-lg ${platformColors[platform.platform] || "bg-gray-500"} flex items-center justify-center`}>
+          <span className="text-white text-xs font-bold uppercase">
+            {platform.platform.charAt(0)}
+          </span>
+        </div>
+        <div>
+          <p className="font-medium capitalize">{platform.platform}</p>
+          <p className="text-sm text-muted-foreground">{formatNumber(platform.total_orders)} orders</p>
+        </div>
+      </div>
+      <div className="text-right">
+        <p className="font-semibold">{formatCurrency(platform.total_revenue_usd)}</p>
+        <span className={`text-sm ${parseFloat(platform.revenue_mom_growth_pct) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+          {formatPercent(platform.revenue_mom_growth_pct)} MoM
+        </span>
       </div>
     </div>
-    <p className="font-semibold">{formatCurrency(product.revenue)}</p>
-  </div>
-);
+  );
+};
 
 const ConnectionStatus = ({ isConnected, isLoading }: { isConnected: boolean; isLoading: boolean }) => {
   if (isLoading) {
@@ -141,24 +148,6 @@ const Dashboard = () => {
 
   const isConnected = healthData?.status === "healthy";
 
-  // Map KPIs to icons
-  const kpiIcons: Record<string, React.ElementType> = {
-    revenue: DollarSign,
-    orders: ShoppingCart,
-    customers: Users,
-    aov: TrendingUp,
-    conversion: Activity,
-    products: Package,
-  };
-
-  const getKPIIcon = (kpiId: string) => {
-    const id = kpiId.toLowerCase();
-    for (const [key, icon] of Object.entries(kpiIcons)) {
-      if (id.includes(key)) return icon;
-    }
-    return Activity;
-  };
-
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -171,7 +160,7 @@ const Dashboard = () => {
                 Back
               </Button>
               <div className="h-6 w-px bg-border" />
-              <h1 className="text-xl font-bold text-gradient-primary">E-com.io</h1>
+              <h1 className="text-xl font-bold text-gradient-primary">DataPulse</h1>
             </div>
             
             <div className="flex items-center gap-4">
@@ -180,8 +169,8 @@ const Dashboard = () => {
               {/* Connected Stores */}
               <div className="flex items-center gap-2">
                 {stores.map((store) => (
-                  <div key={store.id} className={`w-8 h-8 rounded-lg ${store.bgColor} flex items-center justify-center p-1.5`}>
-                    <store.logo className="w-5 h-5 text-white" />
+                  <div key={store.id} className={`w-8 h-8 rounded-lg ${store.bgColor} flex items-center justify-center`}>
+                    <span className="text-white text-xs font-bold uppercase">{store.id.charAt(0)}</span>
                   </div>
                 ))}
               </div>
@@ -213,7 +202,7 @@ const Dashboard = () => {
                 <div>
                   <p className="font-medium text-red-500">Connection Error</p>
                   <p className="text-sm text-muted-foreground">
-                    {error?.message || "Failed to connect to API. Make sure FastAPI is running on localhost:8000"}
+                    {error?.message || "Failed to connect to API"}
                   </p>
                 </div>
               </div>
@@ -262,14 +251,11 @@ const Dashboard = () => {
               <BarChart3 className="w-4 h-4" />
               Overview
             </TabsTrigger>
-            <TabsTrigger value="shopify" className="gap-2">
-              <ShopifyLogo className="w-4 h-4" />
-              Shopify
-            </TabsTrigger>
-            <TabsTrigger value="tiktok" className="gap-2">
-              <TikTokLogo className="w-4 h-4" />
-              TikTok Shop
-            </TabsTrigger>
+            {stores.map(store => (
+              <TabsTrigger key={store.id} value={store.id} className="gap-2 capitalize">
+                {store.name}
+              </TabsTrigger>
+            ))}
           </TabsList>
 
           <TabsContent value={activeTab} className="space-y-6">
@@ -280,16 +266,42 @@ const Dashboard = () => {
                   <KPICard key={i} title="" value="" icon={Activity} isLoading />
                 ))
               ) : (
-                dashboardData?.kpis?.map((kpi: KPI) => (
+                <>
                   <KPICard 
-                    key={kpi.id}
-                    title={kpi.name}
-                    value={kpi.value}
-                    change={kpi.change}
-                    changeType={kpi.changeType}
-                    icon={getKPIIcon(kpi.id)}
+                    title="Total Revenue"
+                    value={dashboardData?.total_revenue_usd || "0"}
+                    change={dashboardData?.revenue_growth_pct}
+                    icon={DollarSign}
+                    isCurrency
                   />
-                ))
+                  <KPICard 
+                    title="Total Orders"
+                    value={dashboardData?.total_orders || 0}
+                    change={dashboardData?.orders_growth_pct}
+                    icon={ShoppingCart}
+                  />
+                  <KPICard 
+                    title="Avg Order Value"
+                    value={dashboardData?.avg_order_value_usd || "0"}
+                    icon={TrendingUp}
+                    isCurrency
+                  />
+                  <KPICard 
+                    title="Platforms"
+                    value={dashboardData?.platforms?.length || 0}
+                    icon={Package}
+                  />
+                  <KPICard 
+                    title="Total Customers"
+                    value={dashboardData?.total_customers || 0}
+                    icon={Users}
+                  />
+                  <KPICard 
+                    title="Today's Orders"
+                    value={dashboardData?.recent_days?.[0]?.total_orders || 0}
+                    icon={Activity}
+                  />
+                </>
               )}
             </div>
 
@@ -298,21 +310,30 @@ const Dashboard = () => {
               {/* Revenue Chart */}
               <Card className="border-border/50 bg-card/80">
                 <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle className="text-lg">Revenue Trend</CardTitle>
+                  <CardTitle className="text-lg">Revenue Trend (Last 7 Days)</CardTitle>
                 </CardHeader>
                 <CardContent>
                   {isLoading ? (
                     <Skeleton className="h-48 w-full" />
                   ) : (
                     <div className="h-48 flex items-end gap-2">
-                      {dashboardData?.revenueTimeline?.map((data, i) => (
-                        <div 
-                          key={i} 
-                          className="flex-1 bg-primary/60 rounded-t hover:bg-primary/80 transition-colors"
-                          style={{ height: `${Math.min((data.revenue / Math.max(...(dashboardData.revenueTimeline?.map(d => d.revenue) || [1]))) * 100, 100)}%` }}
-                          title={`${data.date}: ${formatCurrency(data.revenue)}`}
-                        />
-                      ))}
+                      {dashboardData?.recent_days?.slice().reverse().map((day, i) => {
+                        const maxRevenue = Math.max(...(dashboardData.recent_days?.map(d => parseFloat(d.total_revenue_usd)) || [1]));
+                        const height = (parseFloat(day.total_revenue_usd) / maxRevenue) * 100;
+                        return (
+                          <div 
+                            key={i} 
+                            className="flex-1 bg-primary/60 rounded-t hover:bg-primary/80 transition-colors cursor-pointer group relative"
+                            style={{ height: `${Math.max(height, 5)}%` }}
+                          >
+                            <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-popover text-popover-foreground px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 shadow-lg">
+                              <p className="font-medium">{day.order_date}</p>
+                              <p>{formatCurrency(day.total_revenue_usd)}</p>
+                              <p>{day.total_orders} orders</p>
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
                 </CardContent>
@@ -321,7 +342,7 @@ const Dashboard = () => {
               {/* Store Breakdown */}
               <Card className="border-border/50 bg-card/80">
                 <CardHeader>
-                  <CardTitle className="text-lg">Revenue by Store</CardTitle>
+                  <CardTitle className="text-lg">Revenue by Platform</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   {isLoading ? (
@@ -334,42 +355,46 @@ const Dashboard = () => {
                         <div className="relative w-40 h-40">
                           <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
                             <circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" strokeWidth="20" className="text-muted/20" />
-                            {dashboardData?.storeBreakdown?.map((store, i) => {
-                              const offset = dashboardData.storeBreakdown
+                            {dashboardData?.platforms?.map((platform, i) => {
+                              const totalRevenue = dashboardData.platforms.reduce((acc, p) => acc + parseFloat(p.total_revenue_usd), 0);
+                              const percentage = (parseFloat(platform.total_revenue_usd) / totalRevenue) * 100;
+                              const offset = dashboardData.platforms
                                 .slice(0, i)
-                                .reduce((acc, s) => acc + (s.percentage * 2.51), 0);
-                              const colors = ["text-green-500", "text-pink-500", "text-blue-500", "text-yellow-500"];
+                                .reduce((acc, p) => acc + ((parseFloat(p.total_revenue_usd) / totalRevenue) * 100 * 2.51), 0);
+                              const colors = ["text-green-500", "text-orange-500", "text-red-500", "text-blue-500"];
                               return (
                                 <circle 
-                                  key={store.store}
+                                  key={platform.platform}
                                   cx="50" cy="50" r="40" 
                                   fill="none" 
                                   stroke="currentColor" 
                                   strokeWidth="20" 
                                   className={colors[i % colors.length]}
-                                  strokeDasharray={`${store.percentage * 2.51} 251`}
+                                  strokeDasharray={`${percentage * 2.51} 251`}
                                   strokeDashoffset={-offset}
                                 />
                               );
                             })}
                           </svg>
                           <div className="absolute inset-0 flex items-center justify-center">
-                            <span className="text-2xl font-bold">
-                              {formatCurrency(dashboardData?.storeBreakdown?.reduce((acc, s) => acc + s.revenue, 0) || 0)}
+                            <span className="text-xl font-bold">
+                              {formatCurrency(dashboardData?.total_revenue_usd || 0)}
                             </span>
                           </div>
                         </div>
                       </div>
                       <div className="space-y-3">
-                        {dashboardData?.storeBreakdown?.map((store, i) => {
-                          const colors = ["bg-green-500", "bg-pink-500", "bg-blue-500", "bg-yellow-500"];
+                        {dashboardData?.platforms?.map((platform, i) => {
+                          const totalRevenue = dashboardData.platforms.reduce((acc, p) => acc + parseFloat(p.total_revenue_usd), 0);
+                          const percentage = ((parseFloat(platform.total_revenue_usd) / totalRevenue) * 100).toFixed(1);
+                          const colors = ["bg-green-500", "bg-orange-500", "bg-red-500", "bg-blue-500"];
                           return (
-                            <div key={store.store} className="flex items-center justify-between">
+                            <div key={platform.platform} className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
                                 <div className={`w-3 h-3 rounded-full ${colors[i % colors.length]}`} />
-                                <span className="text-sm capitalize">{store.store}</span>
+                                <span className="text-sm capitalize">{platform.platform}</span>
                               </div>
-                              <span className="font-semibold">{formatCurrency(store.revenue)} ({store.percentage}%)</span>
+                              <span className="font-semibold">{formatCurrency(platform.total_revenue_usd)} ({percentage}%)</span>
                             </div>
                           );
                         })}
@@ -380,24 +405,23 @@ const Dashboard = () => {
               </Card>
             </div>
 
-            {/* Recent Orders & Top Products */}
+            {/* Platform Details */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <Card className="border-border/50 bg-card/80">
                 <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle className="text-lg">Recent Orders</CardTitle>
-                  <Button variant="ghost" size="sm">View All</Button>
+                  <CardTitle className="text-lg">Platform Performance</CardTitle>
                 </CardHeader>
                 <CardContent>
                   {isLoading ? (
                     <div className="space-y-3">
-                      {Array.from({ length: 5 }).map((_, i) => (
+                      {Array.from({ length: 4 }).map((_, i) => (
                         <Skeleton key={i} className="h-16 w-full" />
                       ))}
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      {dashboardData?.recentOrders?.slice(0, 5).map((order) => (
-                        <OrderRow key={order.id} order={order} />
+                      {dashboardData?.platforms?.map((platform) => (
+                        <PlatformRow key={platform.platform} platform={platform} />
                       ))}
                     </div>
                   )}
@@ -406,20 +430,30 @@ const Dashboard = () => {
 
               <Card className="border-border/50 bg-card/80">
                 <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle className="text-lg">Top Products</CardTitle>
-                  <Button variant="ghost" size="sm">View All</Button>
+                  <CardTitle className="text-lg">Daily Summary</CardTitle>
                 </CardHeader>
                 <CardContent>
                   {isLoading ? (
                     <div className="space-y-3">
                       {Array.from({ length: 5 }).map((_, i) => (
-                        <Skeleton key={i} className="h-16 w-full" />
+                        <Skeleton key={i} className="h-12 w-full" />
                       ))}
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      {dashboardData?.topProducts?.slice(0, 5).map((product, i) => (
-                        <ProductRow key={product.id} product={product} index={i} />
+                      {dashboardData?.recent_days?.slice(0, 5).map((day) => (
+                        <div key={day.order_date} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                          <div>
+                            <p className="font-medium">{day.order_date}</p>
+                            <p className="text-sm text-muted-foreground">{day.total_orders} orders • {day.unique_customers} customers</p>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-semibold">{formatCurrency(day.total_revenue_usd)}</p>
+                            <span className={`text-sm ${parseFloat(day.revenue_dod_change) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                              {formatPercent(day.revenue_dod_change)} DoD
+                            </span>
+                          </div>
+                        </div>
                       ))}
                     </div>
                   )}

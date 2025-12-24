@@ -17,27 +17,69 @@ async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> 
   return response.json();
 }
 
-// Types matching your e-commerce data
-export interface KPI {
-  id: string;
-  name: string;
-  value: number;
-  previousValue?: number;
-  change?: number;
-  changeType?: 'increase' | 'decrease';
-  icon?: string;
+// Types matching actual API response
+export interface PlatformData {
+  platform: string;
+  total_orders: number;
+  completed_orders: number;
+  cancelled_orders: number;
+  total_revenue_usd: string;
+  orders_this_month: number;
+  revenue_this_month_usd: string;
+  orders_last_month: number;
+  revenue_last_month_usd: string;
+  orders_today: number;
+  revenue_today_usd: string;
+  avg_order_value_usd: string;
+  avg_items_per_order: string;
+  payment_rate: string;
+  fulfillment_rate: string | null;
+  cancellation_rate: string;
+  first_order_date: string;
+  last_order_date: string;
+  active_days: number;
+  revenue_mom_growth_pct: string;
+  orders_mom_growth_pct: string;
+  _generated_at: string;
 }
 
-export interface Order {
-  id: string;
-  orderNumber: string;
-  customer: string;
-  email?: string;
-  store: 'shopify' | 'tiktok' | 'amazon' | string;
-  status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
-  total: number;
-  items: number;
-  createdAt: string;
+export interface DailyData {
+  order_date: string;
+  total_orders: number;
+  total_revenue_usd: string;
+  avg_order_value_usd: string;
+  total_items_sold: number;
+  shopify_orders: number;
+  amazon_orders: number;
+  lazada_orders: number;
+  shopee_orders: number;
+  shopify_revenue_usd: string;
+  amazon_revenue_usd: string;
+  lazada_revenue_usd: string;
+  shopee_revenue_usd: string;
+  unique_customers: number;
+  fulfilled_orders: number;
+  fulfillment_rate: string;
+  revenue_7d_avg: string;
+  orders_7d_avg: string;
+  revenue_30d_avg: string;
+  orders_30d_avg: string;
+  revenue_dod_change: string;
+  orders_dod_change: number;
+  revenue_wow_change: string;
+  orders_wow_change: number;
+  _generated_at: string;
+}
+
+export interface DashboardData {
+  total_revenue_usd: string;
+  total_orders: number;
+  avg_order_value_usd: string;
+  revenue_growth_pct: string;
+  orders_growth_pct: number;
+  total_customers: number;
+  platforms: PlatformData[];
+  recent_days: DailyData[];
 }
 
 export interface Product {
@@ -51,21 +93,6 @@ export interface Product {
   imageUrl?: string;
 }
 
-export interface RevenueData {
-  date: string;
-  revenue: number;
-  orders: number;
-  store?: string;
-}
-
-export interface DashboardData {
-  kpis: KPI[];
-  recentOrders: Order[];
-  topProducts: Product[];
-  revenueTimeline: RevenueData[];
-  storeBreakdown: { store: string; revenue: number; percentage: number }[];
-}
-
 // API endpoints matching FastAPI structure
 export const api = {
   // Dashboard - main KPIs overview
@@ -74,11 +101,11 @@ export const api = {
 
   // Platforms breakdown
   getPlatforms: () =>
-    fetchAPI<{ store: string; revenue: number; orders: number; percentage: number }[]>('/api/v1/kpis/platforms'),
+    fetchAPI<PlatformData[]>('/api/v1/kpis/platforms'),
 
   // Daily data for charts
   getDaily: (days: number = 30) =>
-    fetchAPI<RevenueData[]>(`/api/v1/kpis/daily?days=${days}`),
+    fetchAPI<DailyData[]>(`/api/v1/kpis/daily?days=${days}`),
 
   // Top products
   getProducts: (limit: number = 10) =>
