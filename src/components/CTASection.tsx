@@ -16,13 +16,6 @@ const CTASection = () => {
         <div className="max-w-4xl mx-auto">
           {/* Main CTA Card */}
           <div className="glass card-glow rounded-3xl p-8 md:p-12 text-center">
-            {/* Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 border border-primary/30 mb-8">
-              <span className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-              <span className="text-sm font-medium text-primary">
-                Looking for 5 Beta Testers
-              </span>
-            </div>
 
             {/* Headline */}
             <h2 className="text-3xl md:text-5xl font-bold mb-4">
