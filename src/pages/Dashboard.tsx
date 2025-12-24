@@ -10,11 +10,15 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { 
   ArrowLeft, TrendingUp, DollarSign, 
   Users, ShoppingCart, Package, Activity, Bell, Settings, Search, Plus,
-  ArrowUpRight, ArrowDownRight, BarChart3, AlertCircle, RefreshCw
+  ArrowUpRight, ArrowDownRight, BarChart3, AlertCircle, RefreshCw, Globe, PieChart
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useDashboard, useHealthCheck } from "@/hooks/useDashboardData";
 import { PlatformData, DailyData } from "@/lib/api";
+import { ProductAnalyticsSection } from "@/components/dashboard/ProductAnalyticsSection";
+import { LocationAnalyticsSection } from "@/components/dashboard/LocationAnalyticsSection";
+import { CustomerAnalyticsSection } from "@/components/dashboard/CustomerAnalyticsSection";
+import { ProfitabilitySection } from "@/components/dashboard/ProfitabilitySection";
 
 const stores = [
   { id: "shopify", name: "Shopify", logo: ShopifyLogo, bgColor: "bg-[#96bf48]" },
@@ -297,10 +301,26 @@ const Dashboard = () => {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="bg-muted/50">
+          <TabsList className="bg-muted/50 flex-wrap h-auto gap-1 p-1">
             <TabsTrigger value="overview" className="gap-2">
               <BarChart3 className="w-4 h-4" />
               Overview
+            </TabsTrigger>
+            <TabsTrigger value="products" className="gap-2">
+              <Package className="w-4 h-4" />
+              Products
+            </TabsTrigger>
+            <TabsTrigger value="locations" className="gap-2">
+              <Globe className="w-4 h-4" />
+              Locations
+            </TabsTrigger>
+            <TabsTrigger value="customers" className="gap-2">
+              <Users className="w-4 h-4" />
+              Customers
+            </TabsTrigger>
+            <TabsTrigger value="profitability" className="gap-2">
+              <PieChart className="w-4 h-4" />
+              Profitability
             </TabsTrigger>
             {stores.map(store => (
               <TabsTrigger key={store.id} value={store.id} className="gap-2 capitalize">
@@ -308,6 +328,26 @@ const Dashboard = () => {
               </TabsTrigger>
             ))}
           </TabsList>
+
+          {/* Product Analytics Tab */}
+          <TabsContent value="products" className="space-y-6">
+            <ProductAnalyticsSection isLoading={isLoading} />
+          </TabsContent>
+
+          {/* Location Analytics Tab */}
+          <TabsContent value="locations" className="space-y-6">
+            <LocationAnalyticsSection isLoading={isLoading} />
+          </TabsContent>
+
+          {/* Customer Analytics Tab */}
+          <TabsContent value="customers" className="space-y-6">
+            <CustomerAnalyticsSection isLoading={isLoading} />
+          </TabsContent>
+
+          {/* Profitability Tab */}
+          <TabsContent value="profitability" className="space-y-6">
+            <ProfitabilitySection isLoading={isLoading} />
+          </TabsContent>
 
           <TabsContent value={activeTab} className="space-y-6">
             {/* KPI Grid */}
