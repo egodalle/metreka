@@ -4,59 +4,64 @@ import { Check, Sparkles, ArrowRight } from "lucide-react";
 const plans = [
   {
     name: "Starter",
-    price: "$497",
+    price: "$59",
     period: "/month",
-    description: "Perfect for small stores just getting started with analytics",
-    orders: "Up to 500 orders/month",
+    description: "Perfect for solo sellers on 1-2 stores getting started with analytics",
+    subtitle: "Solo / Small Seller",
     features: [
-      "1 e-commerce platform",
-      "3 core dashboards",
+      "Up to 2 stores",
       "Daily data sync",
+      "Core KPIs (Revenue, Orders, AOV, Refunds)",
+      "Prebuilt dashboard",
+      "30-90 days historical data",
       "Email support",
-      "Basic KPIs",
     ],
     popular: false,
   },
   {
     name: "Growth",
-    price: "$997",
+    price: "$179",
     period: "/month",
-    description: "For growing businesses ready to scale with data",
-    orders: "Up to 2,500 orders/month",
+    description: "For serious multi-channel sellers scaling across platforms",
+    subtitle: "Most Popular",
     features: [
-      "2 e-commerce platforms",
-      "5 dashboards",
-      "Hourly data sync",
-      "Priority support",
-      "Advanced KPIs",
-      "Custom alerts",
+      "Up to 5 stores",
+      "Shopify + Amazon + Shopee/Lazada",
+      "Hourly or near-real-time sync",
+      "Advanced KPIs (Channel comparison, Product performance)",
+      "Inventory velocity & Customer cohorts",
+      "dbt-modeled clean tables",
+      "1-2 years historical data",
+      "Slack & priority support",
     ],
     popular: true,
   },
   {
-    name: "Scale",
-    price: "$1,997",
+    name: "Pro",
+    price: "$499",
     period: "/month",
-    description: "Enterprise features for high-volume operations",
-    orders: "Up to 10,000 orders/month",
+    description: "For agencies and large brands with complex operations",
+    subtitle: "Agency / Brand",
     features: [
-      "3 e-commerce platforms",
-      "All dashboards",
-      "Real-time sync",
-      "Dedicated support",
-      "Custom DBT models",
+      "Up to 10-15 stores",
+      "All marketplaces",
+      "Custom dbt models",
+      "Custom KPI definitions",
+      "Warehouse access (SQL)",
       "API access",
-      "White-label option",
+      "White-label dashboards",
+      "Priority onboarding",
     ],
     popular: false,
   },
 ];
 
 const addOns = [
-  { name: "Additional Platform", price: "$297/mo" },
-  { name: "Google Analytics 4", price: "$197/mo" },
-  { name: "Ad Platform Integration", price: "$297/mo" },
-  { name: "Custom Dashboard", price: "$497/mo" },
+  { name: "Extra Store", price: "$29/mo" },
+  { name: "Real-time Sync", price: "$75/mo" },
+  { name: "Historical Backfill (per year)", price: "$75" },
+  { name: "Custom KPIs / dbt models", price: "$200" },
+  { name: "Setup & Onboarding", price: "$299" },
 ];
 
 const PricingSection = () => {
@@ -102,12 +107,12 @@ const PricingSection = () => {
 
               {/* Header */}
               <div className="text-center mb-6 pt-2">
-                <h3 className="text-xl font-bold text-foreground mb-2">{plan.name}</h3>
+                <h3 className="text-xl font-bold text-foreground mb-1">{plan.name}</h3>
+                <p className="text-xs text-primary font-medium mb-2">{plan.subtitle}</p>
                 <div className="flex items-baseline justify-center gap-1">
                   <span className="text-4xl font-bold text-foreground">{plan.price}</span>
                   <span className="text-muted-foreground">{plan.period}</span>
                 </div>
-                <p className="text-sm text-muted-foreground mt-2">{plan.orders}</p>
               </div>
 
               {/* Description */}
@@ -141,10 +146,10 @@ const PricingSection = () => {
         <div className="glass card-glow rounded-2xl p-8 max-w-4xl mx-auto text-center mb-16">
           <h3 className="text-2xl font-bold text-foreground mb-2">Enterprise</h3>
           <p className="text-muted-foreground mb-4">
-            Unlimited orders, all platforms, custom dashboards, and dedicated support
+            Custom connectors, dedicated infrastructure, and custom SLAs for large-scale operations
           </p>
           <div className="flex items-baseline justify-center gap-2 mb-6">
-            <span className="text-3xl font-bold text-foreground">$3,997+</span>
+            <span className="text-3xl font-bold text-foreground">$1,000+</span>
             <span className="text-muted-foreground">/month</span>
           </div>
           <Button variant="accent" size="lg">
@@ -153,11 +158,11 @@ const PricingSection = () => {
         </div>
 
         {/* Add-ons */}
-        <div className="max-w-3xl mx-auto">
+        <div className="max-w-4xl mx-auto">
           <h4 className="text-lg font-bold text-foreground text-center mb-6">
             Available Add-ons
           </h4>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
             {addOns.map((addon) => (
               <div
                 key={addon.name}
