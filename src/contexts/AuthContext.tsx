@@ -1,3 +1,4 @@
+// Auth context for managing user authentication state
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, getStoredUser, getStoredToken, getCurrentUser, logout as authLogout } from '@/lib/auth';
 
