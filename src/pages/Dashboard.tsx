@@ -463,31 +463,73 @@ const Dashboard = () => {
                       {filteredData.recentDays?.slice().reverse().map((day, i) => {
                         const revenues = filteredData.recentDays.map(d => parseFloat(d.total_revenue_usd));
                         const maxRevenue = Math.max(...revenues, 1);
-                        const height = (parseFloat(day.total_revenue_usd) / maxRevenue) * 100;
+                        const totalHeight = (parseFloat(day.total_revenue_usd) / maxRevenue) * 100;
                         
-                        // Get bar color based on selected store or gradient for all
-                        const getBarColor = () => {
-                          if (selectedStore !== "all") {
-                            return platformColors[selectedStore]?.stroke || "#8b5cf6";
-                          }
-                          // For "all stores", use primary gradient
-                          return "hsl(var(--primary))";
-                        };
+                        // For single store, show solid bar
+                        if (selectedStore !== "all") {
+                          return (
+                            <div 
+                              key={i} 
+                              className="flex-1 rounded-t hover:opacity-90 transition-opacity cursor-pointer group relative"
+                              style={{ 
+                                height: `${Math.max(totalHeight, 5)}%`,
+                                backgroundColor: platformColors[selectedStore]?.stroke || "hsl(var(--primary))",
+                              }}
+                            >
+                              <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-popover text-popover-foreground px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 shadow-lg">
+                                <p className="font-medium">{day.order_date}</p>
+                                <p>{formatCurrency(day.total_revenue_usd)}</p>
+                                <p>{day.total_orders} orders</p>
+                              </div>
+                            </div>
+                          );
+                        }
+                        
+                        // For all stores, show stacked bar with platform colors
+                        const platformRevenues = [
+                          { platform: 'shopify', revenue: parseFloat((day as any).shopify_revenue_usd || '0') },
+                          { platform: 'amazon', revenue: parseFloat((day as any).amazon_revenue_usd || '0') },
+                          { platform: 'shopee', revenue: parseFloat((day as any).shopee_revenue_usd || '0') },
+                          { platform: 'lazada', revenue: parseFloat((day as any).lazada_revenue_usd || '0') },
+                        ].filter(p => p.revenue > 0);
+                        
+                        const dayTotal = platformRevenues.reduce((acc, p) => acc + p.revenue, 0);
                         
                         return (
                           <div 
                             key={i} 
-                            className="flex-1 rounded-t hover:opacity-80 transition-colors cursor-pointer group relative"
-                            style={{ 
-                              height: `${Math.max(height, 5)}%`,
-                              backgroundColor: getBarColor(),
-                              opacity: 0.7
-                            }}
+                            className="flex-1 flex flex-col-reverse rounded-t overflow-hidden cursor-pointer group relative"
+                            style={{ height: `${Math.max(totalHeight, 5)}%` }}
                           >
-                            <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-popover text-popover-foreground px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 shadow-lg">
-                              <p className="font-medium">{day.order_date}</p>
-                              <p>{formatCurrency(day.total_revenue_usd)}</p>
-                              <p>{day.total_orders} orders</p>
+                            {platformRevenues.map((p) => {
+                              const segmentHeight = dayTotal > 0 ? (p.revenue / dayTotal) * 100 : 0;
+                              return (
+                                <div
+                                  key={p.platform}
+                                  className="w-full transition-opacity hover:opacity-90"
+                                  style={{
+                                    height: `${segmentHeight}%`,
+                                    backgroundColor: platformColors[p.platform]?.stroke || "hsl(var(--primary))",
+                                  }}
+                                />
+                              );
+                            })}
+                            <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-popover text-popover-foreground px-3 py-2 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 shadow-lg">
+                              <p className="font-medium mb-1">{day.order_date}</p>
+                              {platformRevenues.map(p => (
+                                <div key={p.platform} className="flex items-center gap-2">
+                                  <div 
+                                    className="w-2 h-2 rounded-full" 
+                                    style={{ backgroundColor: platformColors[p.platform]?.stroke }}
+                                  />
+                                  <span className="capitalize">{p.platform}:</span>
+                                  <span className="font-medium">{formatCurrency(p.revenue)}</span>
+                                </div>
+                              ))}
+                              <div className="border-t border-border mt-1 pt-1">
+                                <p className="font-medium">Total: {formatCurrency(day.total_revenue_usd)}</p>
+                                <p className="text-muted-foreground">{day.total_orders} orders</p>
+                              </div>
                             </div>
                           </div>
                         );
