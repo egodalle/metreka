@@ -153,9 +153,13 @@ const Dashboard = () => {
 
   const isConnected = healthData?.status === "healthy";
 
+  // Analytics tabs that don't need the overview KPIs
+  const analyticsTabs = ["products", "locations", "customers", "profitability"];
+  
   // Get filtered data based on active tab
   const getFilteredData = () => {
-    if (!dashboardData || activeTab === "overview") {
+    // For analytics tabs or overview, return the full dashboard data
+    if (!dashboardData || activeTab === "overview" || analyticsTabs.includes(activeTab)) {
       return {
         totalRevenue: dashboardData?.total_revenue_usd || "0",
         totalOrders: dashboardData?.total_orders || 0,
@@ -167,7 +171,7 @@ const Dashboard = () => {
       };
     }
 
-    // Find the selected platform
+    // Find the selected platform (for store-specific tabs like shopify, amazon, etc.)
     const platform = dashboardData.platforms?.find(p => p.platform === activeTab);
     if (!platform) {
       return {
@@ -366,7 +370,8 @@ const Dashboard = () => {
             />
           </TabsContent>
 
-          <TabsContent value={activeTab} className="space-y-6">
+          {/* Overview Tab */}
+          <TabsContent value="overview" className="space-y-6">
             {/* KPI Grid */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
               {isLoading ? (
@@ -376,14 +381,14 @@ const Dashboard = () => {
               ) : (
                 <>
                   <KPICard 
-                    title={activeTab === "overview" ? "Total Revenue" : `${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Revenue`}
+                    title="Total Revenue"
                     value={filteredData.totalRevenue}
                     change={filteredData.revenueGrowth}
                     icon={DollarSign}
                     isCurrency
                   />
                   <KPICard 
-                    title={activeTab === "overview" ? "Total Orders" : `${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Orders`}
+                    title="Total Orders"
                     value={filteredData.totalOrders}
                     change={filteredData.ordersGrowth}
                     icon={ShoppingCart}
@@ -394,33 +399,16 @@ const Dashboard = () => {
                     icon={TrendingUp}
                     isCurrency
                   />
-                  {activeTab === "overview" ? (
-                    <>
-                      <KPICard 
-                        title="Platforms"
-                        value={dashboardData?.platforms?.length || 0}
-                        icon={Package}
-                      />
-                      <KPICard 
-                        title="Today's Orders"
-                        value={dashboardData?.recent_days?.[0]?.total_orders || 0}
-                        icon={Activity}
-                      />
-                    </>
-                  ) : (
-                    <>
-                      <KPICard 
-                        title="This Month Orders"
-                        value={filteredData.platforms[0]?.orders_this_month || 0}
-                        icon={Package}
-                      />
-                      <KPICard 
-                        title="Today's Orders"
-                        value={filteredData.platforms[0]?.orders_today || 0}
-                        icon={Activity}
-                      />
-                    </>
-                  )}
+                  <KPICard 
+                    title="Platforms"
+                    value={dashboardData?.platforms?.length || 0}
+                    icon={Package}
+                  />
+                  <KPICard 
+                    title="Today's Orders"
+                    value={dashboardData?.recent_days?.[0]?.total_orders || 0}
+                    icon={Activity}
+                  />
                 </>
               )}
             </div>
@@ -430,9 +418,7 @@ const Dashboard = () => {
               {/* Revenue Chart */}
               <Card className="border-border/50 bg-card/80">
                 <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle className="text-lg">
-                    {activeTab === "overview" ? "Revenue Trend (Last 7 Days)" : `${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Revenue (Last 7 Days)`}
-                  </CardTitle>
+                  <CardTitle className="text-lg">Revenue Trend (Last 7 Days)</CardTitle>
                 </CardHeader>
                 <CardContent>
                   {isLoading ? (
@@ -462,19 +448,17 @@ const Dashboard = () => {
                 </CardContent>
               </Card>
 
-              {/* Store Breakdown or Platform Details */}
+              {/* Revenue by Platform */}
               <Card className="border-border/50 bg-card/80">
                 <CardHeader>
-                  <CardTitle className="text-lg">
-                    {activeTab === "overview" ? "Revenue by Platform" : `${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Metrics`}
-                  </CardTitle>
+                  <CardTitle className="text-lg">Revenue by Platform</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-6">
                   {isLoading ? (
                     <div className="flex items-center justify-center">
                       <Skeleton className="w-40 h-40 rounded-full" />
                     </div>
-                  ) : activeTab === "overview" ? (
+                  ) : (
                     <>
                       <div className="flex items-center justify-center">
                         <div className="relative w-40 h-40">
@@ -525,47 +509,6 @@ const Dashboard = () => {
                         })}
                       </div>
                     </>
-                  ) : (
-                    // Platform-specific metrics
-                    <div className="space-y-4">
-                      {filteredData.platforms[0] && (
-                        <>
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="p-4 rounded-lg bg-muted/30">
-                              <p className="text-sm text-muted-foreground">Payment Rate</p>
-                              <p className="text-2xl font-bold">{parseFloat(filteredData.platforms[0].payment_rate || "0").toFixed(1)}%</p>
-                            </div>
-                            <div className="p-4 rounded-lg bg-muted/30">
-                              <p className="text-sm text-muted-foreground">Fulfillment Rate</p>
-                              <p className="text-2xl font-bold">{parseFloat(filteredData.platforms[0].fulfillment_rate || "0").toFixed(1)}%</p>
-                            </div>
-                            <div className="p-4 rounded-lg bg-muted/30">
-                              <p className="text-sm text-muted-foreground">Cancellation Rate</p>
-                              <p className="text-2xl font-bold">{parseFloat(filteredData.platforms[0].cancellation_rate || "0").toFixed(1)}%</p>
-                            </div>
-                            <div className="p-4 rounded-lg bg-muted/30">
-                              <p className="text-sm text-muted-foreground">Avg Items/Order</p>
-                              <p className="text-2xl font-bold">{parseFloat(filteredData.platforms[0].avg_items_per_order || "0").toFixed(1)}</p>
-                            </div>
-                          </div>
-                          <div className="p-4 rounded-lg bg-muted/30">
-                            <p className="text-sm text-muted-foreground mb-2">Month over Month</p>
-                            <div className="flex justify-between">
-                              <div>
-                                <p className="text-xs text-muted-foreground">This Month</p>
-                                <p className="font-semibold">{formatCurrency(filteredData.platforms[0].revenue_this_month_usd)}</p>
-                                <p className="text-sm">{filteredData.platforms[0].orders_this_month} orders</p>
-                              </div>
-                              <div className="text-right">
-                                <p className="text-xs text-muted-foreground">Last Month</p>
-                                <p className="font-semibold">{formatCurrency(filteredData.platforms[0].revenue_last_month_usd)}</p>
-                                <p className="text-sm">{filteredData.platforms[0].orders_last_month} orders</p>
-                              </div>
-                            </div>
-                          </div>
-                        </>
-                      )}
-                    </div>
                   )}
                 </CardContent>
               </Card>
@@ -573,34 +516,30 @@ const Dashboard = () => {
 
             {/* Platform Details / Daily Summary */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {activeTab === "overview" && (
-                <Card className="border-border/50 bg-card/80">
-                  <CardHeader className="flex flex-row items-center justify-between">
-                    <CardTitle className="text-lg">Platform Performance</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {isLoading ? (
-                      <div className="space-y-3">
-                        {Array.from({ length: 4 }).map((_, i) => (
-                          <Skeleton key={i} className="h-16 w-full" />
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="space-y-3">
-                        {dashboardData?.platforms?.map((platform) => (
-                          <PlatformRow key={platform.platform} platform={platform} />
-                        ))}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
-
-              <Card className={`border-border/50 bg-card/80 ${activeTab !== "overview" ? "lg:col-span-2" : ""}`}>
+              <Card className="border-border/50 bg-card/80">
                 <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle className="text-lg">
-                    {activeTab === "overview" ? "Daily Summary" : `${activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} Daily Summary`}
-                  </CardTitle>
+                  <CardTitle className="text-lg">Platform Performance</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {isLoading ? (
+                    <div className="space-y-3">
+                      {Array.from({ length: 4 }).map((_, i) => (
+                        <Skeleton key={i} className="h-16 w-full" />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {dashboardData?.platforms?.map((platform) => (
+                        <PlatformRow key={platform.platform} platform={platform} />
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              <Card className="border-border/50 bg-card/80">
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle className="text-lg">Daily Summary</CardTitle>
                 </CardHeader>
                 <CardContent>
                   {isLoading ? (
@@ -610,8 +549,8 @@ const Dashboard = () => {
                       ))}
                     </div>
                   ) : (
-                    <div className={`space-y-3 ${activeTab !== "overview" ? "grid grid-cols-1 md:grid-cols-2 gap-3" : ""}`}>
-                      {filteredData.recentDays?.slice(0, activeTab === "overview" ? 5 : 7).map((day) => (
+                    <div className="space-y-3">
+                      {filteredData.recentDays?.slice(0, 5).map((day) => (
                         <div key={day.order_date} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
                           <div>
                             <p className="font-medium">{day.order_date}</p>
@@ -628,6 +567,171 @@ const Dashboard = () => {
               </Card>
             </div>
           </TabsContent>
+
+          {/* Store-specific tabs (Shopify, Amazon, Shopee, Lazada) */}
+          {stores.map(store => (
+            <TabsContent key={store.id} value={store.id} className="space-y-6">
+              {/* KPI Grid for store */}
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                {isLoading ? (
+                  Array.from({ length: 5 }).map((_, i) => (
+                    <KPICard key={i} title="" value="" icon={Activity} isLoading />
+                  ))
+                ) : (
+                  <>
+                    <KPICard 
+                      title={`${store.name} Revenue`}
+                      value={dashboardData?.platforms?.find(p => p.platform === store.id)?.total_revenue_usd || "0"}
+                      change={dashboardData?.platforms?.find(p => p.platform === store.id)?.revenue_mom_growth_pct}
+                      icon={DollarSign}
+                      isCurrency
+                    />
+                    <KPICard 
+                      title={`${store.name} Orders`}
+                      value={dashboardData?.platforms?.find(p => p.platform === store.id)?.total_orders || 0}
+                      change={parseFloat(dashboardData?.platforms?.find(p => p.platform === store.id)?.orders_mom_growth_pct || "0")}
+                      icon={ShoppingCart}
+                    />
+                    <KPICard 
+                      title="Avg Order Value"
+                      value={dashboardData?.platforms?.find(p => p.platform === store.id)?.avg_order_value_usd || "0"}
+                      icon={TrendingUp}
+                      isCurrency
+                    />
+                    <KPICard 
+                      title="This Month Orders"
+                      value={dashboardData?.platforms?.find(p => p.platform === store.id)?.orders_this_month || 0}
+                      icon={Package}
+                    />
+                    <KPICard 
+                      title="Today's Orders"
+                      value={dashboardData?.platforms?.find(p => p.platform === store.id)?.orders_today || 0}
+                      icon={Activity}
+                    />
+                  </>
+                )}
+              </div>
+
+              {/* Charts Row */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <Card className="border-border/50 bg-card/80">
+                  <CardHeader>
+                    <CardTitle className="text-lg">{store.name} Revenue (Last 7 Days)</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {isLoading ? (
+                      <Skeleton className="h-48 w-full" />
+                    ) : (
+                      <div className="h-48 flex items-end gap-2">
+                        {dashboardData?.recent_days?.slice().reverse().map((day, i) => {
+                          const revenueKey = `${store.id}_revenue_usd` as keyof DailyData;
+                          const revenue = parseFloat(String(day[revenueKey] || "0"));
+                          const revenues = dashboardData.recent_days.map(d => parseFloat(String(d[revenueKey] || "0")));
+                          const maxRevenue = Math.max(...revenues, 1);
+                          const height = (revenue / maxRevenue) * 100;
+                          return (
+                            <div 
+                              key={i} 
+                              className="flex-1 bg-primary/60 rounded-t hover:bg-primary/80 transition-colors cursor-pointer group relative"
+                              style={{ height: `${Math.max(height, 5)}%` }}
+                            >
+                              <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-popover text-popover-foreground px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 shadow-lg">
+                                <p className="font-medium">{day.order_date}</p>
+                                <p>{formatCurrency(revenue)}</p>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card className="border-border/50 bg-card/80">
+                  <CardHeader>
+                    <CardTitle className="text-lg">{store.name} Metrics</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {(() => {
+                      const platform = dashboardData?.platforms?.find(p => p.platform === store.id);
+                      if (!platform) return <p className="text-muted-foreground">No data available</p>;
+                      return (
+                        <div className="space-y-4">
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="p-4 rounded-lg bg-muted/30">
+                              <p className="text-sm text-muted-foreground">Payment Rate</p>
+                              <p className="text-2xl font-bold">{parseFloat(platform.payment_rate || "0").toFixed(1)}%</p>
+                            </div>
+                            <div className="p-4 rounded-lg bg-muted/30">
+                              <p className="text-sm text-muted-foreground">Fulfillment Rate</p>
+                              <p className="text-2xl font-bold">{parseFloat(platform.fulfillment_rate || "0").toFixed(1)}%</p>
+                            </div>
+                            <div className="p-4 rounded-lg bg-muted/30">
+                              <p className="text-sm text-muted-foreground">Cancellation Rate</p>
+                              <p className="text-2xl font-bold">{parseFloat(platform.cancellation_rate || "0").toFixed(1)}%</p>
+                            </div>
+                            <div className="p-4 rounded-lg bg-muted/30">
+                              <p className="text-sm text-muted-foreground">Avg Items/Order</p>
+                              <p className="text-2xl font-bold">{parseFloat(platform.avg_items_per_order || "0").toFixed(1)}</p>
+                            </div>
+                          </div>
+                          <div className="p-4 rounded-lg bg-muted/30">
+                            <p className="text-sm text-muted-foreground mb-2">Month over Month</p>
+                            <div className="flex justify-between">
+                              <div>
+                                <p className="text-xs text-muted-foreground">This Month</p>
+                                <p className="font-semibold">{formatCurrency(platform.revenue_this_month_usd)}</p>
+                                <p className="text-sm">{platform.orders_this_month} orders</p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-xs text-muted-foreground">Last Month</p>
+                                <p className="font-semibold">{formatCurrency(platform.revenue_last_month_usd)}</p>
+                                <p className="text-sm">{platform.orders_last_month} orders</p>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })()}
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Daily Summary */}
+              <Card className="border-border/50 bg-card/80">
+                <CardHeader>
+                  <CardTitle className="text-lg">{store.name} Daily Summary</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {isLoading ? (
+                    <div className="space-y-3">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <Skeleton key={i} className="h-12 w-full" />
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {dashboardData?.recent_days?.slice(0, 7).map((day) => {
+                        const revenueKey = `${store.id}_revenue_usd` as keyof DailyData;
+                        const ordersKey = `${store.id}_orders` as keyof DailyData;
+                        return (
+                          <div key={day.order_date} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                            <div>
+                              <p className="font-medium">{day.order_date}</p>
+                              <p className="text-sm text-muted-foreground">{day[ordersKey] || 0} orders</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-semibold">{formatCurrency(String(day[revenueKey] || "0"))}</p>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          ))}
         </Tabs>
       </main>
     </div>
