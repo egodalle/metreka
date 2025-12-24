@@ -1,4 +1,5 @@
-// Auth context for managing user authentication state - v2
+// Auth context for managing user authentication state
+// Version: 3 - Force rebuild
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, getStoredUser, getStoredToken, getCurrentUser, logout as authLogout } from '@/lib/auth';
 
@@ -13,7 +14,13 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(getStoredUser());
+  const [user, setUser] = useState<User | null>(() => {
+    try {
+      return getStoredUser();
+    } catch {
+      return null;
+    }
+  });
   const [isLoading, setIsLoading] = useState(true);
 
   const refreshUser = async () => {
