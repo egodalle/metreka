@@ -17,6 +17,7 @@ const plans = [
       "Email support",
     ],
     popular: false,
+    trial: "3-day free trial",
   },
   {
     name: "Growth",
@@ -102,6 +103,13 @@ const PricingSection = () => {
               {plan.popular && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-primary to-cyan text-xs font-bold text-primary-foreground">
                   Most Popular
+                </div>
+              )}
+
+              {/* Trial Badge */}
+              {plan.trial && (
+                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-accent to-orange text-xs font-bold text-primary-foreground">
+                  {plan.trial}
                 </div>
               )}
 
