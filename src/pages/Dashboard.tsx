@@ -135,13 +135,11 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [selectedPeriod, setSelectedPeriod] = useState("7d");
   const [activeTab, setActiveTab] = useState("overview");
-
-  const storeFilter = activeTab === "overview" ? undefined : activeTab;
   
   const { data: healthData, isLoading: healthLoading } = useHealthCheck();
-  const { data: dashboardData, isLoading, isError, error, refetch } = useDashboard(selectedPeriod, storeFilter);
+  const { data: dashboardData, isLoading, isError, error, refetch } = useDashboard();
 
-  const isConnected = healthData?.status === "ok";
+  const isConnected = healthData?.status === "healthy";
 
   // Map KPIs to icons
   const kpiIcons: Record<string, React.ElementType> = {
