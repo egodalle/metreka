@@ -5,10 +5,10 @@ const Footer = () => {
 
   const links = {
     product: [
+      { label: "How It Works", href: "#how-it-works" },
+      { label: "Dashboard", href: "#dashboard" },
       { label: "Features", href: "#features" },
       { label: "Pricing", href: "#pricing" },
-      { label: "Roadmap", href: "#timeline" },
-      { label: "Changelog", href: "#" },
     ],
     platforms: [
       { label: "Shopify", href: "#platforms" },
