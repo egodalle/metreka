@@ -87,3 +87,16 @@ export async function getCurrentUser(): Promise<User | null> {
 export function logout(): void {
   clearAuth();
 }
+
+export async function requestPasswordReset(email: string): Promise<void> {
+  const response = await fetch(`${API_BASE_URL}/api/v1/auth/forgot-password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.detail || 'Failed to send reset email');
+  }
+}
