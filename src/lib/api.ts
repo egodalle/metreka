@@ -91,7 +91,120 @@ export interface Product {
   unitsSold: number;
   inventory?: number;
   imageUrl?: string;
+  category?: string;
+  margin?: number;
+  returnRate?: number;
+  conversionRate?: number;
 }
+
+// Product Analytics - Sales, Inventory, Performance
+export interface ProductAnalytics {
+  id: string;
+  name: string;
+  sku: string;
+  category: string;
+  platform: string;
+  unitsSold: number;
+  revenue: number;
+  cost: number;
+  margin: number;
+  marginPercent: number;
+  inventory: number;
+  turnoverRate: number;
+  daysOfStock: number;
+  lowStockAlert: boolean;
+  returnRate: number;
+  returnCount: number;
+  conversionRate: number;
+  views: number;
+  cartAdds: number;
+  avgRating: number;
+  reviewCount: number;
+  trend: 'up' | 'down' | 'stable';
+  trendPercent: number;
+}
+
+// Location/Geography Analytics
+export interface LocationData {
+  country: string;
+  countryCode: string;
+  region?: string;
+  city?: string;
+  orders: number;
+  revenue: number;
+  avgOrderValue: number;
+  customers: number;
+  newCustomers: number;
+  topProducts: string[];
+  shippingZone?: string;
+  avgDeliveryDays?: number;
+  deliverySuccessRate?: number;
+  latitude?: number;
+  longitude?: number;
+}
+
+// Customer Analytics
+export interface CustomerMetrics {
+  totalCustomers: number;
+  newCustomers: number;
+  returningCustomers: number;
+  avgLifetimeValue: number;
+  avgOrdersPerCustomer: number;
+  retentionRate: number;
+  churnRate: number;
+  avgDaysBetweenOrders: number;
+  topAcquisitionChannels: { channel: string; customers: number; revenue: number }[];
+}
+
+export interface CustomerCohort {
+  cohortMonth: string;
+  newCustomers: number;
+  retainedMonth1: number;
+  retainedMonth2: number;
+  retainedMonth3: number;
+  retainedMonth6: number;
+  retainedMonth12: number;
+  totalRevenue: number;
+  avgLTV: number;
+}
+
+export interface CustomerSegment {
+  segment: string;
+  description: string;
+  customerCount: number;
+  totalRevenue: number;
+  avgOrderValue: number;
+  purchaseFrequency: number;
+  color: string;
+}
+
+// Profitability Analytics
+export interface ProfitabilityData {
+  period: string;
+  grossRevenue: number;
+  returns: number;
+  netRevenue: number;
+  cogs: number; // Cost of Goods Sold
+  grossProfit: number;
+  grossMargin: number;
+  operatingExpenses: number;
+  shippingCosts: number;
+  marketingCosts: number;
+  platformFees: number;
+  netProfit: number;
+  netMargin: number;
+}
+
+export interface ProfitabilityBySegment {
+  segment: string; // product category, platform, region
+  segmentType: 'category' | 'platform' | 'region';
+  revenue: number;
+  cost: number;
+  profit: number;
+  margin: number;
+  contribution: number; // % of total profit
+}
+
 
 // API endpoints matching FastAPI structure
 export const api = {
@@ -114,6 +227,36 @@ export const api = {
   // Health check
   healthCheck: () =>
     fetchAPI<{ status: string }>('/health'),
+
+  // Product Analytics
+  getProductAnalytics: (params?: { category?: string; platform?: string; limit?: number }) => {
+    const query = new URLSearchParams();
+    if (params?.category) query.set('category', params.category);
+    if (params?.platform) query.set('platform', params.platform);
+    if (params?.limit) query.set('limit', params.limit.toString());
+    return fetchAPI<ProductAnalytics[]>(`/api/v1/analytics/products?${query.toString()}`);
+  },
+
+  // Location Analytics
+  getLocationData: (granularity: 'country' | 'region' | 'city' = 'country') =>
+    fetchAPI<LocationData[]>(`/api/v1/analytics/locations?granularity=${granularity}`),
+
+  // Customer Analytics
+  getCustomerMetrics: () =>
+    fetchAPI<CustomerMetrics>('/api/v1/analytics/customers'),
+
+  getCustomerCohorts: () =>
+    fetchAPI<CustomerCohort[]>('/api/v1/analytics/customers/cohorts'),
+
+  getCustomerSegments: () =>
+    fetchAPI<CustomerSegment[]>('/api/v1/analytics/customers/segments'),
+
+  // Profitability Analytics
+  getProfitability: (period: 'daily' | 'weekly' | 'monthly' = 'monthly') =>
+    fetchAPI<ProfitabilityData[]>(`/api/v1/analytics/profitability?period=${period}`),
+
+  getProfitabilityBySegment: (segmentType: 'category' | 'platform' | 'region') =>
+    fetchAPI<ProfitabilityBySegment[]>(`/api/v1/analytics/profitability/segments?type=${segmentType}`),
 };
 
 export default api;
