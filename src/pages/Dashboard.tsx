@@ -153,26 +153,35 @@ const Dashboard = () => {
 
   const isConnected = healthData?.status === "healthy";
 
-  // Analytics tabs that don't need the overview KPIs
-  const analyticsTabs = ["products", "locations", "customers", "profitability"];
-  
-  // Get filtered data based on active tab
+  // Get filtered data based on selected store filter
   const getFilteredData = () => {
-    // For analytics tabs or overview, return the full dashboard data
-    if (!dashboardData || activeTab === "overview" || analyticsTabs.includes(activeTab)) {
+    if (!dashboardData) {
       return {
-        totalRevenue: dashboardData?.total_revenue_usd || "0",
-        totalOrders: dashboardData?.total_orders || 0,
-        avgOrderValue: dashboardData?.avg_order_value_usd || "0",
-        revenueGrowth: dashboardData?.revenue_growth_pct,
-        ordersGrowth: dashboardData?.orders_growth_pct,
-        platforms: dashboardData?.platforms || [],
-        recentDays: dashboardData?.recent_days || [],
+        totalRevenue: "0",
+        totalOrders: 0,
+        avgOrderValue: "0",
+        revenueGrowth: undefined,
+        ordersGrowth: undefined,
+        platforms: [],
+        recentDays: [],
       };
     }
 
-    // Find the selected platform (for store-specific tabs like shopify, amazon, etc.)
-    const platform = dashboardData.platforms?.find(p => p.platform === activeTab);
+    // If "all" stores selected, return full dashboard data
+    if (selectedStore === "all") {
+      return {
+        totalRevenue: dashboardData.total_revenue_usd || "0",
+        totalOrders: dashboardData.total_orders || 0,
+        avgOrderValue: dashboardData.avg_order_value_usd || "0",
+        revenueGrowth: dashboardData.revenue_growth_pct,
+        ordersGrowth: dashboardData.orders_growth_pct,
+        platforms: dashboardData.platforms || [],
+        recentDays: dashboardData.recent_days || [],
+      };
+    }
+
+    // Find the selected platform
+    const platform = dashboardData.platforms?.find(p => p.platform === selectedStore);
     if (!platform) {
       return {
         totalRevenue: "0",
@@ -186,8 +195,8 @@ const Dashboard = () => {
     }
 
     // Map recent days to platform-specific data
-    const platformRevenueKey = `${activeTab}_revenue_usd` as keyof DailyData;
-    const platformOrdersKey = `${activeTab}_orders` as keyof DailyData;
+    const platformRevenueKey = `${selectedStore}_revenue_usd` as keyof DailyData;
+    const platformOrdersKey = `${selectedStore}_orders` as keyof DailyData;
 
     const platformDays = dashboardData.recent_days?.map(day => ({
       ...day,
@@ -304,6 +313,35 @@ const Dashboard = () => {
           </div>
         </div>
 
+        {/* Store Filter */}
+        <div className="flex items-center gap-2 mb-6 flex-wrap">
+          <span className="text-sm font-medium text-muted-foreground mr-2">Store:</span>
+          <div className="flex items-center gap-2 flex-wrap">
+            <Button
+              variant={selectedStore === "all" ? "default" : "outline"}
+              size="sm"
+              onClick={() => setSelectedStore("all")}
+              className="gap-2"
+            >
+              All Stores
+            </Button>
+            {stores.map(store => (
+              <Button
+                key={store.id}
+                variant={selectedStore === store.id ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedStore(store.id)}
+                className="gap-2"
+              >
+                <div className={`w-4 h-4 rounded ${store.bgColor} flex items-center justify-center`}>
+                  <span className="text-white text-[10px] font-bold uppercase">{store.id.charAt(0)}</span>
+                </div>
+                {store.name}
+              </Button>
+            ))}
+          </div>
+        </div>
+
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="bg-muted/50 flex-wrap h-auto gap-1 p-1">
@@ -327,11 +365,6 @@ const Dashboard = () => {
               <PieChart className="w-4 h-4" />
               Profitability
             </TabsTrigger>
-            {stores.map(store => (
-              <TabsTrigger key={store.id} value={store.id} className="gap-2 capitalize">
-                {store.name}
-              </TabsTrigger>
-            ))}
           </TabsList>
 
           {/* Product Analytics Tab */}
@@ -568,170 +601,6 @@ const Dashboard = () => {
             </div>
           </TabsContent>
 
-          {/* Store-specific tabs (Shopify, Amazon, Shopee, Lazada) */}
-          {stores.map(store => (
-            <TabsContent key={store.id} value={store.id} className="space-y-6">
-              {/* KPI Grid for store */}
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                {isLoading ? (
-                  Array.from({ length: 5 }).map((_, i) => (
-                    <KPICard key={i} title="" value="" icon={Activity} isLoading />
-                  ))
-                ) : (
-                  <>
-                    <KPICard 
-                      title={`${store.name} Revenue`}
-                      value={dashboardData?.platforms?.find(p => p.platform === store.id)?.total_revenue_usd || "0"}
-                      change={dashboardData?.platforms?.find(p => p.platform === store.id)?.revenue_mom_growth_pct}
-                      icon={DollarSign}
-                      isCurrency
-                    />
-                    <KPICard 
-                      title={`${store.name} Orders`}
-                      value={dashboardData?.platforms?.find(p => p.platform === store.id)?.total_orders || 0}
-                      change={parseFloat(dashboardData?.platforms?.find(p => p.platform === store.id)?.orders_mom_growth_pct || "0")}
-                      icon={ShoppingCart}
-                    />
-                    <KPICard 
-                      title="Avg Order Value"
-                      value={dashboardData?.platforms?.find(p => p.platform === store.id)?.avg_order_value_usd || "0"}
-                      icon={TrendingUp}
-                      isCurrency
-                    />
-                    <KPICard 
-                      title="This Month Orders"
-                      value={dashboardData?.platforms?.find(p => p.platform === store.id)?.orders_this_month || 0}
-                      icon={Package}
-                    />
-                    <KPICard 
-                      title="Today's Orders"
-                      value={dashboardData?.platforms?.find(p => p.platform === store.id)?.orders_today || 0}
-                      icon={Activity}
-                    />
-                  </>
-                )}
-              </div>
-
-              {/* Charts Row */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <Card className="border-border/50 bg-card/80">
-                  <CardHeader>
-                    <CardTitle className="text-lg">{store.name} Revenue (Last 7 Days)</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {isLoading ? (
-                      <Skeleton className="h-48 w-full" />
-                    ) : (
-                      <div className="h-48 flex items-end gap-2">
-                        {dashboardData?.recent_days?.slice().reverse().map((day, i) => {
-                          const revenueKey = `${store.id}_revenue_usd` as keyof DailyData;
-                          const revenue = parseFloat(String(day[revenueKey] || "0"));
-                          const revenues = dashboardData.recent_days.map(d => parseFloat(String(d[revenueKey] || "0")));
-                          const maxRevenue = Math.max(...revenues, 1);
-                          const height = (revenue / maxRevenue) * 100;
-                          return (
-                            <div 
-                              key={i} 
-                              className="flex-1 bg-primary/60 rounded-t hover:bg-primary/80 transition-colors cursor-pointer group relative"
-                              style={{ height: `${Math.max(height, 5)}%` }}
-                            >
-                              <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-popover text-popover-foreground px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 shadow-lg">
-                                <p className="font-medium">{day.order_date}</p>
-                                <p>{formatCurrency(revenue)}</p>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                <Card className="border-border/50 bg-card/80">
-                  <CardHeader>
-                    <CardTitle className="text-lg">{store.name} Metrics</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    {(() => {
-                      const platform = dashboardData?.platforms?.find(p => p.platform === store.id);
-                      if (!platform) return <p className="text-muted-foreground">No data available</p>;
-                      return (
-                        <div className="space-y-4">
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="p-4 rounded-lg bg-muted/30">
-                              <p className="text-sm text-muted-foreground">Payment Rate</p>
-                              <p className="text-2xl font-bold">{parseFloat(platform.payment_rate || "0").toFixed(1)}%</p>
-                            </div>
-                            <div className="p-4 rounded-lg bg-muted/30">
-                              <p className="text-sm text-muted-foreground">Fulfillment Rate</p>
-                              <p className="text-2xl font-bold">{parseFloat(platform.fulfillment_rate || "0").toFixed(1)}%</p>
-                            </div>
-                            <div className="p-4 rounded-lg bg-muted/30">
-                              <p className="text-sm text-muted-foreground">Cancellation Rate</p>
-                              <p className="text-2xl font-bold">{parseFloat(platform.cancellation_rate || "0").toFixed(1)}%</p>
-                            </div>
-                            <div className="p-4 rounded-lg bg-muted/30">
-                              <p className="text-sm text-muted-foreground">Avg Items/Order</p>
-                              <p className="text-2xl font-bold">{parseFloat(platform.avg_items_per_order || "0").toFixed(1)}</p>
-                            </div>
-                          </div>
-                          <div className="p-4 rounded-lg bg-muted/30">
-                            <p className="text-sm text-muted-foreground mb-2">Month over Month</p>
-                            <div className="flex justify-between">
-                              <div>
-                                <p className="text-xs text-muted-foreground">This Month</p>
-                                <p className="font-semibold">{formatCurrency(platform.revenue_this_month_usd)}</p>
-                                <p className="text-sm">{platform.orders_this_month} orders</p>
-                              </div>
-                              <div className="text-right">
-                                <p className="text-xs text-muted-foreground">Last Month</p>
-                                <p className="font-semibold">{formatCurrency(platform.revenue_last_month_usd)}</p>
-                                <p className="text-sm">{platform.orders_last_month} orders</p>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })()}
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Daily Summary */}
-              <Card className="border-border/50 bg-card/80">
-                <CardHeader>
-                  <CardTitle className="text-lg">{store.name} Daily Summary</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  {isLoading ? (
-                    <div className="space-y-3">
-                      {Array.from({ length: 5 }).map((_, i) => (
-                        <Skeleton key={i} className="h-12 w-full" />
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      {dashboardData?.recent_days?.slice(0, 7).map((day) => {
-                        const revenueKey = `${store.id}_revenue_usd` as keyof DailyData;
-                        const ordersKey = `${store.id}_orders` as keyof DailyData;
-                        return (
-                          <div key={day.order_date} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
-                            <div>
-                              <p className="font-medium">{day.order_date}</p>
-                              <p className="text-sm text-muted-foreground">{day[ordersKey] || 0} orders</p>
-                            </div>
-                            <div className="text-right">
-                              <p className="font-semibold">{formatCurrency(String(day[revenueKey] || "0"))}</p>
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-          ))}
         </Tabs>
       </main>
     </div>
