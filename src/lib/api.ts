@@ -66,45 +66,27 @@ export interface DashboardData {
   storeBreakdown: { store: string; revenue: number; percentage: number }[];
 }
 
-// API endpoints
+// API endpoints matching FastAPI structure
 export const api = {
-  // Dashboard
-  getDashboard: (period: string = '7d', store?: string) =>
-    fetchAPI<DashboardData>(`/api/dashboard?period=${period}${store ? `&store=${store}` : ''}`),
+  // Dashboard - main KPIs overview
+  getDashboard: () =>
+    fetchAPI<DashboardData>('/api/v1/kpis/dashboard'),
 
-  // KPIs
-  getKPIs: (period: string = '7d', store?: string) =>
-    fetchAPI<KPI[]>(`/api/kpis?period=${period}${store ? `&store=${store}` : ''}`),
+  // Platforms breakdown
+  getPlatforms: () =>
+    fetchAPI<{ store: string; revenue: number; orders: number; percentage: number }[]>('/api/v1/kpis/platforms'),
 
-  // Orders
-  getOrders: (params?: { limit?: number; offset?: number; store?: string; status?: string }) => {
-    const searchParams = new URLSearchParams();
-    if (params?.limit) searchParams.set('limit', String(params.limit));
-    if (params?.offset) searchParams.set('offset', String(params.offset));
-    if (params?.store) searchParams.set('store', params.store);
-    if (params?.status) searchParams.set('status', params.status);
-    return fetchAPI<{ orders: Order[]; total: number }>(`/api/orders?${searchParams}`);
-  },
+  // Daily data for charts
+  getDaily: (days: number = 30) =>
+    fetchAPI<RevenueData[]>(`/api/v1/kpis/daily?days=${days}`),
 
-  getOrder: (id: string) =>
-    fetchAPI<Order>(`/api/orders/${id}`),
-
-  // Products
-  getTopProducts: (params?: { limit?: number; store?: string; period?: string }) => {
-    const searchParams = new URLSearchParams();
-    if (params?.limit) searchParams.set('limit', String(params.limit));
-    if (params?.store) searchParams.set('store', params.store);
-    if (params?.period) searchParams.set('period', params.period);
-    return fetchAPI<Product[]>(`/api/products/top?${searchParams}`);
-  },
-
-  // Revenue
-  getRevenueTimeline: (period: string = '7d', store?: string) =>
-    fetchAPI<RevenueData[]>(`/api/revenue/timeline?period=${period}${store ? `&store=${store}` : ''}`),
+  // Top products
+  getProducts: (limit: number = 10) =>
+    fetchAPI<Product[]>(`/api/v1/kpis/products?limit=${limit}`),
 
   // Health check
   healthCheck: () =>
-    fetchAPI<{ status: string; database: string }>('/health'),
+    fetchAPI<{ status: string }>('/health'),
 };
 
 export default api;
