@@ -96,18 +96,20 @@ const KPICard = ({
   );
 };
 
+// Platform brand colors - shared across components
+const platformColors: Record<string, { bg: string; text: string; stroke: string }> = {
+  shopify: { bg: "bg-[#96bf48]", text: "text-[#96bf48]", stroke: "#96bf48" },
+  amazon: { bg: "bg-[#ff9900]", text: "text-[#ff9900]", stroke: "#ff9900" },
+  shopee: { bg: "bg-[#ee4d2d]", text: "text-[#ee4d2d]", stroke: "#ee4d2d" },
+  lazada: { bg: "bg-[#0f146d]", text: "text-[#0f146d]", stroke: "#0f146d" },
+};
+
 const PlatformRow = ({ platform }: { platform: PlatformData }) => {
-  const platformColors: Record<string, string> = {
-    shopify: "bg-[#96bf48]",
-    amazon: "bg-[#ff9900]",
-    shopee: "bg-[#ee4d2d]",
-    lazada: "bg-[#0f146d]",
-  };
 
   return (
     <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
       <div className="flex items-center gap-4">
-        <div className={`w-8 h-8 rounded-lg ${platformColors[platform.platform] || "bg-gray-500"} flex items-center justify-center`}>
+        <div className={`w-8 h-8 rounded-lg ${platformColors[platform.platform]?.bg || "bg-gray-500"} flex items-center justify-center`}>
           <span className="text-white text-xs font-bold uppercase">
             {platform.platform.charAt(0)}
           </span>
@@ -462,11 +464,25 @@ const Dashboard = () => {
                         const revenues = filteredData.recentDays.map(d => parseFloat(d.total_revenue_usd));
                         const maxRevenue = Math.max(...revenues, 1);
                         const height = (parseFloat(day.total_revenue_usd) / maxRevenue) * 100;
+                        
+                        // Get bar color based on selected store or gradient for all
+                        const getBarColor = () => {
+                          if (selectedStore !== "all") {
+                            return platformColors[selectedStore]?.stroke || "#8b5cf6";
+                          }
+                          // For "all stores", use primary gradient
+                          return "hsl(var(--primary))";
+                        };
+                        
                         return (
                           <div 
                             key={i} 
-                            className="flex-1 bg-primary/60 rounded-t hover:bg-primary/80 transition-colors cursor-pointer group relative"
-                            style={{ height: `${Math.max(height, 5)}%` }}
+                            className="flex-1 rounded-t hover:opacity-80 transition-colors cursor-pointer group relative"
+                            style={{ 
+                              height: `${Math.max(height, 5)}%`,
+                              backgroundColor: getBarColor(),
+                              opacity: 0.7
+                            }}
                           >
                             <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-popover text-popover-foreground px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 shadow-lg">
                               <p className="font-medium">{day.order_date}</p>
@@ -503,15 +519,14 @@ const Dashboard = () => {
                               const offset = filteredData.platforms
                                 .slice(0, i)
                                 .reduce((acc, p) => acc + ((parseFloat(p.total_revenue_usd) / totalRevenue) * 100 * 2.51), 0);
-                              const colors = ["text-green-500", "text-orange-500", "text-red-500", "text-blue-500"];
+                              const strokeColor = platformColors[platform.platform]?.stroke || "#8b5cf6";
                               return (
                                 <circle 
                                   key={platform.platform}
                                   cx="50" cy="50" r="40" 
                                   fill="none" 
-                                  stroke="currentColor" 
+                                  stroke={strokeColor}
                                   strokeWidth="20" 
-                                  className={colors[i % colors.length]}
                                   strokeDasharray={`${percentage * 2.51} 251`}
                                   strokeDashoffset={-offset}
                                 />
@@ -526,14 +541,16 @@ const Dashboard = () => {
                         </div>
                       </div>
                       <div className="space-y-3">
-                        {filteredData.platforms?.map((platform, i) => {
+                        {filteredData.platforms?.map((platform) => {
                           const totalRevenue = filteredData.platforms.reduce((acc, p) => acc + parseFloat(p.total_revenue_usd), 0);
                           const percentage = ((parseFloat(platform.total_revenue_usd) / totalRevenue) * 100).toFixed(1);
-                          const colors = ["bg-green-500", "bg-orange-500", "bg-red-500", "bg-blue-500"];
                           return (
                             <div key={platform.platform} className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
-                                <div className={`w-3 h-3 rounded-full ${colors[i % colors.length]}`} />
+                                <div 
+                                  className="w-3 h-3 rounded-full" 
+                                  style={{ backgroundColor: platformColors[platform.platform]?.stroke || "#8b5cf6" }}
+                                />
                                 <span className="text-sm capitalize">{platform.platform}</span>
                               </div>
                               <span className="font-semibold">{formatCurrency(platform.total_revenue_usd)} ({percentage}%)</span>
