@@ -1,6 +1,5 @@
 // Auth context for managing user authentication state
-// Version: 3 - Force rebuild
-import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, ReactNode, useMemo, useCallback } from 'react';
 import { User, getStoredUser, getStoredToken, getCurrentUser, logout as authLogout } from '@/lib/auth';
 
 interface AuthContextType {
@@ -11,7 +10,11 @@ interface AuthContextType {
   refreshUser: () => Promise<void>;
 }
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
+// Create context with a stable reference
+const AuthContext = createContext<AuthContextType | null>(null);
+
+// Prevent HMR issues by using displayName
+AuthContext.displayName = 'AuthContext';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(() => {
@@ -23,7 +26,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
   const [isLoading, setIsLoading] = useState(true);
 
-  const refreshUser = async () => {
+  const refreshUser = useCallback(async () => {
     const token = getStoredToken();
     if (!token) {
       setUser(null);
@@ -39,35 +42,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
     refreshUser();
-  }, []);
+  }, [refreshUser]);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     authLogout();
     setUser(null);
-  };
+  }, []);
+
+  const value = useMemo(() => ({
+    user,
+    isLoading,
+    isAuthenticated: !!user,
+    logout,
+    refreshUser,
+  }), [user, isLoading, logout, refreshUser]);
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        isLoading,
-        isAuthenticated: !!user,
-        logout,
-        refreshUser,
-      }}
-    >
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
 }
 
-export function useAuth() {
+export function useAuth(): AuthContextType {
   const context = useContext(AuthContext);
-  if (context === undefined) {
+  if (context === null) {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
