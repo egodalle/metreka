@@ -4,7 +4,6 @@ import {
   Package, 
   Truck, 
   TrendingUp,
-  PieChart,
   Target,
   Zap
 } from "lucide-react";
@@ -16,12 +15,12 @@ const dashboards = [
     icon: BarChart3,
     color: "from-primary to-cyan",
     kpis: [
-      "Total Revenue & Trend",
+      "Total Revenue & Growth",
       "Orders Today (Real-time)",
       "Avg Order Value",
-      "Revenue by Channel",
-      "Top Products",
-      "Geographic Distribution",
+      "Revenue by Platform",
+      "Daily Revenue Trends",
+      "Month-over-Month Growth",
     ],
   },
   {
@@ -30,40 +29,40 @@ const dashboards = [
     icon: TrendingUp,
     color: "from-green to-primary",
     kpis: [
-      "Gross vs Net Revenue",
-      "Refund & Discount Rates",
-      "Sales by Hour/Day",
-      "Category Performance",
-      "Sales Velocity",
+      "Revenue by Channel",
+      "Orders by Platform",
+      "Sales by Day",
+      "7-Day Revenue Average",
+      "30-Day Revenue Average",
       "Revenue Growth Rate",
     ],
   },
   {
-    title: "Customer Intelligence",
-    subtitle: "Marketing View",
+    title: "Platform Analytics",
+    subtitle: "Multi-Channel View",
     icon: Users,
     color: "from-purple to-primary",
     kpis: [
-      "Customer Lifetime Value",
-      "New vs Returning",
-      "RFM Segments",
-      "Cohort Retention",
-      "Acquisition Cost",
-      "Purchase Frequency",
+      "Shopify Performance",
+      "Amazon Performance",
+      "Lazada Performance",
+      "Shopee Performance",
+      "Platform Comparison",
+      "Active Days per Platform",
     ],
   },
   {
-    title: "Product Pulse",
+    title: "Order Insights",
     subtitle: "Operations View",
     icon: Package,
     color: "from-accent to-orange",
     kpis: [
-      "Inventory Value",
-      "Stock Turnover",
-      "Low Stock Alerts",
-      "Dead Stock Analysis",
-      "Best/Worst Performers",
-      "Variant Analysis",
+      "Total Orders",
+      "Completed Orders",
+      "Cancelled Orders",
+      "Items per Order",
+      "Unique Customers",
+      "Order Trends",
     ],
   },
   {
@@ -72,12 +71,12 @@ const dashboards = [
     icon: Truck,
     color: "from-primary to-purple",
     kpis: [
-      "Orders Pending",
       "Fulfillment Rate",
-      "Avg Fulfillment Time",
-      "Shipping Costs",
-      "Return & Cancel Rates",
-      "Return Reasons",
+      "Fulfilled Orders Today",
+      "Cancellation Rate",
+      "Payment Rate",
+      "Day-over-Day Changes",
+      "Week-over-Week Changes",
     ],
   },
 ];
@@ -95,20 +94,20 @@ const FeaturesSection = () => {
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass border border-border mb-6">
             <Target className="w-4 h-4 text-primary" />
             <span className="text-sm font-medium text-muted-foreground">
-              50+ KPIs Tracked
+              30+ KPIs Tracked
             </span>
           </div>
           <h2 className="text-3xl md:text-5xl font-bold mb-4">
-            5 Dashboards, <span className="text-gradient-accent">Infinite Insights</span>
+            5 Dashboards, <span className="text-gradient-accent">Real-Time Data</span>
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Purpose-built dashboards for every role in your organization
+            Purpose-built dashboards powered by live multi-platform analytics
           </p>
         </div>
 
         {/* Dashboards Grid */}
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
-          {dashboards.map((dashboard, index) => (
+          {dashboards.map((dashboard) => (
             <div
               key={dashboard.title}
               className="glass card-glow rounded-2xl p-6 group hover:scale-[1.02] transition-all duration-300"
