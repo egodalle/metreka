@@ -26,8 +26,8 @@ const HeroSection = () => {
   const navigate = useNavigate();
   
   const stats = [
-    { icon: TrendingUp, value: 50, suffix: "+", label: "KPIs Tracked" },
-    { icon: ShoppingCart, value: 5, suffix: "", label: "Platforms" },
+    { icon: TrendingUp, value: 30, suffix: "+", label: "KPIs Tracked" },
+    { icon: ShoppingCart, value: 4, suffix: "", label: "Platforms" },
     { icon: Users, value: 10000, suffix: "+", label: "Orders/Month" },
     { icon: DollarSign, value: 497, prefix: "$", suffix: "", label: "Starting At" },
   ];

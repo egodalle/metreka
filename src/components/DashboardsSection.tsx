@@ -1,7 +1,6 @@
 import { 
   LayoutDashboard, 
   TrendingUp, 
-  Users, 
   Package, 
   Truck,
   DollarSign,
@@ -10,15 +9,14 @@ import {
   BarChart3,
   PieChart,
   Activity,
-  Map,
   Clock,
   Percent,
-  Heart,
   Repeat,
-  Boxes,
-  AlertTriangle,
-  Timer,
-  RotateCcw
+  CheckCircle,
+  XCircle,
+  Calendar,
+  CreditCard,
+  ArrowUpDown
 } from "lucide-react";
 
 const dashboards = [
@@ -30,12 +28,12 @@ const dashboards = [
     description: "CEO/Founder view with real-time business health metrics",
     color: "from-primary to-accent",
     kpis: [
-      { name: "Total Revenue", icon: DollarSign, description: "Sum of all sales with trend" },
+      { name: "Total Revenue & Growth", icon: DollarSign, description: "Revenue with trend data" },
       { name: "Orders Today", icon: ShoppingCart, description: "Real-time order count" },
       { name: "Avg Order Value", icon: Target, description: "Revenue / Orders" },
-      { name: "Conversion Rate", icon: Percent, description: "Orders / Sessions" },
-      { name: "Revenue by Channel", icon: PieChart, description: "Platform breakdown" },
-      { name: "Geographic Distribution", icon: Map, description: "Sales by region" },
+      { name: "Revenue by Platform", icon: PieChart, description: "Shopify, Amazon, Lazada, Shopee" },
+      { name: "Daily Revenue Trends", icon: BarChart3, description: "7-day trend analysis" },
+      { name: "MoM Growth", icon: TrendingUp, description: "Month-over-month changes" },
     ],
   },
   {
@@ -46,60 +44,60 @@ const dashboards = [
     description: "Deep dive into sales metrics and revenue optimization",
     color: "from-emerald-500 to-teal-500",
     kpis: [
-      { name: "Gross Revenue", icon: DollarSign, description: "Total sales amount" },
-      { name: "Net Revenue", icon: Activity, description: "After refunds/discounts" },
-      { name: "Refund Rate", icon: RotateCcw, description: "Refunds / Orders" },
-      { name: "Sales by Hour", icon: Clock, description: "Peak selling times" },
-      { name: "Revenue Growth", icon: TrendingUp, description: "MoM, YoY trends" },
-      { name: "Category Performance", icon: BarChart3, description: "Revenue by category" },
+      { name: "Revenue by Channel", icon: DollarSign, description: "Per-platform breakdown" },
+      { name: "Orders by Platform", icon: ShoppingCart, description: "Channel comparison" },
+      { name: "Sales by Day", icon: Calendar, description: "Daily performance" },
+      { name: "7-Day Average", icon: Activity, description: "Rolling weekly average" },
+      { name: "30-Day Average", icon: BarChart3, description: "Rolling monthly average" },
+      { name: "Revenue Growth Rate", icon: TrendingUp, description: "Growth percentage" },
     ],
   },
   {
-    id: "customer",
-    name: "Customer Intelligence",
-    subtitle: "Customer Analytics",
-    icon: Users,
-    description: "Understand your customers and maximize lifetime value",
+    id: "platform",
+    name: "Platform Analytics",
+    subtitle: "Multi-Channel View",
+    icon: Package,
+    description: "Compare performance across all connected platforms",
     color: "from-violet-500 to-purple-500",
     kpis: [
-      { name: "Customer LTV", icon: Heart, description: "Predicted lifetime revenue" },
-      { name: "New vs Returning", icon: Repeat, description: "Customer breakdown" },
-      { name: "Acquisition Cost", icon: DollarSign, description: "Marketing spend / New customers" },
-      { name: "RFM Segments", icon: Target, description: "Recency, Frequency, Monetary" },
-      { name: "Cohort Retention", icon: Users, description: "Retention by signup month" },
-      { name: "Purchase Frequency", icon: ShoppingCart, description: "Orders per customer" },
+      { name: "Shopify Performance", icon: BarChart3, description: "Orders, revenue, AOV" },
+      { name: "Amazon Performance", icon: BarChart3, description: "Orders, revenue, AOV" },
+      { name: "Lazada Performance", icon: BarChart3, description: "Orders, revenue, AOV" },
+      { name: "Shopee Performance", icon: BarChart3, description: "Orders, revenue, AOV" },
+      { name: "Platform Comparison", icon: PieChart, description: "Side-by-side metrics" },
+      { name: "Active Days", icon: Calendar, description: "Days with sales per platform" },
     ],
   },
   {
-    id: "product",
-    name: "Product Pulse",
-    subtitle: "Product & Inventory",
-    icon: Package,
-    description: "Optimize inventory and identify winning products",
+    id: "orders",
+    name: "Order Insights",
+    subtitle: "Operations View",
+    icon: ShoppingCart,
+    description: "Track order volume, completion rates, and trends",
     color: "from-amber-500 to-orange-500",
     kpis: [
-      { name: "Inventory Value", icon: Boxes, description: "Stock × Cost" },
-      { name: "Stock Turnover", icon: Repeat, description: "COGS / Avg Inventory" },
-      { name: "Low Stock Alerts", icon: AlertTriangle, description: "Products below threshold" },
-      { name: "Best Sellers", icon: TrendingUp, description: "Top 10 by revenue" },
-      { name: "Dead Stock", icon: Package, description: "Products with no sales" },
-      { name: "Variant Analysis", icon: BarChart3, description: "Size/Color performance" },
+      { name: "Total Orders", icon: ShoppingCart, description: "All-time order count" },
+      { name: "Completed Orders", icon: CheckCircle, description: "Successfully fulfilled" },
+      { name: "Cancelled Orders", icon: XCircle, description: "Order cancellations" },
+      { name: "Items per Order", icon: Package, description: "Average items sold" },
+      { name: "Unique Customers", icon: Target, description: "Daily unique buyers" },
+      { name: "Order Trends", icon: TrendingUp, description: "7-day order patterns" },
     ],
   },
   {
-    id: "operations",
+    id: "fulfillment",
     name: "Fulfillment Tracker",
-    subtitle: "Operational Dashboard",
+    subtitle: "Ops Manager View",
     icon: Truck,
-    description: "Monitor fulfillment efficiency and delivery performance",
+    description: "Monitor fulfillment efficiency and operational metrics",
     color: "from-rose-500 to-pink-500",
     kpis: [
-      { name: "Orders Pending", icon: Clock, description: "Unfulfilled orders" },
-      { name: "Fulfillment Rate", icon: Percent, description: "Fulfilled / Total" },
-      { name: "Avg Fulfillment Time", icon: Timer, description: "Order to ship" },
-      { name: "Shipping Costs", icon: DollarSign, description: "Total and per order" },
-      { name: "Return Rate", icon: RotateCcw, description: "Returns / Orders" },
-      { name: "Perfect Order Rate", icon: Target, description: "Orders without issues" },
+      { name: "Fulfillment Rate", icon: Percent, description: "Fulfilled / Total orders" },
+      { name: "Fulfilled Today", icon: CheckCircle, description: "Today's completions" },
+      { name: "Cancellation Rate", icon: XCircle, description: "Cancel percentage" },
+      { name: "Payment Rate", icon: CreditCard, description: "Payment success rate" },
+      { name: "Day-over-Day", icon: ArrowUpDown, description: "Daily changes" },
+      { name: "Week-over-Week", icon: Repeat, description: "Weekly changes" },
     ],
   },
 ];
@@ -121,10 +119,10 @@ const DashboardsSection = () => {
             </span>
           </div>
           <h2 className="text-3xl md:text-5xl font-bold mb-4">
-            50+ <span className="text-gradient-primary">KPIs</span> That Matter
+            30+ <span className="text-gradient-primary">KPIs</span> That Matter
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Enterprise-grade analytics dashboards designed for e-commerce decision makers
+            Enterprise-grade analytics dashboards powered by real-time multi-platform data
           </p>
         </div>
 
@@ -182,7 +180,7 @@ const DashboardsSection = () => {
         <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
             { value: "5", label: "Dashboards" },
-            { value: "50+", label: "KPIs Tracked" },
+            { value: "30+", label: "KPIs Tracked" },
             { value: "<3s", label: "Load Time" },
             { value: "99.5%", label: "Uptime SLA" },
           ].map((stat) => (
