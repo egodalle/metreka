@@ -2,6 +2,8 @@ import Navbar from "@/components/Navbar";
 import HeroSection from "@/components/HeroSection";
 import PlatformsSection from "@/components/PlatformsSection";
 import FeaturesSection from "@/components/FeaturesSection";
+import HowItWorksSection from "@/components/HowItWorksSection";
+import DashboardPreviewSection from "@/components/DashboardPreviewSection";
 import DashboardsSection from "@/components/DashboardsSection";
 import PricingSection from "@/components/PricingSection";
 import CTASection from "@/components/CTASection";
@@ -15,9 +17,9 @@ const Index = () => {
         <title>DataPulse - E-Commerce Analytics Platform | Turn Store Data Into Sales Growth</title>
         <meta 
           name="description" 
-          content="Enterprise-grade e-commerce analytics for small-to-medium businesses. Connect Shopify, WooCommerce, Amazon & more in one unified dashboard. Starting at $497/month." 
+          content="Enterprise-grade e-commerce analytics for small-to-medium businesses. Connect Shopify, TikTok Shop, Amazon & more in one unified dashboard. Starting at $59/month." 
         />
-        <meta name="keywords" content="e-commerce analytics, Shopify analytics, WooCommerce analytics, Amazon seller analytics, business intelligence, data warehouse" />
+        <meta name="keywords" content="e-commerce analytics, Shopify analytics, TikTok Shop analytics, Amazon seller analytics, business intelligence, data warehouse" />
         <link rel="canonical" href="https://datapulse.io" />
       </Helmet>
       
@@ -26,6 +28,8 @@ const Index = () => {
         <main>
           <HeroSection />
           <PlatformsSection />
+          <HowItWorksSection />
+          <DashboardPreviewSection />
           <FeaturesSection />
           <DashboardsSection />
           <PricingSection />
