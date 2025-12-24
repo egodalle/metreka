@@ -4,9 +4,15 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ShopifyLogo, TikTokLogo, AmazonLogo, LazadaLogo, ShopeeLogo, StoreLogo } from "@/components/StoreLogos";
-import { ArrowLeft, ArrowRight, Check, Eye, EyeOff, Key, Link2, TrendingUp, DollarSign, Users, ShoppingBasket, LayoutDashboard } from "lucide-react";
+import { 
+  ArrowLeft, ArrowRight, Check, Eye, EyeOff, Key, Link2, 
+  TrendingUp, DollarSign, Users, ShoppingCart, Package, Activity, 
+  Bell, Settings, Search, Plus, ArrowUpRight, ArrowDownRight, 
+  BarChart3, Globe, PieChart, RefreshCw
+} from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 type DemoStep = "login" | "stores" | "connect" | "dashboard";
@@ -19,6 +25,73 @@ const stores = [
   { id: "shopee", name: "Shopee", logo: ShopeeLogo, bgColor: "bg-[#ee4d2d]", authType: "api" },
 ];
 
+// Mock dashboard data
+const mockDashboardData = {
+  totalRevenue: "$284,532.45",
+  totalOrders: 3847,
+  avgOrderValue: "$73.95",
+  revenueGrowth: 12.5,
+  ordersGrowth: 8.2,
+  platforms: [
+    { name: "Shopify", revenue: "$186,234", orders: 2341, growth: 14.2 },
+    { name: "Amazon", revenue: "$58,298", orders: 892, growth: 8.7 },
+    { name: "Shopee", revenue: "$24,500", orders: 412, growth: 22.3 },
+    { name: "Lazada", revenue: "$15,500", orders: 202, growth: 5.1 },
+  ],
+  recentDays: [
+    { day: "Mon", revenue: 12400, orders: 156 },
+    { day: "Tue", revenue: 15200, orders: 189 },
+    { day: "Wed", revenue: 13800, orders: 172 },
+    { day: "Thu", revenue: 18900, orders: 234 },
+    { day: "Fri", revenue: 22100, orders: 278 },
+    { day: "Sat", revenue: 25600, orders: 312 },
+    { day: "Sun", revenue: 19800, orders: 245 },
+  ],
+  topProducts: [
+    { name: "Premium Wireless Headphones", revenue: "$12,450", units: 156, platform: "shopify" },
+    { name: "Smart Watch Pro", revenue: "$9,820", units: 89, platform: "amazon" },
+    { name: "Bluetooth Speaker", revenue: "$7,340", units: 234, platform: "shopee" },
+    { name: "LED Face Mask", revenue: "$6,780", units: 113, platform: "lazada" },
+    { name: "Portable Blender", revenue: "$5,430", units: 271, platform: "shopify" },
+  ],
+};
+
+const KPICard = ({ 
+  title, 
+  value, 
+  change, 
+  icon: Icon,
+  isCurrency = false
+}: {
+  title: string;
+  value: string | number;
+  change?: number;
+  icon: React.ElementType;
+  isCurrency?: boolean;
+}) => {
+  const isPositive = change !== undefined && change >= 0;
+
+  return (
+    <Card className="border-border/50 bg-card/80 backdrop-blur hover:shadow-lg transition-all duration-300">
+      <CardContent className="p-6">
+        <div className="flex items-center justify-between mb-4">
+          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+            <Icon className="w-5 h-5 text-primary" />
+          </div>
+          {change !== undefined && (
+            <div className={`flex items-center gap-1 text-sm font-medium ${isPositive ? "text-green-500" : "text-red-500"}`}>
+              {isPositive ? <ArrowUpRight className="w-4 h-4" /> : <ArrowDownRight className="w-4 h-4" />}
+              {Math.abs(change).toFixed(1)}%
+            </div>
+          )}
+        </div>
+        <p className="text-2xl font-bold text-foreground">{value}</p>
+        <p className="text-sm text-muted-foreground mt-1">{title}</p>
+      </CardContent>
+    </Card>
+  );
+};
+
 const Demo = () => {
   const navigate = useNavigate();
   const [step, setStep] = useState<DemoStep>("login");
@@ -30,6 +103,11 @@ const Demo = () => {
   const [apiSecret, setApiSecret] = useState("");
   const [isConnecting, setIsConnecting] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
+  
+  // Dashboard state
+  const [selectedPeriod, setSelectedPeriod] = useState("7d");
+  const [activeTab, setActiveTab] = useState("overview");
+  const [storeFilter, setStoreFilter] = useState("all");
 
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,6 +143,334 @@ const Demo = () => {
 
   const selectedStoreData = stores.find(s => s.id === selectedStore);
 
+  // Dashboard view (full page layout like actual dashboard)
+  if (step === "dashboard") {
+    return (
+      <div className="min-h-screen bg-background">
+        {/* Header */}
+        <header className="border-b border-border/50 bg-background/80 backdrop-blur-sm sticky top-0 z-50">
+          <div className="container mx-auto px-4 py-4">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-4">
+                <Button variant="ghost" onClick={() => navigate("/")} className="gap-2">
+                  <ArrowLeft className="w-4 h-4" />
+                  Back
+                </Button>
+                <div className="h-6 w-px bg-border" />
+                <h1 className="text-xl font-bold text-gradient-primary">E-com.io</h1>
+              </div>
+              
+              <div className="flex items-center gap-4">
+                <Badge variant="outline" className="text-green-500 border-green-500/30">
+                  Connected
+                </Badge>
+                <Badge variant="outline" className="text-primary border-primary/30">
+                  Demo Mode
+                </Badge>
+                
+                {/* Connected Stores */}
+                <div className="flex items-center gap-2">
+                  {stores.slice(0, 4).map((store) => (
+                    <div key={store.id} className={`w-8 h-8 rounded-lg ${store.bgColor} flex items-center justify-center p-1.5`}>
+                      <store.logo className="w-5 h-5 text-white" />
+                    </div>
+                  ))}
+                </div>
+                
+                <div className="h-6 w-px bg-border" />
+                
+                <Button variant="ghost" size="icon">
+                  <Search className="w-5 h-5" />
+                </Button>
+                <Button variant="ghost" size="icon">
+                  <Bell className="w-5 h-5" />
+                </Button>
+                <ThemeToggle />
+                <Button variant="ghost" size="icon">
+                  <Settings className="w-5 h-5" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <main className="container mx-auto px-4 py-8">
+          {/* Page Header */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+            <div>
+              <h2 className="text-3xl font-bold">Dashboard</h2>
+              <p className="text-muted-foreground mt-1">Real-time data from your connected stores.</p>
+            </div>
+            
+            <div className="flex items-center gap-3">
+              <Button variant="outline" className="gap-2">
+                <RefreshCw className="w-4 h-4" />
+                Refresh
+              </Button>
+              <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="7d">Last 7 days</SelectItem>
+                  <SelectItem value="30d">Last 30 days</SelectItem>
+                  <SelectItem value="90d">Last 90 days</SelectItem>
+                  <SelectItem value="1y">Last year</SelectItem>
+                </SelectContent>
+              </Select>
+              <Button className="gap-2">
+                <Plus className="w-4 h-4" />
+                Add Store
+              </Button>
+            </div>
+          </div>
+
+          {/* Store Filter */}
+          <div className="flex items-center gap-2 mb-6 flex-wrap">
+            <span className="text-sm font-medium text-muted-foreground mr-2">Store:</span>
+            <div className="flex items-center gap-2 flex-wrap">
+              <Button
+                variant={storeFilter === "all" ? "default" : "outline"}
+                size="sm"
+                onClick={() => setStoreFilter("all")}
+              >
+                All Stores
+              </Button>
+              {stores.slice(0, 4).map(store => (
+                <Button
+                  key={store.id}
+                  variant={storeFilter === store.id ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setStoreFilter(store.id)}
+                  className="gap-2"
+                >
+                  <div className={`w-4 h-4 rounded ${store.bgColor} flex items-center justify-center`}>
+                    <store.logo className="w-3 h-3 text-white" />
+                  </div>
+                  {store.name}
+                </Button>
+              ))}
+            </div>
+          </div>
+
+          {/* Tabs */}
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+            <TabsList className="bg-muted/50 flex-wrap h-auto gap-1 p-1">
+              <TabsTrigger value="overview" className="gap-2">
+                <BarChart3 className="w-4 h-4" />
+                Overview
+              </TabsTrigger>
+              <TabsTrigger value="products" className="gap-2">
+                <Package className="w-4 h-4" />
+                Products
+              </TabsTrigger>
+              <TabsTrigger value="locations" className="gap-2">
+                <Globe className="w-4 h-4" />
+                Locations
+              </TabsTrigger>
+              <TabsTrigger value="customers" className="gap-2">
+                <Users className="w-4 h-4" />
+                Customers
+              </TabsTrigger>
+              <TabsTrigger value="profitability" className="gap-2">
+                <PieChart className="w-4 h-4" />
+                Profitability
+              </TabsTrigger>
+            </TabsList>
+
+            {/* Overview Tab */}
+            <TabsContent value="overview" className="space-y-6">
+              {/* KPI Grid */}
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
+                <KPICard 
+                  title="Total Revenue"
+                  value={mockDashboardData.totalRevenue}
+                  change={mockDashboardData.revenueGrowth}
+                  icon={DollarSign}
+                  isCurrency
+                />
+                <KPICard 
+                  title="Total Orders"
+                  value={mockDashboardData.totalOrders.toLocaleString()}
+                  change={mockDashboardData.ordersGrowth}
+                  icon={ShoppingCart}
+                />
+                <KPICard 
+                  title="Avg Order Value"
+                  value={mockDashboardData.avgOrderValue}
+                  icon={TrendingUp}
+                  isCurrency
+                />
+                <KPICard 
+                  title="Platforms"
+                  value={4}
+                  icon={Package}
+                />
+                <KPICard 
+                  title="Today's Orders"
+                  value={mockDashboardData.recentDays[6].orders}
+                  change={15.3}
+                  icon={Activity}
+                />
+              </div>
+
+              {/* Charts Row */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {/* Revenue Chart */}
+                <Card className="border-border/50 bg-card/80">
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <CardTitle className="text-lg">Revenue Trend (Last 7 Days)</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="h-48 flex items-end gap-2">
+                      {mockDashboardData.recentDays.map((day, i) => (
+                        <div key={i} className="flex-1 flex flex-col items-center gap-2">
+                          <div 
+                            className="w-full bg-primary/60 rounded-t transition-all hover:bg-primary/80"
+                            style={{ height: `${(day.revenue / 26000) * 100}%` }}
+                          />
+                          <span className="text-xs text-muted-foreground">{day.day}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Platform Breakdown */}
+                <Card className="border-border/50 bg-card/80">
+                  <CardHeader>
+                    <CardTitle className="text-lg">Revenue by Platform</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {mockDashboardData.platforms.map((platform, i) => {
+                      const PlatformLogo = stores[i]?.logo;
+                      return (
+                        <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                          <div className="flex items-center gap-3">
+                            <div className={`w-8 h-8 rounded-lg ${stores[i]?.bgColor || "bg-gray-500"} flex items-center justify-center p-1.5`}>
+                              {PlatformLogo && <PlatformLogo className="w-5 h-5 text-white" />}
+                            </div>
+                            <div>
+                            <p className="font-medium">{platform.name}</p>
+                            <p className="text-sm text-muted-foreground">{platform.orders.toLocaleString()} orders</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-semibold">{platform.revenue}</p>
+                          <span className="text-sm text-green-500">+{platform.growth}%</span>
+                        </div>
+                      </div>
+                      );
+                    })}
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Top Products */}
+              <Card className="border-border/50 bg-card/80">
+                <CardHeader className="flex flex-row items-center justify-between">
+                  <CardTitle className="text-lg">Top Products</CardTitle>
+                  <Button variant="ghost" size="sm">View All</Button>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {mockDashboardData.topProducts.map((product, i) => {
+                      const platformStore = stores.find(s => s.id === product.platform);
+                      return (
+                        <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                          <div className="flex items-center gap-4">
+                            <span className="text-lg font-bold text-muted-foreground w-6">#{i + 1}</span>
+                            <div className={`w-8 h-8 rounded-lg ${platformStore?.bgColor || "bg-gray-500"} flex items-center justify-center p-1.5`}>
+                              {platformStore && <platformStore.logo className="w-5 h-5 text-white" />}
+                            </div>
+                            <div>
+                              <p className="font-medium">{product.name}</p>
+                              <p className="text-sm text-muted-foreground">{product.units} units sold</p>
+                            </div>
+                          </div>
+                          <p className="font-semibold text-lg">{product.revenue}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Products Tab */}
+            <TabsContent value="products" className="space-y-6">
+              <Card className="border-border/50 bg-card/80">
+                <CardHeader>
+                  <CardTitle>Product Analytics</CardTitle>
+                  <CardDescription>Detailed product performance across all platforms</CardDescription>
+                </CardHeader>
+                <CardContent className="h-96 flex items-center justify-center text-muted-foreground">
+                  <div className="text-center">
+                    <Package className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>Product analytics with category breakdown, trends, and insights</p>
+                    <p className="text-sm mt-2">Connect your store to see real data</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Locations Tab */}
+            <TabsContent value="locations" className="space-y-6">
+              <Card className="border-border/50 bg-card/80">
+                <CardHeader>
+                  <CardTitle>Location Analytics</CardTitle>
+                  <CardDescription>Geographic distribution of your sales</CardDescription>
+                </CardHeader>
+                <CardContent className="h-96 flex items-center justify-center text-muted-foreground">
+                  <div className="text-center">
+                    <Globe className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>Location heatmaps, regional performance, and shipping analytics</p>
+                    <p className="text-sm mt-2">Connect your store to see real data</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Customers Tab */}
+            <TabsContent value="customers" className="space-y-6">
+              <Card className="border-border/50 bg-card/80">
+                <CardHeader>
+                  <CardTitle>Customer Analytics</CardTitle>
+                  <CardDescription>Customer segments, retention, and lifetime value</CardDescription>
+                </CardHeader>
+                <CardContent className="h-96 flex items-center justify-center text-muted-foreground">
+                  <div className="text-center">
+                    <Users className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>Customer cohorts, CLV analysis, and retention metrics</p>
+                    <p className="text-sm mt-2">Connect your store to see real data</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Profitability Tab */}
+            <TabsContent value="profitability" className="space-y-6">
+              <Card className="border-border/50 bg-card/80">
+                <CardHeader>
+                  <CardTitle>Profitability Analytics</CardTitle>
+                  <CardDescription>Margins, costs, and profit analysis</CardDescription>
+                </CardHeader>
+                <CardContent className="h-96 flex items-center justify-center text-muted-foreground">
+                  <div className="text-center">
+                    <PieChart className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>Profit margins, cost breakdown, and financial insights</p>
+                    <p className="text-sm mt-2">Connect your store to see real data</p>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          </Tabs>
+        </main>
+      </div>
+    );
+  }
+
+  // Onboarding flow (login, stores, connect steps)
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -75,10 +481,6 @@ const Demo = () => {
             Back to Home
           </Button>
           <div className="flex items-center gap-4">
-            <Button variant="outline" onClick={() => navigate("/demo/dashboard")} className="gap-2">
-              <LayoutDashboard className="w-4 h-4" />
-              View Full Dashboard
-            </Button>
             <Badge variant="outline" className="text-primary border-primary/30">
               Demo Mode
             </Badge>
@@ -313,77 +715,6 @@ const Demo = () => {
                 )}
               </CardContent>
             </Card>
-          )}
-
-          {/* Dashboard Step */}
-          {step === "dashboard" && selectedStoreData && (
-            <div className="space-y-6 max-w-4xl mx-auto">
-              <div className="text-center">
-                <h2 className="text-2xl font-bold mb-2">Your Dashboard is Ready!</h2>
-                <p className="text-muted-foreground">Here's a preview of your unified analytics</p>
-              </div>
-
-              {/* Connected Store Badge */}
-              <div className="flex justify-center">
-                <Badge className={`${selectedStoreData.bgColor} text-white px-4 py-2 text-sm flex items-center gap-2`}>
-                  <StoreLogo store={selectedStoreData.id} className="w-4 h-4" />
-                  {selectedStoreData.name} Connected
-                </Badge>
-              </div>
-
-              {/* KPI Cards */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {[
-                  { label: "Total Revenue", value: "$124,532", change: "+12.5%", icon: DollarSign, color: "text-green-500" },
-                  { label: "Orders", value: "1,234", change: "+8.2%", icon: ShoppingBasket, color: "text-blue-500" },
-                  { label: "Customers", value: "856", change: "+15.3%", icon: Users, color: "text-purple-500" },
-                  { label: "Growth", value: "23.4%", change: "+4.1%", icon: TrendingUp, color: "text-orange-500" },
-                ].map((kpi, i) => (
-                  <Card key={i} className="border-border/50 bg-card/50 backdrop-blur">
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between mb-2">
-                        <kpi.icon className={`w-5 h-5 ${kpi.color}`} />
-                        <span className="text-xs text-green-500 font-medium">{kpi.change}</span>
-                      </div>
-                      <p className="text-2xl font-bold">{kpi.value}</p>
-                      <p className="text-xs text-muted-foreground">{kpi.label}</p>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-
-              {/* Mini Chart Placeholder */}
-              <Card className="border-border/50 bg-card/50 backdrop-blur">
-                <CardHeader>
-                  <CardTitle className="text-lg">Revenue Trend</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="h-32 flex items-end gap-2">
-                    {[40, 65, 45, 80, 55, 90, 75, 95, 70, 85, 60, 100].map((h, i) => (
-                      <div 
-                        key={i}
-                        className="flex-1 bg-primary/20 rounded-t transition-all hover:bg-primary/40"
-                        style={{ height: `${h}%` }}
-                      />
-                    ))}
-                  </div>
-                  <div className="flex justify-between mt-2 text-xs text-muted-foreground">
-                    <span>Jan</span>
-                    <span>Dec</span>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Action Buttons */}
-              <div className="flex gap-4 justify-center">
-                <Button variant="outline" onClick={() => { setStep("stores"); setSelectedStore(null); setIsConnected(false); }}>
-                  Add Another Store
-                </Button>
-                <Button onClick={() => navigate("/")}>
-                  Back to Home
-                </Button>
-              </div>
-            </div>
           )}
         </div>
       </div>
