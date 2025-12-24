@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/table";
 import { 
   Package, TrendingUp, TrendingDown, Minus, AlertTriangle, 
-  BarChart3, ArrowUpDown, Star, Eye, ShoppingCart, Store
+  BarChart3, ArrowUpDown, Star, Eye, ShoppingCart, Store, DollarSign
 } from "lucide-react";
 import { ProductAnalytics } from "@/lib/api";
 
@@ -78,6 +78,48 @@ const mockProducts: ProductAnalytics[] = [
     returnRate: 1.5, returnCount: 27, conversionRate: 5.8, views: 31431, cartAdds: 2043,
     avgRating: 4.5, reviewCount: 423, trend: 'up', trendPercent: 15.2
   },
+  {
+    id: "7", name: "Fitness Tracker Band", sku: "FTB-007", category: "Electronics",
+    platform: "amazon", unitsSold: 2345, revenue: 93800, cost: 46900, margin: 46900,
+    marginPercent: 50, inventory: 189, turnoverRate: 12.4, daysOfStock: 8, lowStockAlert: false,
+    returnRate: 2.1, returnCount: 49, conversionRate: 6.2, views: 37823, cartAdds: 2892,
+    avgRating: 4.4, reviewCount: 678, trend: 'up', trendPercent: 18.3
+  },
+  {
+    id: "8", name: "Portable Charger 20000mAh", sku: "PC-008", category: "Electronics",
+    platform: "shopee", unitsSold: 4567, revenue: 91340, cost: 45670, margin: 45670,
+    marginPercent: 50, inventory: 654, turnoverRate: 7.0, daysOfStock: 14, lowStockAlert: false,
+    returnRate: 1.2, returnCount: 55, conversionRate: 7.8, views: 58551, cartAdds: 5012,
+    avgRating: 4.6, reviewCount: 1567, trend: 'up', trendPercent: 22.5
+  },
+  {
+    id: "9", name: "Bamboo Cutting Board Set", sku: "BCB-009", category: "Home",
+    platform: "lazada", unitsSold: 1234, revenue: 37020, cost: 14808, margin: 22212,
+    marginPercent: 60, inventory: 432, turnoverRate: 2.9, daysOfStock: 35, lowStockAlert: false,
+    returnRate: 0.8, returnCount: 10, conversionRate: 5.4, views: 22852, cartAdds: 1542,
+    avgRating: 4.7, reviewCount: 345, trend: 'stable', trendPercent: 2.1
+  },
+  {
+    id: "10", name: "Resistance Bands Set", sku: "RBS-010", category: "Sports",
+    platform: "amazon", unitsSold: 3456, revenue: 69120, cost: 27648, margin: 41472,
+    marginPercent: 60, inventory: 78, turnoverRate: 44.3, daysOfStock: 2, lowStockAlert: true,
+    returnRate: 1.1, returnCount: 38, conversionRate: 8.9, views: 38831, cartAdds: 4123,
+    avgRating: 4.8, reviewCount: 2134, trend: 'up', trendPercent: 31.2
+  },
+  {
+    id: "11", name: "Stainless Steel Water Bottle", sku: "SSWB-011", category: "Sports",
+    platform: "shopee", unitsSold: 2890, revenue: 43350, cost: 17340, margin: 26010,
+    marginPercent: 60, inventory: 567, turnoverRate: 5.1, daysOfStock: 20, lowStockAlert: false,
+    returnRate: 0.6, returnCount: 17, conversionRate: 7.2, views: 40139, cartAdds: 3234,
+    avgRating: 4.5, reviewCount: 892, trend: 'up', trendPercent: 9.8
+  },
+  {
+    id: "12", name: "Aromatherapy Diffuser", sku: "AD-012", category: "Home",
+    platform: "shopify", unitsSold: 1567, revenue: 62680, cost: 25072, margin: 37608,
+    marginPercent: 60, inventory: 234, turnoverRate: 6.7, daysOfStock: 15, lowStockAlert: false,
+    returnRate: 1.9, returnCount: 30, conversionRate: 4.8, views: 32646, cartAdds: 1987,
+    avgRating: 4.3, reviewCount: 456, trend: 'stable', trendPercent: 0.5
+  },
 ];
 
 const TrendIcon = ({ trend }: { trend: 'up' | 'down' | 'stable' }) => {
@@ -130,6 +172,14 @@ export function ProductAnalyticsSection({ data, isLoading, selectedStore = "all"
     );
   }
 
+  // Calculate summary stats
+  const totalRevenue = products.reduce((acc, p) => acc + p.revenue, 0);
+  const totalUnits = products.reduce((acc, p) => acc + p.unitsSold, 0);
+  const trendingUp = products.filter(p => p.trend === 'up').length;
+  const avgMargin = products.length > 0 
+    ? products.reduce((acc, p) => acc + p.marginPercent, 0) / products.length 
+    : 0;
+
   return (
     <div className="space-y-6">
       {/* Summary Cards */}
@@ -152,25 +202,11 @@ export function ProductAnalyticsSection({ data, isLoading, selectedStore = "all"
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-green-500" />
+                <DollarSign className="w-5 h-5 text-green-500" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{topPerformers.length}</p>
-                <p className="text-sm text-muted-foreground">Trending Up</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/50 bg-card/80">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-orange-500/10 flex items-center justify-center">
-                <AlertTriangle className="w-5 h-5 text-orange-500" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{lowStockProducts.length}</p>
-                <p className="text-sm text-muted-foreground">Low Stock Alerts</p>
+                <p className="text-2xl font-bold">{formatCurrency(totalRevenue)}</p>
+                <p className="text-sm text-muted-foreground">Total Revenue</p>
               </div>
             </div>
           </CardContent>
@@ -180,15 +216,69 @@ export function ProductAnalyticsSection({ data, isLoading, selectedStore = "all"
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                <BarChart3 className="w-5 h-5 text-blue-500" />
+                <ShoppingCart className="w-5 h-5 text-blue-500" />
               </div>
               <div>
-                <p className="text-2xl font-bold">
-                  {(products.reduce((acc, p) => acc + p.marginPercent, 0) / products.length).toFixed(1)}%
-                </p>
+                <p className="text-2xl font-bold">{formatNumber(totalUnits)}</p>
+                <p className="text-sm text-muted-foreground">Units Sold</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/50 bg-card/80">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                <BarChart3 className="w-5 h-5 text-purple-500" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{avgMargin.toFixed(1)}%</p>
                 <p className="text-sm text-muted-foreground">Avg Margin</p>
               </div>
             </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Additional Stats Row */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <Card className="border-border/50 bg-card/80">
+          <CardContent className="p-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="w-4 h-4 text-green-500" />
+              <span className="text-sm text-muted-foreground">Trending Up</span>
+            </div>
+            <span className="font-bold">{trendingUp}</span>
+          </CardContent>
+        </Card>
+        <Card className="border-border/50 bg-card/80">
+          <CardContent className="p-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-orange-500" />
+              <span className="text-sm text-muted-foreground">Low Stock</span>
+            </div>
+            <span className="font-bold">{lowStockProducts.length}</span>
+          </CardContent>
+        </Card>
+        <Card className="border-border/50 bg-card/80">
+          <CardContent className="p-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Eye className="w-4 h-4 text-blue-500" />
+              <span className="text-sm text-muted-foreground">Total Views</span>
+            </div>
+            <span className="font-bold">{formatNumber(products.reduce((acc, p) => acc + p.views, 0))}</span>
+          </CardContent>
+        </Card>
+        <Card className="border-border/50 bg-card/80">
+          <CardContent className="p-3 flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Star className="w-4 h-4 text-yellow-500" />
+              <span className="text-sm text-muted-foreground">Avg Rating</span>
+            </div>
+            <span className="font-bold">
+              {products.length > 0 ? (products.reduce((acc, p) => acc + p.avgRating, 0) / products.length).toFixed(1) : '0'}
+            </span>
           </CardContent>
         </Card>
       </div>
