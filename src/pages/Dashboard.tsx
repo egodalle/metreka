@@ -146,6 +146,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [selectedPeriod, setSelectedPeriod] = useState("7d");
   const [activeTab, setActiveTab] = useState("overview");
+  const [selectedStore, setSelectedStore] = useState("all");
   
   const { data: healthData, isLoading: healthLoading } = useHealthCheck();
   const { data: dashboardData, isLoading, isError, error, refetch } = useDashboard();
@@ -331,22 +332,38 @@ const Dashboard = () => {
 
           {/* Product Analytics Tab */}
           <TabsContent value="products" className="space-y-6">
-            <ProductAnalyticsSection isLoading={isLoading} />
+            <ProductAnalyticsSection 
+              isLoading={isLoading} 
+              selectedStore={selectedStore}
+              onStoreChange={setSelectedStore}
+            />
           </TabsContent>
 
           {/* Location Analytics Tab */}
           <TabsContent value="locations" className="space-y-6">
-            <LocationAnalyticsSection isLoading={isLoading} />
+            <LocationAnalyticsSection 
+              isLoading={isLoading}
+              selectedStore={selectedStore}
+              onStoreChange={setSelectedStore}
+            />
           </TabsContent>
 
           {/* Customer Analytics Tab */}
           <TabsContent value="customers" className="space-y-6">
-            <CustomerAnalyticsSection isLoading={isLoading} />
+            <CustomerAnalyticsSection 
+              isLoading={isLoading}
+              selectedStore={selectedStore}
+              onStoreChange={setSelectedStore}
+            />
           </TabsContent>
 
           {/* Profitability Tab */}
           <TabsContent value="profitability" className="space-y-6">
-            <ProfitabilitySection isLoading={isLoading} />
+            <ProfitabilitySection 
+              isLoading={isLoading}
+              selectedStore={selectedStore}
+              onStoreChange={setSelectedStore}
+            />
           </TabsContent>
 
           <TabsContent value={activeTab} className="space-y-6">

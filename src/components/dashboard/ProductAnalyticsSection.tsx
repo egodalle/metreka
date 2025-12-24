@@ -15,13 +15,15 @@ import {
 } from "@/components/ui/table";
 import { 
   Package, TrendingUp, TrendingDown, Minus, AlertTriangle, 
-  BarChart3, ArrowUpDown, Star, Eye, ShoppingCart
+  BarChart3, ArrowUpDown, Star, Eye, ShoppingCart, Store
 } from "lucide-react";
 import { ProductAnalytics } from "@/lib/api";
 
 interface ProductAnalyticsSectionProps {
   data?: ProductAnalytics[];
   isLoading?: boolean;
+  selectedStore?: string;
+  onStoreChange?: (store: string) => void;
 }
 
 const formatCurrency = (value: number) => 
@@ -84,14 +86,20 @@ const TrendIcon = ({ trend }: { trend: 'up' | 'down' | 'stable' }) => {
   return <Minus className="w-4 h-4 text-muted-foreground" />;
 };
 
-export function ProductAnalyticsSection({ data, isLoading }: ProductAnalyticsSectionProps) {
+export function ProductAnalyticsSection({ data, isLoading, selectedStore = "all", onStoreChange }: ProductAnalyticsSectionProps) {
   const [activeTab, setActiveTab] = useState("performance");
   const [sortBy, setSortBy] = useState("revenue");
   const [filterCategory, setFilterCategory] = useState("all");
 
-  const products = data && data.length > 0 ? data : mockProducts;
+  const allProducts = data && data.length > 0 ? data : mockProducts;
+  
+  // Filter by store first
+  const products = selectedStore === "all" 
+    ? allProducts 
+    : allProducts.filter(p => p.platform.toLowerCase() === selectedStore.toLowerCase());
 
-  const categories = [...new Set(products.map(p => p.category))];
+  const categories = [...new Set(allProducts.map(p => p.category))];
+  const platforms = [...new Set(allProducts.map(p => p.platform))];
 
   const filteredProducts = products
     .filter(p => filterCategory === "all" || p.category === filterCategory)
@@ -195,6 +203,19 @@ export function ProductAnalyticsSection({ data, isLoading }: ProductAnalyticsSec
           </TabsList>
 
           <div className="flex items-center gap-3">
+            <Select value={selectedStore} onValueChange={onStoreChange}>
+              <SelectTrigger className="w-40">
+                <Store className="w-4 h-4 mr-2" />
+                <SelectValue placeholder="All Stores" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Stores</SelectItem>
+                {platforms.map(platform => (
+                  <SelectItem key={platform} value={platform.toLowerCase()} className="capitalize">{platform}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
             <Select value={filterCategory} onValueChange={setFilterCategory}>
               <SelectTrigger className="w-40">
                 <SelectValue placeholder="Category" />
