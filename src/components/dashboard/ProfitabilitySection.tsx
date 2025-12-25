@@ -34,15 +34,37 @@ const formatCurrency = (value: number) =>
 
 const formatPercent = (value: number) => `${value >= 0 ? '+' : ''}${value.toFixed(1)}%`;
 
-// Mock data
-const mockProfitabilityData: ProfitabilityData[] = [
-  { period: "2024-06", grossRevenue: 234567, returns: 4567, netRevenue: 230000, cogs: 92000, grossProfit: 138000, grossMargin: 60, operatingExpenses: 34000, shippingCosts: 12340, marketingCosts: 23450, platformFees: 8970, netProfit: 59240, netMargin: 25.8 },
-  { period: "2024-05", grossRevenue: 212340, returns: 3890, netRevenue: 208450, cogs: 83380, grossProfit: 125070, grossMargin: 60, operatingExpenses: 31200, shippingCosts: 11230, marketingCosts: 21450, platformFees: 8120, netProfit: 53070, netMargin: 25.5 },
-  { period: "2024-04", grossRevenue: 198760, returns: 4120, netRevenue: 194640, cogs: 77856, grossProfit: 116784, grossMargin: 60, operatingExpenses: 29340, shippingCosts: 10560, marketingCosts: 19870, platformFees: 7590, netProfit: 49424, netMargin: 25.4 },
-  { period: "2024-03", grossRevenue: 187450, returns: 3670, netRevenue: 183780, cogs: 73512, grossProfit: 110268, grossMargin: 60, operatingExpenses: 27650, shippingCosts: 9980, marketingCosts: 18750, platformFees: 7160, netProfit: 46728, netMargin: 25.4 },
-  { period: "2024-02", grossRevenue: 167890, returns: 3210, netRevenue: 164680, cogs: 65872, grossProfit: 98808, grossMargin: 60, operatingExpenses: 24780, shippingCosts: 8940, marketingCosts: 16790, platformFees: 6420, netProfit: 41878, netMargin: 25.4 },
-  { period: "2024-01", grossRevenue: 178560, returns: 3450, netRevenue: 175110, cogs: 70044, grossProfit: 105066, grossMargin: 60, operatingExpenses: 26340, shippingCosts: 9510, marketingCosts: 17860, platformFees: 6830, netProfit: 44526, netMargin: 25.4 },
-];
+// Mock data with platform-specific data
+const mockProfitabilityByPlatform: Record<string, ProfitabilityData[]> = {
+  all: [
+    { period: "2024-06", grossRevenue: 234567, returns: 4567, netRevenue: 230000, cogs: 92000, grossProfit: 138000, grossMargin: 60, operatingExpenses: 34000, shippingCosts: 12340, marketingCosts: 23450, platformFees: 8970, netProfit: 59240, netMargin: 25.8 },
+    { period: "2024-05", grossRevenue: 212340, returns: 3890, netRevenue: 208450, cogs: 83380, grossProfit: 125070, grossMargin: 60, operatingExpenses: 31200, shippingCosts: 11230, marketingCosts: 21450, platformFees: 8120, netProfit: 53070, netMargin: 25.5 },
+    { period: "2024-04", grossRevenue: 198760, returns: 4120, netRevenue: 194640, cogs: 77856, grossProfit: 116784, grossMargin: 60, operatingExpenses: 29340, shippingCosts: 10560, marketingCosts: 19870, platformFees: 7590, netProfit: 49424, netMargin: 25.4 },
+    { period: "2024-03", grossRevenue: 187450, returns: 3670, netRevenue: 183780, cogs: 73512, grossProfit: 110268, grossMargin: 60, operatingExpenses: 27650, shippingCosts: 9980, marketingCosts: 18750, platformFees: 7160, netProfit: 46728, netMargin: 25.4 },
+    { period: "2024-02", grossRevenue: 167890, returns: 3210, netRevenue: 164680, cogs: 65872, grossProfit: 98808, grossMargin: 60, operatingExpenses: 24780, shippingCosts: 8940, marketingCosts: 16790, platformFees: 6420, netProfit: 41878, netMargin: 25.4 },
+    { period: "2024-01", grossRevenue: 178560, returns: 3450, netRevenue: 175110, cogs: 70044, grossProfit: 105066, grossMargin: 60, operatingExpenses: 26340, shippingCosts: 9510, marketingCosts: 17860, platformFees: 6830, netProfit: 44526, netMargin: 25.4 },
+  ],
+  shopify: [
+    { period: "2024-06", grossRevenue: 98450, returns: 1890, netRevenue: 96560, cogs: 38624, grossProfit: 57936, grossMargin: 60, operatingExpenses: 14280, shippingCosts: 5180, marketingCosts: 9850, platformFees: 2890, netProfit: 25736, netMargin: 26.7 },
+    { period: "2024-05", grossRevenue: 89230, returns: 1630, netRevenue: 87600, cogs: 35040, grossProfit: 52560, grossMargin: 60, operatingExpenses: 13100, shippingCosts: 4720, marketingCosts: 9010, platformFees: 2630, netProfit: 23100, netMargin: 26.4 },
+    { period: "2024-04", grossRevenue: 83450, returns: 1720, netRevenue: 81730, cogs: 32692, grossProfit: 49038, grossMargin: 60, operatingExpenses: 12300, shippingCosts: 4430, marketingCosts: 8340, platformFees: 2450, netProfit: 21518, netMargin: 26.3 },
+  ],
+  amazon: [
+    { period: "2024-06", grossRevenue: 67890, returns: 1340, netRevenue: 66550, cogs: 26620, grossProfit: 39930, grossMargin: 60, operatingExpenses: 9840, shippingCosts: 3570, marketingCosts: 6790, platformFees: 4660, netProfit: 15070, netMargin: 22.6 },
+    { period: "2024-05", grossRevenue: 61230, returns: 1180, netRevenue: 60050, cogs: 24020, grossProfit: 36030, grossMargin: 60, operatingExpenses: 8900, shippingCosts: 3230, marketingCosts: 6140, platformFees: 4200, netProfit: 13560, netMargin: 22.6 },
+    { period: "2024-04", grossRevenue: 57340, returns: 1190, netRevenue: 56150, cogs: 22460, grossProfit: 33690, grossMargin: 60, operatingExpenses: 8470, shippingCosts: 3050, marketingCosts: 5740, platformFees: 3930, netProfit: 12500, netMargin: 22.3 },
+  ],
+  shopee: [
+    { period: "2024-06", grossRevenue: 42340, returns: 890, netRevenue: 41450, cogs: 16580, grossProfit: 24870, grossMargin: 60, operatingExpenses: 6130, shippingCosts: 2220, marketingCosts: 4230, platformFees: 2480, netProfit: 9810, netMargin: 23.7 },
+    { period: "2024-05", grossRevenue: 38120, returns: 740, netRevenue: 37380, cogs: 14952, grossProfit: 22428, grossMargin: 60, operatingExpenses: 5530, shippingCosts: 2010, marketingCosts: 3820, platformFees: 2240, netProfit: 8828, netMargin: 23.6 },
+    { period: "2024-04", grossRevenue: 35890, returns: 820, netRevenue: 35070, cogs: 14028, grossProfit: 21042, grossMargin: 60, operatingExpenses: 5260, shippingCosts: 1900, marketingCosts: 3590, platformFees: 2100, netProfit: 8192, netMargin: 23.4 },
+  ],
+  lazada: [
+    { period: "2024-06", grossRevenue: 25887, returns: 447, netRevenue: 25440, cogs: 10176, grossProfit: 15264, grossMargin: 60, operatingExpenses: 3750, shippingCosts: 1370, marketingCosts: 2580, platformFees: 940, netProfit: 6624, netMargin: 26.0 },
+    { period: "2024-05", grossRevenue: 23760, returns: 340, netRevenue: 23420, cogs: 9368, grossProfit: 14052, grossMargin: 60, operatingExpenses: 3470, shippingCosts: 1270, marketingCosts: 2380, platformFees: 1050, netProfit: 5882, netMargin: 25.1 },
+    { period: "2024-04", grossRevenue: 22080, returns: 390, netRevenue: 21690, cogs: 8676, grossProfit: 13014, grossMargin: 60, operatingExpenses: 3310, shippingCosts: 1180, marketingCosts: 2200, platformFees: 1110, netProfit: 5214, netMargin: 24.0 },
+  ],
+};
 
 const mockSegmentData: ProfitabilityBySegment[] = [
   { segment: "Electronics", segmentType: "category", revenue: 345670, cost: 138268, profit: 207402, margin: 60, contribution: 42.3 },
@@ -77,7 +99,8 @@ export function ProfitabilitySection({
   const [activeTab, setActiveTab] = useState("overview");
   const [segmentType, setSegmentType] = useState<'category' | 'platform' | 'region'>('category');
 
-  const profitData = data && data.length > 0 ? data : mockProfitabilityData;
+  // Get data based on selected store
+  const profitData = data && data.length > 0 ? data : (mockProfitabilityByPlatform[selectedStore] || mockProfitabilityByPlatform.all);
   const platforms = ["shopify", "amazon", "shopee", "lazada"];
   
   const getSegmentData = () => {

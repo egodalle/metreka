@@ -32,23 +32,93 @@ const formatCurrency = (value: number) =>
 const formatNumber = (value: number) => 
   new Intl.NumberFormat('en-US').format(value);
 
-// Mock data
-const mockMetrics: CustomerMetrics = {
-  totalCustomers: 24567,
-  newCustomers: 3421,
-  returningCustomers: 21146,
-  avgLifetimeValue: 234.56,
-  avgOrdersPerCustomer: 2.8,
-  retentionRate: 68.4,
-  churnRate: 31.6,
-  avgDaysBetweenOrders: 42,
-  topAcquisitionChannels: [
-    { channel: "Organic Search", customers: 8934, revenue: 423567 },
-    { channel: "Paid Social", customers: 5623, revenue: 289450 },
-    { channel: "Direct", customers: 4321, revenue: 198765 },
-    { channel: "Email", customers: 3456, revenue: 167890 },
-    { channel: "Referral", customers: 2233, revenue: 112340 },
-  ]
+// Mock data with platform association
+const mockMetricsByPlatform: Record<string, CustomerMetrics> = {
+  all: {
+    totalCustomers: 24567,
+    newCustomers: 3421,
+    returningCustomers: 21146,
+    avgLifetimeValue: 234.56,
+    avgOrdersPerCustomer: 2.8,
+    retentionRate: 68.4,
+    churnRate: 31.6,
+    avgDaysBetweenOrders: 42,
+    topAcquisitionChannels: [
+      { channel: "Organic Search", customers: 8934, revenue: 423567 },
+      { channel: "Paid Social", customers: 5623, revenue: 289450 },
+      { channel: "Direct", customers: 4321, revenue: 198765 },
+      { channel: "Email", customers: 3456, revenue: 167890 },
+      { channel: "Referral", customers: 2233, revenue: 112340 },
+    ]
+  },
+  shopify: {
+    totalCustomers: 9823,
+    newCustomers: 1456,
+    returningCustomers: 8367,
+    avgLifetimeValue: 267.89,
+    avgOrdersPerCustomer: 3.2,
+    retentionRate: 72.1,
+    churnRate: 27.9,
+    avgDaysBetweenOrders: 38,
+    topAcquisitionChannels: [
+      { channel: "Organic Search", customers: 3567, revenue: 178456 },
+      { channel: "Paid Social", customers: 2345, revenue: 123450 },
+      { channel: "Direct", customers: 1890, revenue: 89765 },
+      { channel: "Email", customers: 1234, revenue: 67890 },
+      { channel: "Referral", customers: 787, revenue: 45340 },
+    ]
+  },
+  amazon: {
+    totalCustomers: 6789,
+    newCustomers: 892,
+    returningCustomers: 5897,
+    avgLifetimeValue: 198.45,
+    avgOrdersPerCustomer: 2.4,
+    retentionRate: 65.3,
+    churnRate: 34.7,
+    avgDaysBetweenOrders: 45,
+    topAcquisitionChannels: [
+      { channel: "Amazon Search", customers: 4567, revenue: 189450 },
+      { channel: "Sponsored", customers: 1234, revenue: 67890 },
+      { channel: "Browse", customers: 678, revenue: 34560 },
+      { channel: "Deals", customers: 234, revenue: 12340 },
+      { channel: "External", customers: 76, revenue: 4560 },
+    ]
+  },
+  shopee: {
+    totalCustomers: 4567,
+    newCustomers: 678,
+    returningCustomers: 3889,
+    avgLifetimeValue: 156.78,
+    avgOrdersPerCustomer: 2.1,
+    retentionRate: 61.2,
+    churnRate: 38.8,
+    avgDaysBetweenOrders: 52,
+    topAcquisitionChannels: [
+      { channel: "In-App Search", customers: 2345, revenue: 98760 },
+      { channel: "Flash Sales", customers: 1234, revenue: 56780 },
+      { channel: "Live Stream", customers: 567, revenue: 23450 },
+      { channel: "Vouchers", customers: 321, revenue: 14560 },
+      { channel: "Affiliate", customers: 100, revenue: 5670 },
+    ]
+  },
+  lazada: {
+    totalCustomers: 3388,
+    newCustomers: 395,
+    returningCustomers: 2993,
+    avgLifetimeValue: 178.90,
+    avgOrdersPerCustomer: 2.3,
+    retentionRate: 63.8,
+    churnRate: 36.2,
+    avgDaysBetweenOrders: 48,
+    topAcquisitionChannels: [
+      { channel: "Search", customers: 1567, revenue: 67890 },
+      { channel: "Campaigns", customers: 890, revenue: 34560 },
+      { channel: "LazMall", customers: 567, revenue: 23450 },
+      { channel: "Flash Sales", customers: 234, revenue: 12340 },
+      { channel: "Affiliate", customers: 130, revenue: 6780 },
+    ]
+  },
 };
 
 const mockCohorts: CustomerCohort[] = [
@@ -70,7 +140,8 @@ const mockSegments: CustomerSegment[] = [
 ];
 
 export function CustomerAnalyticsSection({ metrics, cohorts, segments, isLoading, selectedStore = "all", onStoreChange }: CustomerAnalyticsSectionProps) {
-  const data = metrics || mockMetrics;
+  // Get data based on selected store
+  const data = metrics || mockMetricsByPlatform[selectedStore] || mockMetricsByPlatform.all;
   const cohortData = cohorts && cohorts.length > 0 ? cohorts : mockCohorts;
   const segmentData = segments && segments.length > 0 ? segments : mockSegments;
   const platforms = ["shopify", "amazon", "shopee", "lazada"];
