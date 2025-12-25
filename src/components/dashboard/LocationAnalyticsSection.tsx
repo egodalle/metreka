@@ -32,47 +32,47 @@ const formatCurrency = (value: number) =>
 const formatNumber = (value: number) => 
   new Intl.NumberFormat('en-US').format(value);
 
-// Mock data for demonstration
-const mockLocationData: LocationData[] = [
+// Mock data for demonstration - with platform association
+const mockLocationData: (LocationData & { platform: string })[] = [
   {
     country: "United States", countryCode: "US", orders: 12453, revenue: 623450,
     avgOrderValue: 50.06, customers: 8934, newCustomers: 1234, topProducts: ["Wireless Earbuds", "Smart Watch"],
-    shippingZone: "Domestic", avgDeliveryDays: 3.2, deliverySuccessRate: 98.5
+    shippingZone: "Domestic", avgDeliveryDays: 3.2, deliverySuccessRate: 98.5, platform: "shopify"
   },
   {
     country: "United Kingdom", countryCode: "GB", orders: 4521, revenue: 247890,
     avgOrderValue: 54.82, customers: 3421, newCustomers: 567, topProducts: ["Premium Yoga Mat", "LED Desk Lamp"],
-    shippingZone: "International", avgDeliveryDays: 7.5, deliverySuccessRate: 96.2
+    shippingZone: "International", avgDeliveryDays: 7.5, deliverySuccessRate: 96.2, platform: "amazon"
   },
   {
     country: "Germany", countryCode: "DE", orders: 3892, revenue: 198450,
     avgOrderValue: 50.99, customers: 2891, newCustomers: 423, topProducts: ["Organic Coffee", "Bluetooth Speaker"],
-    shippingZone: "International", avgDeliveryDays: 6.8, deliverySuccessRate: 97.1
+    shippingZone: "International", avgDeliveryDays: 6.8, deliverySuccessRate: 97.1, platform: "shopify"
   },
   {
     country: "Canada", countryCode: "CA", orders: 2567, revenue: 145230,
     avgOrderValue: 56.58, customers: 1987, newCustomers: 312, topProducts: ["Smart Watch", "Wireless Earbuds"],
-    shippingZone: "North America", avgDeliveryDays: 4.5, deliverySuccessRate: 97.8
+    shippingZone: "North America", avgDeliveryDays: 4.5, deliverySuccessRate: 97.8, platform: "amazon"
   },
   {
     country: "Australia", countryCode: "AU", orders: 1893, revenue: 112340,
     avgOrderValue: 59.34, customers: 1456, newCustomers: 234, topProducts: ["LED Desk Lamp", "Premium Yoga Mat"],
-    shippingZone: "APAC", avgDeliveryDays: 9.2, deliverySuccessRate: 95.4
+    shippingZone: "APAC", avgDeliveryDays: 9.2, deliverySuccessRate: 95.4, platform: "shopee"
   },
   {
     country: "France", countryCode: "FR", orders: 1654, revenue: 89760,
     avgOrderValue: 54.27, customers: 1234, newCustomers: 189, topProducts: ["Organic Coffee", "Smart Watch"],
-    shippingZone: "International", avgDeliveryDays: 7.1, deliverySuccessRate: 96.8
+    shippingZone: "International", avgDeliveryDays: 7.1, deliverySuccessRate: 96.8, platform: "lazada"
   },
   {
     country: "Japan", countryCode: "JP", orders: 1432, revenue: 98540,
     avgOrderValue: 68.81, customers: 1098, newCustomers: 167, topProducts: ["Wireless Earbuds", "Smart Watch"],
-    shippingZone: "APAC", avgDeliveryDays: 8.4, deliverySuccessRate: 99.1
+    shippingZone: "APAC", avgDeliveryDays: 8.4, deliverySuccessRate: 99.1, platform: "shopee"
   },
   {
     country: "Singapore", countryCode: "SG", orders: 987, revenue: 67890,
     avgOrderValue: 68.78, customers: 756, newCustomers: 123, topProducts: ["Smart Watch", "LED Desk Lamp"],
-    shippingZone: "APAC", avgDeliveryDays: 5.6, deliverySuccessRate: 98.9
+    shippingZone: "APAC", avgDeliveryDays: 5.6, deliverySuccessRate: 98.9, platform: "lazada"
   },
 ];
 
@@ -91,18 +91,23 @@ export function LocationAnalyticsSection({
 }: LocationAnalyticsSectionProps) {
   const [selectedZone, setSelectedZone] = useState("all");
 
-  const locations = data && data.length > 0 ? data : mockLocationData;
+  const allLocations = data && data.length > 0 ? data.map(d => ({ ...d, platform: 'all' })) : mockLocationData;
   const platforms = ["shopify", "amazon", "shopee", "lazada"];
   
-  const zones = [...new Set(locations.map(l => l.shippingZone).filter(Boolean))];
+  // Filter by selected store first
+  const storeFilteredLocations = selectedStore === "all" 
+    ? allLocations 
+    : allLocations.filter(l => (l as any).platform?.toLowerCase() === selectedStore.toLowerCase());
   
-  const filteredLocations = locations.filter(l => 
+  const zones = [...new Set(storeFilteredLocations.map(l => l.shippingZone).filter(Boolean))];
+  
+  const filteredLocations = storeFilteredLocations.filter(l => 
     selectedZone === "all" || l.shippingZone === selectedZone
   );
 
-  const totalRevenue = locations.reduce((acc, l) => acc + l.revenue, 0);
-  const totalOrders = locations.reduce((acc, l) => acc + l.orders, 0);
-  const totalCustomers = locations.reduce((acc, l) => acc + l.customers, 0);
+  const totalRevenue = filteredLocations.reduce((acc, l) => acc + l.revenue, 0);
+  const totalOrders = filteredLocations.reduce((acc, l) => acc + l.orders, 0);
+  const totalCustomers = filteredLocations.reduce((acc, l) => acc + l.customers, 0);
 
   if (isLoading) {
     return (
@@ -128,7 +133,7 @@ export function LocationAnalyticsSection({
                 <Globe className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{locations.length}</p>
+                <p className="text-2xl font-bold">{filteredLocations.length}</p>
                 <p className="text-sm text-muted-foreground">Countries</p>
               </div>
             </div>
