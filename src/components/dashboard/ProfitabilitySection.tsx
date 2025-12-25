@@ -1,8 +1,5 @@
-import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -14,17 +11,13 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { 
-  DollarSign, TrendingUp, TrendingDown, PieChart, BarChart3,
-  Percent, Package, Truck, Target, Minus, Store
+  DollarSign, TrendingUp, Percent, ShoppingCart, AlertCircle
 } from "lucide-react";
-import { ProfitabilityData, ProfitabilityBySegment } from "@/lib/api";
+import { ProfitabilityResponse } from "@/lib/api";
+import { useProfitability } from "@/hooks/useDashboardData";
 
 interface ProfitabilitySectionProps {
-  data?: ProfitabilityData[];
-  segmentData?: ProfitabilityBySegment[];
   isLoading?: boolean;
-  period?: 'daily' | 'weekly' | 'monthly';
-  onPeriodChange?: (period: 'daily' | 'weekly' | 'monthly') => void;
   selectedStore?: string;
   onStoreChange?: (store: string) => void;
 }
@@ -32,96 +25,15 @@ interface ProfitabilitySectionProps {
 const formatCurrency = (value: number) => 
   new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(value);
 
-const formatPercent = (value: number) => `${value >= 0 ? '+' : ''}${value.toFixed(1)}%`;
+const formatNumber = (value: number) => 
+  new Intl.NumberFormat('en-US').format(value);
 
-// Mock data with platform-specific data
-const mockProfitabilityByPlatform: Record<string, ProfitabilityData[]> = {
-  all: [
-    { period: "2024-06", grossRevenue: 234567, returns: 4567, netRevenue: 230000, cogs: 92000, grossProfit: 138000, grossMargin: 60, operatingExpenses: 34000, shippingCosts: 12340, marketingCosts: 23450, platformFees: 8970, netProfit: 59240, netMargin: 25.8 },
-    { period: "2024-05", grossRevenue: 212340, returns: 3890, netRevenue: 208450, cogs: 83380, grossProfit: 125070, grossMargin: 60, operatingExpenses: 31200, shippingCosts: 11230, marketingCosts: 21450, platformFees: 8120, netProfit: 53070, netMargin: 25.5 },
-    { period: "2024-04", grossRevenue: 198760, returns: 4120, netRevenue: 194640, cogs: 77856, grossProfit: 116784, grossMargin: 60, operatingExpenses: 29340, shippingCosts: 10560, marketingCosts: 19870, platformFees: 7590, netProfit: 49424, netMargin: 25.4 },
-    { period: "2024-03", grossRevenue: 187450, returns: 3670, netRevenue: 183780, cogs: 73512, grossProfit: 110268, grossMargin: 60, operatingExpenses: 27650, shippingCosts: 9980, marketingCosts: 18750, platformFees: 7160, netProfit: 46728, netMargin: 25.4 },
-    { period: "2024-02", grossRevenue: 167890, returns: 3210, netRevenue: 164680, cogs: 65872, grossProfit: 98808, grossMargin: 60, operatingExpenses: 24780, shippingCosts: 8940, marketingCosts: 16790, platformFees: 6420, netProfit: 41878, netMargin: 25.4 },
-    { period: "2024-01", grossRevenue: 178560, returns: 3450, netRevenue: 175110, cogs: 70044, grossProfit: 105066, grossMargin: 60, operatingExpenses: 26340, shippingCosts: 9510, marketingCosts: 17860, platformFees: 6830, netProfit: 44526, netMargin: 25.4 },
-  ],
-  shopify: [
-    { period: "2024-06", grossRevenue: 98450, returns: 1890, netRevenue: 96560, cogs: 38624, grossProfit: 57936, grossMargin: 60, operatingExpenses: 14280, shippingCosts: 5180, marketingCosts: 9850, platformFees: 2890, netProfit: 25736, netMargin: 26.7 },
-    { period: "2024-05", grossRevenue: 89230, returns: 1630, netRevenue: 87600, cogs: 35040, grossProfit: 52560, grossMargin: 60, operatingExpenses: 13100, shippingCosts: 4720, marketingCosts: 9010, platformFees: 2630, netProfit: 23100, netMargin: 26.4 },
-    { period: "2024-04", grossRevenue: 83450, returns: 1720, netRevenue: 81730, cogs: 32692, grossProfit: 49038, grossMargin: 60, operatingExpenses: 12300, shippingCosts: 4430, marketingCosts: 8340, platformFees: 2450, netProfit: 21518, netMargin: 26.3 },
-  ],
-  amazon: [
-    { period: "2024-06", grossRevenue: 67890, returns: 1340, netRevenue: 66550, cogs: 26620, grossProfit: 39930, grossMargin: 60, operatingExpenses: 9840, shippingCosts: 3570, marketingCosts: 6790, platformFees: 4660, netProfit: 15070, netMargin: 22.6 },
-    { period: "2024-05", grossRevenue: 61230, returns: 1180, netRevenue: 60050, cogs: 24020, grossProfit: 36030, grossMargin: 60, operatingExpenses: 8900, shippingCosts: 3230, marketingCosts: 6140, platformFees: 4200, netProfit: 13560, netMargin: 22.6 },
-    { period: "2024-04", grossRevenue: 57340, returns: 1190, netRevenue: 56150, cogs: 22460, grossProfit: 33690, grossMargin: 60, operatingExpenses: 8470, shippingCosts: 3050, marketingCosts: 5740, platformFees: 3930, netProfit: 12500, netMargin: 22.3 },
-  ],
-  shopee: [
-    { period: "2024-06", grossRevenue: 42340, returns: 890, netRevenue: 41450, cogs: 16580, grossProfit: 24870, grossMargin: 60, operatingExpenses: 6130, shippingCosts: 2220, marketingCosts: 4230, platformFees: 2480, netProfit: 9810, netMargin: 23.7 },
-    { period: "2024-05", grossRevenue: 38120, returns: 740, netRevenue: 37380, cogs: 14952, grossProfit: 22428, grossMargin: 60, operatingExpenses: 5530, shippingCosts: 2010, marketingCosts: 3820, platformFees: 2240, netProfit: 8828, netMargin: 23.6 },
-    { period: "2024-04", grossRevenue: 35890, returns: 820, netRevenue: 35070, cogs: 14028, grossProfit: 21042, grossMargin: 60, operatingExpenses: 5260, shippingCosts: 1900, marketingCosts: 3590, platformFees: 2100, netProfit: 8192, netMargin: 23.4 },
-  ],
-  lazada: [
-    { period: "2024-06", grossRevenue: 25887, returns: 447, netRevenue: 25440, cogs: 10176, grossProfit: 15264, grossMargin: 60, operatingExpenses: 3750, shippingCosts: 1370, marketingCosts: 2580, platformFees: 940, netProfit: 6624, netMargin: 26.0 },
-    { period: "2024-05", grossRevenue: 23760, returns: 340, netRevenue: 23420, cogs: 9368, grossProfit: 14052, grossMargin: 60, operatingExpenses: 3470, shippingCosts: 1270, marketingCosts: 2380, platformFees: 1050, netProfit: 5882, netMargin: 25.1 },
-    { period: "2024-04", grossRevenue: 22080, returns: 390, netRevenue: 21690, cogs: 8676, grossProfit: 13014, grossMargin: 60, operatingExpenses: 3310, shippingCosts: 1180, marketingCosts: 2200, platformFees: 1110, netProfit: 5214, netMargin: 24.0 },
-  ],
-};
+const formatPercent = (value: number) => `${value.toFixed(2)}%`;
 
-const mockSegmentData: ProfitabilityBySegment[] = [
-  { segment: "Electronics", segmentType: "category", revenue: 345670, cost: 138268, profit: 207402, margin: 60, contribution: 42.3 },
-  { segment: "Sports", segmentType: "category", revenue: 189450, cost: 75780, profit: 113670, margin: 60, contribution: 23.2 },
-  { segment: "Home", segmentType: "category", revenue: 134560, cost: 53824, profit: 80736, margin: 60, contribution: 16.5 },
-  { segment: "Food & Beverage", segmentType: "category", revenue: 98760, cost: 39504, profit: 59256, margin: 60, contribution: 12.1 },
-  { segment: "Fashion", segmentType: "category", revenue: 56780, cost: 22712, profit: 34068, margin: 60, contribution: 7.0 },
-];
-
-const mockPlatformSegments: ProfitabilityBySegment[] = [
-  { segment: "Shopify", segmentType: "platform", revenue: 423560, cost: 169424, profit: 254136, margin: 60, contribution: 48.2 },
-  { segment: "Amazon", segmentType: "platform", revenue: 234560, cost: 93824, profit: 140736, margin: 60, contribution: 26.7 },
-  { segment: "Shopee", segmentType: "platform", revenue: 134560, cost: 53824, profit: 80736, margin: 60, contribution: 15.3 },
-  { segment: "Lazada", segmentType: "platform", revenue: 89450, cost: 35780, profit: 53670, margin: 60, contribution: 10.2 },
-];
-
-const mockRegionSegments: ProfitabilityBySegment[] = [
-  { segment: "North America", segmentType: "region", revenue: 456780, cost: 182712, profit: 274068, margin: 60, contribution: 51.9 },
-  { segment: "Europe", segmentType: "region", revenue: 234560, cost: 93824, profit: 140736, margin: 60, contribution: 26.7 },
-  { segment: "APAC", segmentType: "region", revenue: 189450, cost: 75780, profit: 113670, margin: 60, contribution: 21.6 },
-];
-
-export function ProfitabilitySection({ 
-  data, 
-  segmentData, 
-  isLoading,
-  period = 'monthly',
-  onPeriodChange,
-  selectedStore = "all",
-  onStoreChange
-}: ProfitabilitySectionProps) {
-  const [activeTab, setActiveTab] = useState("overview");
-  const [segmentType, setSegmentType] = useState<'category' | 'platform' | 'region'>('category');
-
-  // Get data based on selected store
-  const profitData = data && data.length > 0 ? data : (mockProfitabilityByPlatform[selectedStore] || mockProfitabilityByPlatform.all);
-  const platforms = ["shopify", "amazon", "shopee", "lazada"];
+export function ProfitabilitySection({ isLoading: externalLoading, selectedStore = "all" }: ProfitabilitySectionProps) {
+  const { data, isLoading: queryLoading } = useProfitability(30);
   
-  const getSegmentData = () => {
-    if (segmentData && segmentData.length > 0) return segmentData;
-    switch (segmentType) {
-      case 'platform': return mockPlatformSegments;
-      case 'region': return mockRegionSegments;
-      default: return mockSegmentData;
-    }
-  };
-
-  const segments = getSegmentData();
-  const latestPeriod = profitData[0];
-  const previousPeriod = profitData[1];
-
-  const revenueChange = latestPeriod && previousPeriod 
-    ? ((latestPeriod.netRevenue - previousPeriod.netRevenue) / previousPeriod.netRevenue) * 100 
-    : 0;
-  const profitChange = latestPeriod && previousPeriod 
-    ? ((latestPeriod.netProfit - previousPeriod.netProfit) / previousPeriod.netProfit) * 100 
-    : 0;
+  const isLoading = externalLoading || queryLoading;
 
   if (isLoading) {
     return (
@@ -136,20 +48,46 @@ export function ProfitabilitySection({
     );
   }
 
+  if (!data) {
+    return (
+      <Card className="border-border/50 bg-card/80">
+        <CardContent className="p-8 text-center text-muted-foreground">
+          No profitability data available
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const { summary, by_platform, period_days, note } = data;
+  const totalPlatformRevenue = by_platform.reduce((acc, p) => acc + p.gross_revenue, 0);
+
   return (
     <div className="space-y-6">
       {/* Summary KPIs */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="border-border/50 bg-card/80">
           <CardContent className="p-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                <DollarSign className="w-5 h-5 text-primary" />
+              </div>
               <div>
+                <p className="text-2xl font-bold">{formatCurrency(summary.gross_revenue)}</p>
+                <p className="text-sm text-muted-foreground">Gross Revenue</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/50 bg-card/80">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center">
+                <TrendingUp className="w-5 h-5 text-green-500" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold">{formatCurrency(summary.net_revenue)}</p>
                 <p className="text-sm text-muted-foreground">Net Revenue</p>
-                <p className="text-2xl font-bold">{formatCurrency(latestPeriod?.netRevenue || 0)}</p>
-              </div>
-              <div className={`flex items-center gap-1 ${revenueChange >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                {revenueChange >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-                <span className="text-sm font-medium">{formatPercent(revenueChange)}</span>
               </div>
             </div>
           </CardContent>
@@ -157,28 +95,13 @@ export function ProfitabilitySection({
 
         <Card className="border-border/50 bg-card/80">
           <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Gross Profit</p>
-                <p className="text-2xl font-bold">{formatCurrency(latestPeriod?.grossProfit || 0)}</p>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
+                <ShoppingCart className="w-5 h-5 text-blue-500" />
               </div>
-              <Badge variant="outline" className="text-green-500 border-green-500/30">
-                {latestPeriod?.grossMargin.toFixed(1)}% margin
-              </Badge>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="border-border/50 bg-card/80">
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-muted-foreground">Net Profit</p>
-                <p className="text-2xl font-bold">{formatCurrency(latestPeriod?.netProfit || 0)}</p>
-              </div>
-              <div className={`flex items-center gap-1 ${profitChange >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                {profitChange >= 0 ? <TrendingUp className="w-4 h-4" /> : <TrendingDown className="w-4 h-4" />}
-                <span className="text-sm font-medium">{formatPercent(profitChange)}</span>
+                <p className="text-2xl font-bold">{formatNumber(summary.total_orders)}</p>
+                <p className="text-sm text-muted-foreground">Total Orders</p>
               </div>
             </div>
           </CardContent>
@@ -186,283 +109,107 @@ export function ProfitabilitySection({
 
         <Card className="border-border/50 bg-card/80">
           <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Net Margin</p>
-                <p className="text-2xl font-bold">{latestPeriod?.netMargin.toFixed(1)}%</p>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
+                <Percent className="w-5 h-5 text-purple-500" />
               </div>
-              <Percent className="w-5 h-5 text-muted-foreground" />
+              <div>
+                <p className="text-2xl font-bold">{formatCurrency(summary.avg_order_value)}</p>
+                <p className="text-sm text-muted-foreground">Avg Order Value</p>
+              </div>
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-          <TabsList>
-            <TabsTrigger value="overview">P&L Overview</TabsTrigger>
-            <TabsTrigger value="breakdown">Cost Breakdown</TabsTrigger>
-            <TabsTrigger value="segments">By Segment</TabsTrigger>
-          </TabsList>
+      {/* Note about data limitations */}
+      {note && (
+        <Card className="border-yellow-500/30 bg-yellow-500/5">
+          <CardContent className="p-4 flex items-center gap-3">
+            <AlertCircle className="w-5 h-5 text-yellow-500 flex-shrink-0" />
+            <p className="text-sm text-yellow-600 dark:text-yellow-400">{note}</p>
+          </CardContent>
+        </Card>
+      )}
 
-          <div className="flex items-center gap-3">
-            <Select value={selectedStore} onValueChange={onStoreChange}>
-              <SelectTrigger className="w-40">
-                <Store className="w-4 h-4 mr-2" />
-                <SelectValue placeholder="All Stores" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Stores</SelectItem>
-                {platforms.map(platform => (
-                  <SelectItem key={platform} value={platform} className="capitalize">{platform}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+      {/* Additional Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+        <Card className="border-border/50 bg-card/80">
+          <CardContent className="p-3 flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">Total Discounts</span>
+            <span className="font-bold">{formatCurrency(summary.total_discounts)}</span>
+          </CardContent>
+        </Card>
+        <Card className="border-border/50 bg-card/80">
+          <CardContent className="p-3 flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">Discount Rate</span>
+            <span className="font-bold">{formatPercent(summary.discount_rate)}</span>
+          </CardContent>
+        </Card>
+        <Card className="border-border/50 bg-card/80">
+          <CardContent className="p-3 flex items-center justify-between">
+            <span className="text-sm text-muted-foreground">Period</span>
+            <span className="font-bold">{period_days} days</span>
+          </CardContent>
+        </Card>
+      </div>
 
-            <Select value={period} onValueChange={(v) => onPeriodChange?.(v as 'daily' | 'weekly' | 'monthly')}>
-              <SelectTrigger className="w-32">
-                <SelectValue placeholder="Period" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="daily">Daily</SelectItem>
-                <SelectItem value="weekly">Weekly</SelectItem>
-                <SelectItem value="monthly">Monthly</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        </div>
-
-        {/* P&L Overview */}
-        <TabsContent value="overview">
-          <Card className="border-border/50 bg-card/80">
-            <CardHeader>
-              <CardTitle className="text-lg">Profit & Loss Statement</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Period</TableHead>
-                    <TableHead className="text-right">Gross Revenue</TableHead>
-                    <TableHead className="text-right">Returns</TableHead>
-                    <TableHead className="text-right">Net Revenue</TableHead>
-                    <TableHead className="text-right">COGS</TableHead>
-                    <TableHead className="text-right">Gross Profit</TableHead>
-                    <TableHead className="text-right">Expenses</TableHead>
-                    <TableHead className="text-right">Net Profit</TableHead>
-                    <TableHead className="text-right">Margin</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {profitData.map((row, i) => (
-                    <TableRow key={row.period} className={i === 0 ? "bg-primary/5" : ""}>
-                      <TableCell className="font-medium">{row.period}</TableCell>
-                      <TableCell className="text-right">{formatCurrency(row.grossRevenue)}</TableCell>
-                      <TableCell className="text-right text-red-500">-{formatCurrency(row.returns)}</TableCell>
-                      <TableCell className="text-right font-medium">{formatCurrency(row.netRevenue)}</TableCell>
-                      <TableCell className="text-right text-muted-foreground">-{formatCurrency(row.cogs)}</TableCell>
-                      <TableCell className="text-right text-green-500">{formatCurrency(row.grossProfit)}</TableCell>
-                      <TableCell className="text-right text-muted-foreground">
-                        -{formatCurrency(row.operatingExpenses + row.shippingCosts + row.marketingCosts + row.platformFees)}
-                      </TableCell>
-                      <TableCell className="text-right font-bold text-green-500">{formatCurrency(row.netProfit)}</TableCell>
-                      <TableCell className="text-right">
-                        <Badge variant="outline">{row.netMargin.toFixed(1)}%</Badge>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Cost Breakdown */}
-        <TabsContent value="breakdown">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card className="border-border/50 bg-card/80">
-              <CardHeader>
-                <CardTitle className="text-lg">Expense Distribution</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                {latestPeriod && (
-                  <>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Package className="w-4 h-4 text-blue-500" />
-                          <span>Cost of Goods Sold</span>
-                        </div>
-                        <span className="font-bold">{formatCurrency(latestPeriod.cogs)}</span>
-                      </div>
-                      <Progress value={(latestPeriod.cogs / latestPeriod.netRevenue) * 100} className="bg-blue-500/20" />
-                      <p className="text-xs text-muted-foreground text-right">{((latestPeriod.cogs / latestPeriod.netRevenue) * 100).toFixed(1)}% of revenue</p>
+      {/* Revenue by Platform */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="border-border/50 bg-card/80">
+          <CardHeader>
+            <CardTitle className="text-lg">Revenue by Platform</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {by_platform.map((platform) => {
+              const revenuePercent = (platform.gross_revenue / totalPlatformRevenue) * 100;
+              return (
+                <div key={platform.platform} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <div className="w-3 h-3 rounded-full bg-primary" />
+                      <span className="font-medium capitalize">{platform.platform}</span>
                     </div>
-
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Target className="w-4 h-4 text-purple-500" />
-                          <span>Marketing</span>
-                        </div>
-                        <span className="font-bold">{formatCurrency(latestPeriod.marketingCosts)}</span>
-                      </div>
-                      <Progress value={(latestPeriod.marketingCosts / latestPeriod.netRevenue) * 100} className="bg-purple-500/20" />
-                      <p className="text-xs text-muted-foreground text-right">{((latestPeriod.marketingCosts / latestPeriod.netRevenue) * 100).toFixed(1)}% of revenue</p>
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <BarChart3 className="w-4 h-4 text-orange-500" />
-                          <span>Operating Expenses</span>
-                        </div>
-                        <span className="font-bold">{formatCurrency(latestPeriod.operatingExpenses)}</span>
-                      </div>
-                      <Progress value={(latestPeriod.operatingExpenses / latestPeriod.netRevenue) * 100} className="bg-orange-500/20" />
-                      <p className="text-xs text-muted-foreground text-right">{((latestPeriod.operatingExpenses / latestPeriod.netRevenue) * 100).toFixed(1)}% of revenue</p>
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <Truck className="w-4 h-4 text-green-500" />
-                          <span>Shipping</span>
-                        </div>
-                        <span className="font-bold">{formatCurrency(latestPeriod.shippingCosts)}</span>
-                      </div>
-                      <Progress value={(latestPeriod.shippingCosts / latestPeriod.netRevenue) * 100} className="bg-green-500/20" />
-                      <p className="text-xs text-muted-foreground text-right">{((latestPeriod.shippingCosts / latestPeriod.netRevenue) * 100).toFixed(1)}% of revenue</p>
-                    </div>
-
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                          <DollarSign className="w-4 h-4 text-red-500" />
-                          <span>Platform Fees</span>
-                        </div>
-                        <span className="font-bold">{formatCurrency(latestPeriod.platformFees)}</span>
-                      </div>
-                      <Progress value={(latestPeriod.platformFees / latestPeriod.netRevenue) * 100} className="bg-red-500/20" />
-                      <p className="text-xs text-muted-foreground text-right">{((latestPeriod.platformFees / latestPeriod.netRevenue) * 100).toFixed(1)}% of revenue</p>
-                    </div>
-                  </>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card className="border-border/50 bg-card/80">
-              <CardHeader>
-                <CardTitle className="text-lg">Margin Waterfall</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {latestPeriod && (
-                  <div className="space-y-4">
-                    <div className="flex items-center justify-between p-3 rounded-lg bg-green-500/10 border border-green-500/30">
-                      <span className="font-medium">Gross Revenue</span>
-                      <span className="font-bold text-green-500">{formatCurrency(latestPeriod.grossRevenue)}</span>
-                    </div>
-
-                    <div className="flex items-center gap-2 justify-center">
-                      <Minus className="w-4 h-4 text-red-500" />
-                      <span className="text-sm text-muted-foreground">Returns ({formatCurrency(latestPeriod.returns)})</span>
-                    </div>
-
-                    <div className="flex items-center justify-between p-3 rounded-lg bg-blue-500/10 border border-blue-500/30">
-                      <span className="font-medium">Net Revenue</span>
-                      <span className="font-bold text-blue-500">{formatCurrency(latestPeriod.netRevenue)}</span>
-                    </div>
-
-                    <div className="flex items-center gap-2 justify-center">
-                      <Minus className="w-4 h-4 text-red-500" />
-                      <span className="text-sm text-muted-foreground">COGS ({formatCurrency(latestPeriod.cogs)})</span>
-                    </div>
-
-                    <div className="flex items-center justify-between p-3 rounded-lg bg-purple-500/10 border border-purple-500/30">
-                      <span className="font-medium">Gross Profit</span>
-                      <span className="font-bold text-purple-500">{formatCurrency(latestPeriod.grossProfit)} ({latestPeriod.grossMargin}%)</span>
-                    </div>
-
-                    <div className="flex items-center gap-2 justify-center">
-                      <Minus className="w-4 h-4 text-red-500" />
-                      <span className="text-sm text-muted-foreground">
-                        All Expenses ({formatCurrency(latestPeriod.operatingExpenses + latestPeriod.shippingCosts + latestPeriod.marketingCosts + latestPeriod.platformFees)})
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between p-4 rounded-lg bg-primary/10 border-2 border-primary/30">
-                      <span className="font-bold text-lg">Net Profit</span>
-                      <div className="text-right">
-                        <span className="font-bold text-lg text-primary">{formatCurrency(latestPeriod.netProfit)}</span>
-                        <p className="text-sm text-muted-foreground">{latestPeriod.netMargin.toFixed(1)}% margin</p>
-                      </div>
+                    <div className="text-right">
+                      <p className="font-bold">{formatCurrency(platform.gross_revenue)}</p>
+                      <p className="text-xs text-muted-foreground">{revenuePercent.toFixed(1)}%</p>
                     </div>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
+                  <Progress value={revenuePercent} />
+                </div>
+              );
+            })}
+          </CardContent>
+        </Card>
 
-        {/* By Segment */}
-        <TabsContent value="segments">
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <Select value={segmentType} onValueChange={(v) => setSegmentType(v as 'category' | 'platform' | 'region')}>
-                <SelectTrigger className="w-48">
-                  <PieChart className="w-4 h-4 mr-2" />
-                  <SelectValue placeholder="Segment by" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="category">By Category</SelectItem>
-                  <SelectItem value="platform">By Platform</SelectItem>
-                  <SelectItem value="region">By Region</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <Card className="border-border/50 bg-card/80">
-              <CardHeader>
-                <CardTitle className="text-lg">Profitability by {segmentType.charAt(0).toUpperCase() + segmentType.slice(1)}</CardTitle>
-              </CardHeader>
-              <CardContent className="p-0">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Segment</TableHead>
-                      <TableHead className="text-right">Revenue</TableHead>
-                      <TableHead className="text-right">Cost</TableHead>
-                      <TableHead className="text-right">Profit</TableHead>
-                      <TableHead className="text-right">Margin</TableHead>
-                      <TableHead className="text-right">Contribution</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {segments.map((segment) => (
-                      <TableRow key={segment.segment} className="hover:bg-muted/50">
-                        <TableCell className="font-medium">{segment.segment}</TableCell>
-                        <TableCell className="text-right">{formatCurrency(segment.revenue)}</TableCell>
-                        <TableCell className="text-right text-muted-foreground">{formatCurrency(segment.cost)}</TableCell>
-                        <TableCell className="text-right font-bold text-green-500">{formatCurrency(segment.profit)}</TableCell>
-                        <TableCell className="text-right">
-                          <Badge variant="outline">{segment.margin.toFixed(1)}%</Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex items-center justify-end gap-2">
-                            <Progress value={segment.contribution} className="w-20" />
-                            <span className="text-sm">{segment.contribution.toFixed(1)}%</span>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          </div>
-        </TabsContent>
-      </Tabs>
+        <Card className="border-border/50 bg-card/80">
+          <CardHeader>
+            <CardTitle className="text-lg">Platform Details</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Platform</TableHead>
+                  <TableHead className="text-right">Orders</TableHead>
+                  <TableHead className="text-right">Revenue</TableHead>
+                  <TableHead className="text-right">Discounts</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {by_platform.map((platform) => (
+                  <TableRow key={platform.platform} className="hover:bg-muted/50">
+                    <TableCell className="font-medium capitalize">{platform.platform}</TableCell>
+                    <TableCell className="text-right">{formatNumber(platform.orders)}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(platform.gross_revenue)}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(platform.discounts)}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }

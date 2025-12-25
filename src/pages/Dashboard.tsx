@@ -10,13 +10,12 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { 
   ArrowLeft, TrendingUp, DollarSign, 
   Users, ShoppingCart, Package, Activity, Bell, Settings, Search, Plus,
-  ArrowUpRight, ArrowDownRight, BarChart3, AlertCircle, RefreshCw, Globe, PieChart
+  ArrowUpRight, ArrowDownRight, BarChart3, AlertCircle, RefreshCw, PieChart
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useDashboard, useHealthCheck } from "@/hooks/useDashboardData";
 import { PlatformData, DailyData } from "@/lib/api";
 import { ProductAnalyticsSection } from "@/components/dashboard/ProductAnalyticsSection";
-import { LocationAnalyticsSection } from "@/components/dashboard/LocationAnalyticsSection";
 import { CustomerAnalyticsSection } from "@/components/dashboard/CustomerAnalyticsSection";
 import { ProfitabilitySection } from "@/components/dashboard/ProfitabilitySection";
 
@@ -355,10 +354,6 @@ const Dashboard = () => {
               <Package className="w-4 h-4" />
               Products
             </TabsTrigger>
-            <TabsTrigger value="locations" className="gap-2">
-              <Globe className="w-4 h-4" />
-              Locations
-            </TabsTrigger>
             <TabsTrigger value="customers" className="gap-2">
               <Users className="w-4 h-4" />
               Customers
@@ -378,14 +373,6 @@ const Dashboard = () => {
             />
           </TabsContent>
 
-          {/* Location Analytics Tab */}
-          <TabsContent value="locations" className="space-y-6">
-            <LocationAnalyticsSection 
-              isLoading={isLoading}
-              selectedStore={selectedStore}
-              onStoreChange={setSelectedStore}
-            />
-          </TabsContent>
 
           {/* Customer Analytics Tab */}
           <TabsContent value="customers" className="space-y-6">
