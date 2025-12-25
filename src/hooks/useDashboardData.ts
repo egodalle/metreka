@@ -3,14 +3,9 @@ import api, {
   DashboardData, 
   PlatformData, 
   DailyData, 
-  Product,
-  ProductAnalytics,
-  LocationData,
-  CustomerMetrics,
-  CustomerCohort,
-  CustomerSegment,
-  ProfitabilityData,
-  ProfitabilityBySegment
+  ProductAnalyticsResponse,
+  CustomerAnalyticsResponse,
+  ProfitabilityResponse
 } from '@/lib/api';
 
 // Main dashboard data
@@ -41,15 +36,6 @@ export function useDaily(days: number = 30) {
   });
 }
 
-// Top products
-export function useProducts(limit: number = 10) {
-  return useQuery<Product[]>({
-    queryKey: ['products', limit],
-    queryFn: () => api.getProducts(limit),
-    staleTime: 60000,
-  });
-}
-
 // Health check
 export function useHealthCheck() {
   return useQuery({
@@ -61,61 +47,28 @@ export function useHealthCheck() {
 }
 
 // Product Analytics
-export function useProductAnalytics(params?: { category?: string; platform?: string; limit?: number }) {
-  return useQuery<ProductAnalytics[]>({
-    queryKey: ['productAnalytics', params],
-    queryFn: () => api.getProductAnalytics(params),
-    staleTime: 60000,
-  });
-}
-
-// Location Analytics
-export function useLocationData(granularity: 'country' | 'region' | 'city' = 'country') {
-  return useQuery<LocationData[]>({
-    queryKey: ['locations', granularity],
-    queryFn: () => api.getLocationData(granularity),
+export function useProductAnalytics(days: number = 30) {
+  return useQuery<ProductAnalyticsResponse>({
+    queryKey: ['productAnalytics', days],
+    queryFn: () => api.getProductAnalytics(days),
     staleTime: 60000,
   });
 }
 
 // Customer Analytics
-export function useCustomerMetrics() {
-  return useQuery<CustomerMetrics>({
-    queryKey: ['customerMetrics'],
-    queryFn: () => api.getCustomerMetrics(),
-    staleTime: 60000,
-  });
-}
-
-export function useCustomerCohorts() {
-  return useQuery<CustomerCohort[]>({
-    queryKey: ['customerCohorts'],
-    queryFn: () => api.getCustomerCohorts(),
-    staleTime: 120000,
-  });
-}
-
-export function useCustomerSegments() {
-  return useQuery<CustomerSegment[]>({
-    queryKey: ['customerSegments'],
-    queryFn: () => api.getCustomerSegments(),
+export function useCustomerAnalytics(days: number = 30) {
+  return useQuery<CustomerAnalyticsResponse>({
+    queryKey: ['customerAnalytics', days],
+    queryFn: () => api.getCustomerAnalytics(days),
     staleTime: 60000,
   });
 }
 
 // Profitability Analytics
-export function useProfitability(period: 'daily' | 'weekly' | 'monthly' = 'monthly') {
-  return useQuery<ProfitabilityData[]>({
-    queryKey: ['profitability', period],
-    queryFn: () => api.getProfitability(period),
-    staleTime: 60000,
-  });
-}
-
-export function useProfitabilityBySegment(segmentType: 'category' | 'platform' | 'region') {
-  return useQuery<ProfitabilityBySegment[]>({
-    queryKey: ['profitabilitySegment', segmentType],
-    queryFn: () => api.getProfitabilityBySegment(segmentType),
+export function useProfitability(days: number = 30) {
+  return useQuery<ProfitabilityResponse>({
+    queryKey: ['profitability', days],
+    queryFn: () => api.getProfitability(days),
     staleTime: 60000,
   });
 }
