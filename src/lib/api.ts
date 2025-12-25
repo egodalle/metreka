@@ -183,16 +183,25 @@ export const api = {
     fetchAPI<{ status: string }>('/health'),
 
   // Product Analytics
-  getProductAnalytics: (days: number = 30) =>
-    fetchAPI<ProductAnalyticsResponse>(`/api/v1/analytics/products?days=${days}`),
+  getProductAnalytics: (days: number = 30, platform?: string) => {
+    const params = new URLSearchParams({ days: days.toString() });
+    if (platform && platform !== 'all') params.append('platform', platform);
+    return fetchAPI<ProductAnalyticsResponse>(`/api/v1/analytics/products?${params}`);
+  },
 
   // Customer Analytics
-  getCustomerAnalytics: (days: number = 30) =>
-    fetchAPI<CustomerAnalyticsResponse>(`/api/v1/analytics/customers?days=${days}`),
+  getCustomerAnalytics: (days: number = 30, platform?: string) => {
+    const params = new URLSearchParams({ days: days.toString() });
+    if (platform && platform !== 'all') params.append('platform', platform);
+    return fetchAPI<CustomerAnalyticsResponse>(`/api/v1/analytics/customers?${params}`);
+  },
 
   // Profitability Analytics
-  getProfitability: (days: number = 30) =>
-    fetchAPI<ProfitabilityResponse>(`/api/v1/analytics/profitability?days=${days}`),
+  getProfitability: (days: number = 30, platform?: string) => {
+    const params = new URLSearchParams({ days: days.toString() });
+    if (platform && platform !== 'all') params.append('platform', platform);
+    return fetchAPI<ProfitabilityResponse>(`/api/v1/analytics/profitability?${params}`);
+  },
 };
 
 export default api;

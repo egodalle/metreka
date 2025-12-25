@@ -32,7 +32,7 @@ const formatNumber = (value: number) =>
 
 export function ProductAnalyticsSection({ isLoading: externalLoading, selectedStore = "all" }: ProductAnalyticsSectionProps) {
   const [activeTab, setActiveTab] = useState("performance");
-  const { data, isLoading: queryLoading } = useProductAnalytics(30);
+  const { data, isLoading: queryLoading } = useProductAnalytics(30, selectedStore);
   
   const isLoading = externalLoading || queryLoading;
 

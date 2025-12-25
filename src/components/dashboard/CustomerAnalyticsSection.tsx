@@ -28,7 +28,7 @@ const formatNumber = (value: number) =>
   new Intl.NumberFormat('en-US').format(value);
 
 export function CustomerAnalyticsSection({ isLoading: externalLoading, selectedStore = "all" }: CustomerAnalyticsSectionProps) {
-  const { data, isLoading: queryLoading } = useCustomerAnalytics(30);
+  const { data, isLoading: queryLoading } = useCustomerAnalytics(30, selectedStore);
   
   const isLoading = externalLoading || queryLoading;
 

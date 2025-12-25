@@ -47,28 +47,28 @@ export function useHealthCheck() {
 }
 
 // Product Analytics
-export function useProductAnalytics(days: number = 30) {
+export function useProductAnalytics(days: number = 30, platform?: string) {
   return useQuery<ProductAnalyticsResponse>({
-    queryKey: ['productAnalytics', days],
-    queryFn: () => api.getProductAnalytics(days),
+    queryKey: ['productAnalytics', days, platform],
+    queryFn: () => api.getProductAnalytics(days, platform),
     staleTime: 60000,
   });
 }
 
 // Customer Analytics
-export function useCustomerAnalytics(days: number = 30) {
+export function useCustomerAnalytics(days: number = 30, platform?: string) {
   return useQuery<CustomerAnalyticsResponse>({
-    queryKey: ['customerAnalytics', days],
-    queryFn: () => api.getCustomerAnalytics(days),
+    queryKey: ['customerAnalytics', days, platform],
+    queryFn: () => api.getCustomerAnalytics(days, platform),
     staleTime: 60000,
   });
 }
 
 // Profitability Analytics
-export function useProfitability(days: number = 30) {
+export function useProfitability(days: number = 30, platform?: string) {
   return useQuery<ProfitabilityResponse>({
-    queryKey: ['profitability', days],
-    queryFn: () => api.getProfitability(days),
+    queryKey: ['profitability', days, platform],
+    queryFn: () => api.getProfitability(days, platform),
     staleTime: 60000,
   });
 }
