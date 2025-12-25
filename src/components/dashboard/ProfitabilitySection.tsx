@@ -31,7 +31,7 @@ const formatNumber = (value: number) =>
 const formatPercent = (value: number) => `${value.toFixed(2)}%`;
 
 export function ProfitabilitySection({ isLoading: externalLoading, selectedStore = "all" }: ProfitabilitySectionProps) {
-  const { data, isLoading: queryLoading } = useProfitability(30);
+  const { data, isLoading: queryLoading } = useProfitability(30, selectedStore);
   
   const isLoading = externalLoading || queryLoading;
 
