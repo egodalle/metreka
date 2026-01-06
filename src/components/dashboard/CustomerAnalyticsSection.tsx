@@ -10,10 +10,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { 
-  Users, UserPlus, DollarSign, Calendar
+  Users, UserPlus, DollarSign, ShoppingCart
 } from "lucide-react";
-import { CustomerAnalyticsResponse } from "@/lib/api";
-import { useCustomerAnalytics } from "@/hooks/useDashboardData";
+import { useSales } from "@/hooks/useDashboardData";
 
 interface CustomerAnalyticsSectionProps {
   isLoading?: boolean;
@@ -28,7 +27,10 @@ const formatNumber = (value: number) =>
   new Intl.NumberFormat('en-US').format(value);
 
 export function CustomerAnalyticsSection({ isLoading: externalLoading, selectedStore = "all" }: CustomerAnalyticsSectionProps) {
-  const { data, isLoading: queryLoading } = useCustomerAnalytics(30, selectedStore);
+  const { data, isLoading: queryLoading } = useSales({ 
+    source: selectedStore !== "all" ? selectedStore : undefined,
+    limit: 500
+  });
   
   const isLoading = externalLoading || queryLoading;
 
@@ -45,17 +47,50 @@ export function CustomerAnalyticsSection({ isLoading: externalLoading, selectedS
     );
   }
 
-  if (!data) {
+  if (!data?.data || data.data.length === 0) {
     return (
       <Card className="border-border/50 bg-card/80">
         <CardContent className="p-8 text-center text-muted-foreground">
-          No customer analytics data available
+          No customer data available
         </CardContent>
       </Card>
     );
   }
 
-  const { summary, segments, cohorts, top_customers } = data;
+  // Aggregate customer data from sales records
+  const customerMap = new Map<string, { 
+    name: string; 
+    email: string | null;
+    orders: number; 
+    totalSpent: number;
+    firstOrder: string;
+  }>();
+
+  data.data.forEach(sale => {
+    const customerId = sale.customer_id || sale.customer_name || 'Unknown';
+    const existing = customerMap.get(customerId) || { 
+      name: sale.customer_name || 'Unknown Customer', 
+      email: sale.customer_email,
+      orders: 0, 
+      totalSpent: 0,
+      firstOrder: sale.order_date || ''
+    };
+    existing.orders += 1;
+    existing.totalSpent += sale.total_amount || 0;
+    if (sale.order_date && sale.order_date < existing.firstOrder) {
+      existing.firstOrder = sale.order_date;
+    }
+    customerMap.set(customerId, existing);
+  });
+
+  const customers = Array.from(customerMap.values())
+    .sort((a, b) => b.totalSpent - a.totalSpent)
+    .slice(0, 10);
+
+  const totalCustomers = customerMap.size;
+  const totalSpent = Array.from(customerMap.values()).reduce((acc, c) => acc + c.totalSpent, 0);
+  const avgLTV = totalCustomers > 0 ? totalSpent / totalCustomers : 0;
+  const avgOrdersPerCustomer = totalCustomers > 0 ? data.data.length / totalCustomers : 0;
 
   return (
     <div className="space-y-6">
@@ -68,7 +103,7 @@ export function CustomerAnalyticsSection({ isLoading: externalLoading, selectedS
                 <Users className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{formatNumber(summary.total_customers)}</p>
+                <p className="text-2xl font-bold">{formatNumber(totalCustomers)}</p>
                 <p className="text-sm text-muted-foreground">Total Customers</p>
               </div>
             </div>
@@ -79,11 +114,11 @@ export function CustomerAnalyticsSection({ isLoading: externalLoading, selectedS
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center">
-                <UserPlus className="w-5 h-5 text-green-500" />
+                <DollarSign className="w-5 h-5 text-green-500" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{formatNumber(summary.customers_with_orders)}</p>
-                <p className="text-sm text-muted-foreground">With Orders</p>
+                <p className="text-2xl font-bold">{formatCurrency(totalSpent)}</p>
+                <p className="text-sm text-muted-foreground">Total Revenue</p>
               </div>
             </div>
           </CardContent>
@@ -93,10 +128,10 @@ export function CustomerAnalyticsSection({ isLoading: externalLoading, selectedS
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                <DollarSign className="w-5 h-5 text-blue-500" />
+                <UserPlus className="w-5 h-5 text-blue-500" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{formatCurrency(summary.avg_lifetime_value)}</p>
+                <p className="text-2xl font-bold">{formatCurrency(avgLTV)}</p>
                 <p className="text-sm text-muted-foreground">Avg LTV</p>
               </div>
             </div>
@@ -107,58 +142,13 @@ export function CustomerAnalyticsSection({ isLoading: externalLoading, selectedS
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-purple-500/10 flex items-center justify-center">
-                <Calendar className="w-5 h-5 text-purple-500" />
+                <ShoppingCart className="w-5 h-5 text-purple-500" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{summary.avg_orders_per_customer.toFixed(1)}</p>
+                <p className="text-2xl font-bold">{avgOrdersPerCustomer.toFixed(1)}</p>
                 <p className="text-sm text-muted-foreground">Avg Orders</p>
               </div>
             </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Customer Segments */}
-        <Card className="border-border/50 bg-card/80">
-          <CardHeader>
-            <CardTitle className="text-lg">Customer Segments</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {segments.map((segment) => (
-              <div key={segment.segment} className="p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-medium">{segment.segment}</span>
-                  <Badge variant="outline">{formatNumber(segment.customer_count)} customers</Badge>
-                </div>
-                <div className="flex items-center justify-between text-sm text-muted-foreground">
-                  <span>Avg Spent: {formatCurrency(segment.avg_spent)}</span>
-                  <span>Total: {formatCurrency(segment.total_spent)}</span>
-                </div>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-
-        {/* Customer Cohorts */}
-        <Card className="border-border/50 bg-card/80">
-          <CardHeader>
-            <CardTitle className="text-lg">Monthly Cohorts</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {cohorts.map((cohort) => (
-              <div key={cohort.cohort_month} className="p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
-                <div className="flex items-center justify-between mb-1">
-                  <span className="font-medium">{cohort.cohort_month}</span>
-                  <Badge variant="outline">{formatNumber(cohort.customers)} customers</Badge>
-                </div>
-                <div className="flex items-center justify-between text-sm text-muted-foreground">
-                  <span>Avg Orders: {cohort.avg_orders.toFixed(1)}</span>
-                  <span>Avg LTV: {formatCurrency(cohort.avg_ltv)}</span>
-                </div>
-              </div>
-            ))}
           </CardContent>
         </Card>
       </div>
@@ -175,26 +165,30 @@ export function CustomerAnalyticsSection({ isLoading: externalLoading, selectedS
                 <TableHead>Customer</TableHead>
                 <TableHead className="text-right">Orders</TableHead>
                 <TableHead className="text-right">Total Spent</TableHead>
-                <TableHead>Customer Since</TableHead>
+                <TableHead>First Order</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {top_customers.map((customer, index) => (
+              {customers.map((customer, index) => (
                 <TableRow key={index} className="hover:bg-muted/50">
                   <TableCell>
                     <div>
                       <p className="font-medium">{customer.name}</p>
-                      <p className="text-sm text-muted-foreground">{customer.email}</p>
+                      {customer.email && (
+                        <p className="text-sm text-muted-foreground">{customer.email}</p>
+                      )}
                     </div>
                   </TableCell>
                   <TableCell className="text-right font-medium">
-                    {formatNumber(customer.orders_count)}
+                    {formatNumber(customer.orders)}
                   </TableCell>
                   <TableCell className="text-right font-medium">
-                    {formatCurrency(customer.total_spent)}
+                    {formatCurrency(customer.totalSpent)}
                   </TableCell>
                   <TableCell>
-                    <Badge variant="secondary">{customer.customer_since}</Badge>
+                    <Badge variant="secondary">
+                      {customer.firstOrder ? new Date(customer.firstOrder).toLocaleDateString() : 'N/A'}
+                    </Badge>
                   </TableCell>
                 </TableRow>
               ))}

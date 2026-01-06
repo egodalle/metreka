@@ -1,5 +1,4 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -11,10 +10,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { 
-  DollarSign, TrendingUp, Percent, ShoppingCart, AlertCircle
+  DollarSign, TrendingUp, ShoppingCart, Percent
 } from "lucide-react";
-import { ProfitabilityResponse } from "@/lib/api";
-import { useProfitability } from "@/hooks/useDashboardData";
+import { useSalesSummary } from "@/hooks/useDashboardData";
 
 interface ProfitabilitySectionProps {
   isLoading?: boolean;
@@ -28,10 +26,8 @@ const formatCurrency = (value: number) =>
 const formatNumber = (value: number) => 
   new Intl.NumberFormat('en-US').format(value);
 
-const formatPercent = (value: number) => `${value.toFixed(2)}%`;
-
 export function ProfitabilitySection({ isLoading: externalLoading, selectedStore = "all" }: ProfitabilitySectionProps) {
-  const { data, isLoading: queryLoading } = useProfitability(30, selectedStore);
+  const { data, isLoading: queryLoading } = useSalesSummary('source');
   
   const isLoading = externalLoading || queryLoading;
 
@@ -48,7 +44,7 @@ export function ProfitabilitySection({ isLoading: externalLoading, selectedStore
     );
   }
 
-  if (!data) {
+  if (!data?.data || data.data.length === 0) {
     return (
       <Card className="border-border/50 bg-card/80">
         <CardContent className="p-8 text-center text-muted-foreground">
@@ -58,8 +54,21 @@ export function ProfitabilitySection({ isLoading: externalLoading, selectedStore
     );
   }
 
-  const { summary, by_platform, period_days, note } = data;
-  const totalPlatformRevenue = by_platform.reduce((acc, p) => acc + p.gross_revenue, 0);
+  // Filter data if a specific store is selected
+  const platforms = selectedStore === "all" 
+    ? data.data 
+    : data.data.filter(p => p.dimension === selectedStore);
+
+  const totalRevenue = platforms.reduce((acc, p) => acc + p.total_sales, 0);
+  const totalOrders = platforms.reduce((acc, p) => acc + p.total_orders, 0);
+  const totalUnits = platforms.reduce((acc, p) => acc + p.total_units, 0);
+  const avgOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+
+  const platformColors: Record<string, string> = {
+    shopify: "#96bf48",
+    shopee: "#ee4d2d",
+    lazada: "#0f146d",
+  };
 
   return (
     <div className="space-y-6">
@@ -72,8 +81,8 @@ export function ProfitabilitySection({ isLoading: externalLoading, selectedStore
                 <DollarSign className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{formatCurrency(summary.gross_revenue)}</p>
-                <p className="text-sm text-muted-foreground">Gross Revenue</p>
+                <p className="text-2xl font-bold">{formatCurrency(totalRevenue)}</p>
+                <p className="text-sm text-muted-foreground">Total Revenue</p>
               </div>
             </div>
           </CardContent>
@@ -83,11 +92,11 @@ export function ProfitabilitySection({ isLoading: externalLoading, selectedStore
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-green-500/10 flex items-center justify-center">
-                <TrendingUp className="w-5 h-5 text-green-500" />
+                <ShoppingCart className="w-5 h-5 text-green-500" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{formatCurrency(summary.net_revenue)}</p>
-                <p className="text-sm text-muted-foreground">Net Revenue</p>
+                <p className="text-2xl font-bold">{formatNumber(totalOrders)}</p>
+                <p className="text-sm text-muted-foreground">Total Orders</p>
               </div>
             </div>
           </CardContent>
@@ -97,11 +106,11 @@ export function ProfitabilitySection({ isLoading: externalLoading, selectedStore
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-lg bg-blue-500/10 flex items-center justify-center">
-                <ShoppingCart className="w-5 h-5 text-blue-500" />
+                <TrendingUp className="w-5 h-5 text-blue-500" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{formatNumber(summary.total_orders)}</p>
-                <p className="text-sm text-muted-foreground">Total Orders</p>
+                <p className="text-2xl font-bold">{formatNumber(totalUnits)}</p>
+                <p className="text-sm text-muted-foreground">Total Units</p>
               </div>
             </div>
           </CardContent>
@@ -114,42 +123,10 @@ export function ProfitabilitySection({ isLoading: externalLoading, selectedStore
                 <Percent className="w-5 h-5 text-purple-500" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{formatCurrency(summary.avg_order_value)}</p>
+                <p className="text-2xl font-bold">{formatCurrency(avgOrderValue)}</p>
                 <p className="text-sm text-muted-foreground">Avg Order Value</p>
               </div>
             </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Note about data limitations */}
-      {note && (
-        <Card className="border-yellow-500/30 bg-yellow-500/5">
-          <CardContent className="p-4 flex items-center gap-3">
-            <AlertCircle className="w-5 h-5 text-yellow-500 flex-shrink-0" />
-            <p className="text-sm text-yellow-600 dark:text-yellow-400">{note}</p>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Additional Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        <Card className="border-border/50 bg-card/80">
-          <CardContent className="p-3 flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Total Discounts</span>
-            <span className="font-bold">{formatCurrency(summary.total_discounts)}</span>
-          </CardContent>
-        </Card>
-        <Card className="border-border/50 bg-card/80">
-          <CardContent className="p-3 flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Discount Rate</span>
-            <span className="font-bold">{formatPercent(summary.discount_rate)}</span>
-          </CardContent>
-        </Card>
-        <Card className="border-border/50 bg-card/80">
-          <CardContent className="p-3 flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Period</span>
-            <span className="font-bold">{period_days} days</span>
           </CardContent>
         </Card>
       </div>
@@ -161,17 +138,21 @@ export function ProfitabilitySection({ isLoading: externalLoading, selectedStore
             <CardTitle className="text-lg">Revenue by Platform</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {by_platform.map((platform) => {
-              const revenuePercent = (platform.gross_revenue / totalPlatformRevenue) * 100;
+            {data.data.map((platform) => {
+              const allPlatformRevenue = data.data.reduce((acc, p) => acc + p.total_sales, 0);
+              const revenuePercent = (platform.total_sales / allPlatformRevenue) * 100;
               return (
-                <div key={platform.platform} className="space-y-2">
+                <div key={platform.dimension} className="space-y-2">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full bg-primary" />
-                      <span className="font-medium capitalize">{platform.platform}</span>
+                      <div 
+                        className="w-3 h-3 rounded-full" 
+                        style={{ backgroundColor: platformColors[platform.dimension] || "#8b5cf6" }}
+                      />
+                      <span className="font-medium capitalize">{platform.dimension}</span>
                     </div>
                     <div className="text-right">
-                      <p className="font-bold">{formatCurrency(platform.gross_revenue)}</p>
+                      <p className="font-bold">{formatCurrency(platform.total_sales)}</p>
                       <p className="text-xs text-muted-foreground">{revenuePercent.toFixed(1)}%</p>
                     </div>
                   </div>
@@ -192,17 +173,19 @@ export function ProfitabilitySection({ isLoading: externalLoading, selectedStore
                 <TableRow>
                   <TableHead>Platform</TableHead>
                   <TableHead className="text-right">Orders</TableHead>
+                  <TableHead className="text-right">Units</TableHead>
                   <TableHead className="text-right">Revenue</TableHead>
-                  <TableHead className="text-right">Discounts</TableHead>
+                  <TableHead className="text-right">AOV</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {by_platform.map((platform) => (
-                  <TableRow key={platform.platform} className="hover:bg-muted/50">
-                    <TableCell className="font-medium capitalize">{platform.platform}</TableCell>
-                    <TableCell className="text-right">{formatNumber(platform.orders)}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(platform.gross_revenue)}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(platform.discounts)}</TableCell>
+                {data.data.map((platform) => (
+                  <TableRow key={platform.dimension} className="hover:bg-muted/50">
+                    <TableCell className="font-medium capitalize">{platform.dimension}</TableCell>
+                    <TableCell className="text-right">{formatNumber(platform.total_orders)}</TableCell>
+                    <TableCell className="text-right">{formatNumber(platform.total_units)}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(platform.total_sales)}</TableCell>
+                    <TableCell className="text-right">{formatCurrency(platform.avg_order_value)}</TableCell>
                   </TableRow>
                 ))}
               </TableBody>

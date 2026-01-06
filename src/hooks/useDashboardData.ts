@@ -1,14 +1,13 @@
 import { useQuery } from '@tanstack/react-query';
 import api, { 
   DashboardData, 
-  PlatformData, 
-  DailyData, 
-  ProductAnalyticsResponse,
-  CustomerAnalyticsResponse,
-  ProfitabilityResponse
+  StatsResponse,
+  SalesSummaryResponse,
+  SalesResponse,
+  HealthResponse,
 } from '@/lib/api';
 
-// Main dashboard data
+// Main dashboard data (composite of stats + summaries)
 export function useDashboard() {
   return useQuery<DashboardData>({
     queryKey: ['dashboard'],
@@ -18,57 +17,65 @@ export function useDashboard() {
   });
 }
 
-// Platforms breakdown
-export function usePlatforms() {
-  return useQuery<PlatformData[]>({
-    queryKey: ['platforms'],
-    queryFn: () => api.getPlatforms(),
+// Overall stats
+export function useStats() {
+  return useQuery<StatsResponse>({
+    queryKey: ['stats'],
+    queryFn: () => api.getStats(),
     staleTime: 30000,
   });
 }
 
-// Daily data for charts
-export function useDaily(days: number = 30) {
-  return useQuery<DailyData[]>({
-    queryKey: ['daily', days],
-    queryFn: () => api.getDaily(days),
+// Sales summary by dimension
+export function useSalesSummary(
+  groupBy: 'source' | 'day' | 'month' | 'status' = 'source',
+  startDate?: string,
+  endDate?: string
+) {
+  return useQuery<SalesSummaryResponse>({
+    queryKey: ['salesSummary', groupBy, startDate, endDate],
+    queryFn: () => api.getSalesSummary(groupBy, startDate, endDate),
     staleTime: 30000,
+  });
+}
+
+// Sales records with filters
+export function useSales(options?: {
+  source?: string;
+  startDate?: string;
+  endDate?: string;
+  orderStatus?: string;
+  limit?: number;
+  offset?: number;
+}) {
+  return useQuery<SalesResponse>({
+    queryKey: ['sales', options],
+    queryFn: () => api.getSales(options),
+    staleTime: 30000,
+  });
+}
+
+// Sales by specific platform
+export function useSalesBySource(source: string, options?: {
+  startDate?: string;
+  endDate?: string;
+  limit?: number;
+  offset?: number;
+}) {
+  return useQuery<SalesResponse>({
+    queryKey: ['salesBySource', source, options],
+    queryFn: () => api.getSalesBySource(source, options),
+    staleTime: 30000,
+    enabled: !!source,
   });
 }
 
 // Health check
 export function useHealthCheck() {
-  return useQuery({
+  return useQuery<HealthResponse>({
     queryKey: ['health'],
     queryFn: () => api.healthCheck(),
     staleTime: 60000,
     retry: 1,
-  });
-}
-
-// Product Analytics
-export function useProductAnalytics(days: number = 30, platform?: string) {
-  return useQuery<ProductAnalyticsResponse>({
-    queryKey: ['productAnalytics', days, platform],
-    queryFn: () => api.getProductAnalytics(days, platform),
-    staleTime: 60000,
-  });
-}
-
-// Customer Analytics
-export function useCustomerAnalytics(days: number = 30, platform?: string) {
-  return useQuery<CustomerAnalyticsResponse>({
-    queryKey: ['customerAnalytics', days, platform],
-    queryFn: () => api.getCustomerAnalytics(days, platform),
-    staleTime: 60000,
-  });
-}
-
-// Profitability Analytics
-export function useProfitability(days: number = 30, platform?: string) {
-  return useQuery<ProfitabilityResponse>({
-    queryKey: ['profitability', days, platform],
-    queryFn: () => api.getProfitability(days, platform),
-    staleTime: 60000,
   });
 }

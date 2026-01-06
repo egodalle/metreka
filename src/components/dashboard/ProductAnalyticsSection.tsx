@@ -1,8 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Progress } from "@/components/ui/progress";
 import {
   Table,
   TableBody,
@@ -12,11 +10,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { 
-  Package, TrendingUp, DollarSign, ShoppingCart, BarChart3
+  Package, DollarSign, ShoppingCart, BarChart3
 } from "lucide-react";
-import { ProductAnalyticsResponse } from "@/lib/api";
-import { useProductAnalytics } from "@/hooks/useDashboardData";
-import { useState } from "react";
+import { useSales } from "@/hooks/useDashboardData";
 
 interface ProductAnalyticsSectionProps {
   isLoading?: boolean;
@@ -31,8 +27,10 @@ const formatNumber = (value: number) =>
   new Intl.NumberFormat('en-US').format(value);
 
 export function ProductAnalyticsSection({ isLoading: externalLoading, selectedStore = "all" }: ProductAnalyticsSectionProps) {
-  const [activeTab, setActiveTab] = useState("performance");
-  const { data, isLoading: queryLoading } = useProductAnalytics(30, selectedStore);
+  const { data, isLoading: queryLoading } = useSales({ 
+    source: selectedStore !== "all" ? selectedStore : undefined,
+    limit: 100
+  });
   
   const isLoading = externalLoading || queryLoading;
 
@@ -49,17 +47,49 @@ export function ProductAnalyticsSection({ isLoading: externalLoading, selectedSt
     );
   }
 
-  if (!data) {
+  if (!data?.data || data.data.length === 0) {
     return (
       <Card className="border-border/50 bg-card/80">
         <CardContent className="p-8 text-center text-muted-foreground">
-          No product analytics data available
+          No product data available
         </CardContent>
       </Card>
     );
   }
 
-  const { summary, top_products, categories } = data;
+  // Aggregate product data from sales records
+  const productMap = new Map<string, { 
+    name: string; 
+    orders: number; 
+    units: number; 
+    revenue: number;
+    avgPrice: number;
+  }>();
+
+  data.data.forEach(sale => {
+    const productName = sale.product_name || 'Unknown Product';
+    const existing = productMap.get(productName) || { 
+      name: productName, 
+      orders: 0, 
+      units: 0, 
+      revenue: 0,
+      avgPrice: 0
+    };
+    existing.orders += 1;
+    existing.units += sale.quantity || 0;
+    existing.revenue += sale.total_amount || 0;
+    productMap.set(productName, existing);
+  });
+
+  const products = Array.from(productMap.values())
+    .map(p => ({ ...p, avgPrice: p.units > 0 ? p.revenue / p.units : 0 }))
+    .sort((a, b) => b.revenue - a.revenue)
+    .slice(0, 10);
+
+  const totalProducts = productMap.size;
+  const totalRevenue = data.data.reduce((acc, s) => acc + (s.total_amount || 0), 0);
+  const totalUnits = data.data.reduce((acc, s) => acc + (s.quantity || 0), 0);
+  const avgItemValue = totalUnits > 0 ? totalRevenue / totalUnits : 0;
 
   return (
     <div className="space-y-6">
@@ -72,8 +102,8 @@ export function ProductAnalyticsSection({ isLoading: externalLoading, selectedSt
                 <Package className="w-5 h-5 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{formatNumber(summary.total_products)}</p>
-                <p className="text-sm text-muted-foreground">Total Products</p>
+                <p className="text-2xl font-bold">{formatNumber(totalProducts)}</p>
+                <p className="text-sm text-muted-foreground">Unique Products</p>
               </div>
             </div>
           </CardContent>
@@ -86,7 +116,7 @@ export function ProductAnalyticsSection({ isLoading: externalLoading, selectedSt
                 <DollarSign className="w-5 h-5 text-green-500" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{formatCurrency(summary.total_revenue)}</p>
+                <p className="text-2xl font-bold">{formatCurrency(totalRevenue)}</p>
                 <p className="text-sm text-muted-foreground">Total Revenue</p>
               </div>
             </div>
@@ -100,7 +130,7 @@ export function ProductAnalyticsSection({ isLoading: externalLoading, selectedSt
                 <ShoppingCart className="w-5 h-5 text-blue-500" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{formatNumber(summary.total_units_sold)}</p>
+                <p className="text-2xl font-bold">{formatNumber(totalUnits)}</p>
                 <p className="text-sm text-muted-foreground">Units Sold</p>
               </div>
             </div>
@@ -114,7 +144,7 @@ export function ProductAnalyticsSection({ isLoading: externalLoading, selectedSt
                 <BarChart3 className="w-5 h-5 text-purple-500" />
               </div>
               <div>
-                <p className="text-2xl font-bold">{formatCurrency(summary.avg_item_value)}</p>
+                <p className="text-2xl font-bold">{formatCurrency(avgItemValue)}</p>
                 <p className="text-sm text-muted-foreground">Avg Item Value</p>
               </div>
             </div>
@@ -122,115 +152,46 @@ export function ProductAnalyticsSection({ isLoading: externalLoading, selectedSt
         </Card>
       </div>
 
-      {/* Additional Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-        <Card className="border-border/50 bg-card/80">
-          <CardContent className="p-3 flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Orders with Products</span>
-            <span className="font-bold">{formatNumber(summary.orders_with_products)}</span>
-          </CardContent>
-        </Card>
-        <Card className="border-border/50 bg-card/80">
-          <CardContent className="p-3 flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Categories</span>
-            <span className="font-bold">{categories.length}</span>
-          </CardContent>
-        </Card>
-        <Card className="border-border/50 bg-card/80">
-          <CardContent className="p-3 flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Period</span>
-            <span className="font-bold">{summary.period_days} days</span>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Main Content Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="mb-4">
-          <TabsTrigger value="performance">Top Products</TabsTrigger>
-          <TabsTrigger value="categories">Categories</TabsTrigger>
-        </TabsList>
-
-        {/* Top Products Tab */}
-        <TabsContent value="performance">
-          <Card className="border-border/50 bg-card/80">
-            <CardHeader>
-              <CardTitle className="text-lg">Top Performing Products</CardTitle>
-            </CardHeader>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Product</TableHead>
-                    <TableHead className="text-right">Orders</TableHead>
-                    <TableHead className="text-right">Units Sold</TableHead>
-                    <TableHead className="text-right">Revenue</TableHead>
-                    <TableHead className="text-right">Avg Price</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {top_products.map((product, index) => (
-                    <TableRow key={index} className="hover:bg-muted/50">
-                      <TableCell>
-                        <div>
-                          <p className="font-medium">{product.product_name}</p>
-                          <p className="text-sm text-muted-foreground">{product.category} • {product.vendor}</p>
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right font-medium">
-                        {formatNumber(product.total_orders)}
-                      </TableCell>
-                      <TableCell className="text-right font-medium">
-                        {formatNumber(product.units_sold)}
-                      </TableCell>
-                      <TableCell className="text-right font-medium">
-                        {formatCurrency(product.total_revenue)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {formatCurrency(product.avg_price)}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {/* Categories Tab */}
-        <TabsContent value="categories">
-          <Card className="border-border/50 bg-card/80">
-            <CardHeader>
-              <CardTitle className="text-lg">Performance by Category</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {categories.map((category) => {
-                const revenuePercent = (category.total_revenue / summary.total_revenue) * 100;
-                return (
-                  <div key={category.category} className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
-                        <TrendingUp className="w-4 h-4 text-primary" />
-                        <div>
-                          <p className="font-medium">{category.category}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {formatNumber(category.product_count)} products • {formatNumber(category.units_sold)} units
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="font-bold">{formatCurrency(category.total_revenue)}</p>
-                        <p className="text-xs text-muted-foreground">{revenuePercent.toFixed(1)}%</p>
-                      </div>
-                    </div>
-                    <Progress value={revenuePercent} />
-                  </div>
-                );
-              })}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+      {/* Top Products Table */}
+      <Card className="border-border/50 bg-card/80">
+        <CardHeader>
+          <CardTitle className="text-lg">Top Performing Products</CardTitle>
+        </CardHeader>
+        <CardContent className="p-0">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Product</TableHead>
+                <TableHead className="text-right">Orders</TableHead>
+                <TableHead className="text-right">Units Sold</TableHead>
+                <TableHead className="text-right">Revenue</TableHead>
+                <TableHead className="text-right">Avg Price</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {products.map((product, index) => (
+                <TableRow key={index} className="hover:bg-muted/50">
+                  <TableCell>
+                    <p className="font-medium">{product.name}</p>
+                  </TableCell>
+                  <TableCell className="text-right font-medium">
+                    {formatNumber(product.orders)}
+                  </TableCell>
+                  <TableCell className="text-right font-medium">
+                    {formatNumber(product.units)}
+                  </TableCell>
+                  <TableCell className="text-right font-medium">
+                    {formatCurrency(product.revenue)}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    {formatCurrency(product.avgPrice)}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
     </div>
   );
 }
