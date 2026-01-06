@@ -21,7 +21,6 @@ import { ProfitabilitySection } from "@/components/dashboard/ProfitabilitySectio
 
 const stores = [
   { id: "shopify", name: "Shopify", logo: ShopifyLogo, bgColor: "bg-[#96bf48]" },
-  { id: "amazon", name: "Amazon", logo: TikTokLogo, bgColor: "bg-[#ff9900]" },
   { id: "shopee", name: "Shopee", logo: TikTokLogo, bgColor: "bg-[#ee4d2d]" },
   { id: "lazada", name: "Lazada", logo: TikTokLogo, bgColor: "bg-[#0f146d]" },
 ];
@@ -98,13 +97,11 @@ const KPICard = ({
 // Platform brand colors - shared across components
 const platformColors: Record<string, { bg: string; text: string; stroke: string }> = {
   shopify: { bg: "bg-[#96bf48]", text: "text-[#96bf48]", stroke: "#96bf48" },
-  amazon: { bg: "bg-[#ff9900]", text: "text-[#ff9900]", stroke: "#ff9900" },
   shopee: { bg: "bg-[#ee4d2d]", text: "text-[#ee4d2d]", stroke: "#ee4d2d" },
   lazada: { bg: "bg-[#0f146d]", text: "text-[#0f146d]", stroke: "#0f146d" },
 };
 
 const PlatformRow = ({ platform }: { platform: PlatformData }) => {
-
   return (
     <div className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
       <div className="flex items-center gap-4">
@@ -119,9 +116,9 @@ const PlatformRow = ({ platform }: { platform: PlatformData }) => {
         </div>
       </div>
       <div className="text-right">
-        <p className="font-semibold">{formatCurrency(platform.total_revenue_usd)}</p>
-        <span className={`text-sm ${parseFloat(platform.revenue_mom_growth_pct) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-          {formatPercent(platform.revenue_mom_growth_pct)} MoM
+        <p className="font-semibold">{formatCurrency(platform.total_revenue)}</p>
+        <span className="text-sm text-muted-foreground">
+          {formatNumber(platform.total_units)} units
         </span>
       </div>
     </div>
@@ -158,26 +155,26 @@ const Dashboard = () => {
   const getFilteredData = () => {
     if (!dashboardData) {
       return {
-        totalRevenue: "0",
+        totalRevenue: 0,
         totalOrders: 0,
-        avgOrderValue: "0",
-        revenueGrowth: undefined,
-        ordersGrowth: undefined,
+        avgOrderValue: 0,
+        totalCustomers: 0,
+        totalProducts: 0,
         platforms: [],
-        recentDays: [],
+        dailyData: [],
       };
     }
 
     // If "all" stores selected, return full dashboard data
     if (selectedStore === "all") {
       return {
-        totalRevenue: dashboardData.total_revenue_usd || "0",
-        totalOrders: dashboardData.total_orders || 0,
-        avgOrderValue: dashboardData.avg_order_value_usd || "0",
-        revenueGrowth: dashboardData.revenue_growth_pct,
-        ordersGrowth: dashboardData.orders_growth_pct,
-        platforms: dashboardData.platforms || [],
-        recentDays: dashboardData.recent_days || [],
+        totalRevenue: dashboardData.total_revenue,
+        totalOrders: dashboardData.total_orders,
+        avgOrderValue: dashboardData.avg_order_value,
+        totalCustomers: dashboardData.total_customers,
+        totalProducts: dashboardData.total_products,
+        platforms: dashboardData.platforms,
+        dailyData: dashboardData.daily_data,
       };
     }
 
@@ -185,34 +182,24 @@ const Dashboard = () => {
     const platform = dashboardData.platforms?.find(p => p.platform === selectedStore);
     if (!platform) {
       return {
-        totalRevenue: "0",
+        totalRevenue: 0,
         totalOrders: 0,
-        avgOrderValue: "0",
-        revenueGrowth: undefined,
-        ordersGrowth: undefined,
+        avgOrderValue: 0,
+        totalCustomers: 0,
+        totalProducts: 0,
         platforms: [],
-        recentDays: [],
+        dailyData: [],
       };
     }
 
-    // Map recent days to platform-specific data
-    const platformRevenueKey = `${selectedStore}_revenue_usd` as keyof DailyData;
-    const platformOrdersKey = `${selectedStore}_orders` as keyof DailyData;
-
-    const platformDays = dashboardData.recent_days?.map(day => ({
-      ...day,
-      total_revenue_usd: String(day[platformRevenueKey] || "0"),
-      total_orders: Number(day[platformOrdersKey] || 0),
-    })) || [];
-
     return {
-      totalRevenue: platform.total_revenue_usd,
+      totalRevenue: platform.total_revenue,
       totalOrders: platform.total_orders,
-      avgOrderValue: platform.avg_order_value_usd,
-      revenueGrowth: platform.revenue_mom_growth_pct,
-      ordersGrowth: parseFloat(platform.orders_mom_growth_pct),
+      avgOrderValue: platform.avg_order_value,
+      totalCustomers: 0,
+      totalProducts: 0,
       platforms: [platform],
-      recentDays: platformDays,
+      dailyData: dashboardData.daily_data, // Daily data is aggregate only for now
     };
   };
 
@@ -230,7 +217,7 @@ const Dashboard = () => {
                 Back
               </Button>
               <div className="h-6 w-px bg-border" />
-              <h1 className="text-xl font-bold text-gradient-primary">DataPulse</h1>
+              <h1 className="text-xl font-bold text-gradient-primary">GrowthPulse</h1>
             </div>
             
             <div className="flex items-center gap-4">
@@ -405,14 +392,12 @@ const Dashboard = () => {
                   <KPICard 
                     title="Total Revenue"
                     value={filteredData.totalRevenue}
-                    change={filteredData.revenueGrowth}
                     icon={DollarSign}
                     isCurrency
                   />
                   <KPICard 
                     title="Total Orders"
                     value={filteredData.totalOrders}
-                    change={filteredData.ordersGrowth}
                     icon={ShoppingCart}
                   />
                   <KPICard 
@@ -422,14 +407,14 @@ const Dashboard = () => {
                     isCurrency
                   />
                   <KPICard 
-                    title="Platforms"
-                    value={filteredData.platforms?.length || 0}
-                    icon={Package}
+                    title="Total Customers"
+                    value={filteredData.totalCustomers}
+                    icon={Users}
                   />
                   <KPICard 
-                    title="Today's Orders"
-                    value={filteredData.recentDays?.[0]?.total_orders || 0}
-                    icon={Activity}
+                    title="Total Products"
+                    value={filteredData.totalProducts}
+                    icon={Package}
                   />
                 </>
               )}
@@ -440,83 +425,30 @@ const Dashboard = () => {
               {/* Revenue Chart */}
               <Card className="border-border/50 bg-card/80">
                 <CardHeader className="flex flex-row items-center justify-between">
-                  <CardTitle className="text-lg">Revenue Trend (Last 7 Days)</CardTitle>
+                  <CardTitle className="text-lg">Revenue Trend (Daily)</CardTitle>
                 </CardHeader>
                 <CardContent>
                   {isLoading ? (
                     <Skeleton className="h-48 w-full" />
                   ) : (
                     <div className="h-48 flex items-end gap-2">
-                      {filteredData.recentDays?.slice().reverse().map((day, i) => {
-                        const revenues = filteredData.recentDays.map(d => parseFloat(d.total_revenue_usd));
+                      {filteredData.dailyData?.map((day, i) => {
+                        const revenues = filteredData.dailyData.map(d => d.total_revenue);
                         const maxRevenue = Math.max(...revenues, 1);
-                        const totalHeight = (parseFloat(day.total_revenue_usd) / maxRevenue) * 100;
-                        
-                        // For single store, show solid bar
-                        if (selectedStore !== "all") {
-                          return (
-                            <div 
-                              key={i} 
-                              className="flex-1 rounded-t hover:opacity-90 transition-opacity cursor-pointer group relative"
-                              style={{ 
-                                height: `${Math.max(totalHeight, 5)}%`,
-                                backgroundColor: platformColors[selectedStore]?.stroke || "hsl(var(--primary))",
-                              }}
-                            >
-                              <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-popover text-popover-foreground px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 shadow-lg">
-                                <p className="font-medium">{day.order_date}</p>
-                                <p>{formatCurrency(day.total_revenue_usd)}</p>
-                                <p>{day.total_orders} orders</p>
-                              </div>
-                            </div>
-                          );
-                        }
-                        
-                        // For all stores, show stacked bar with platform colors
-                        const platformRevenues = [
-                          { platform: 'shopify', revenue: parseFloat((day as any).shopify_revenue_usd || '0') },
-                          { platform: 'amazon', revenue: parseFloat((day as any).amazon_revenue_usd || '0') },
-                          { platform: 'shopee', revenue: parseFloat((day as any).shopee_revenue_usd || '0') },
-                          { platform: 'lazada', revenue: parseFloat((day as any).lazada_revenue_usd || '0') },
-                        ].filter(p => p.revenue > 0);
-                        
-                        const dayTotal = platformRevenues.reduce((acc, p) => acc + p.revenue, 0);
+                        const totalHeight = (day.total_revenue / maxRevenue) * 100;
                         
                         return (
                           <div 
                             key={i} 
-                            className="flex-1 flex flex-col-reverse rounded-t overflow-hidden cursor-pointer group relative"
-                            style={{ height: `${Math.max(totalHeight, 5)}%` }}
+                            className="flex-1 rounded-t hover:opacity-90 transition-opacity cursor-pointer group relative bg-primary"
+                            style={{ 
+                              height: `${Math.max(totalHeight, 5)}%`,
+                            }}
                           >
-                            {platformRevenues.map((p) => {
-                              const segmentHeight = dayTotal > 0 ? (p.revenue / dayTotal) * 100 : 0;
-                              return (
-                                <div
-                                  key={p.platform}
-                                  className="w-full transition-opacity hover:opacity-90"
-                                  style={{
-                                    height: `${segmentHeight}%`,
-                                    backgroundColor: platformColors[p.platform]?.stroke || "hsl(var(--primary))",
-                                  }}
-                                />
-                              );
-                            })}
-                            <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-popover text-popover-foreground px-3 py-2 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 shadow-lg">
-                              <p className="font-medium mb-1">{day.order_date}</p>
-                              {platformRevenues.map(p => (
-                                <div key={p.platform} className="flex items-center gap-2">
-                                  <div 
-                                    className="w-2 h-2 rounded-full" 
-                                    style={{ backgroundColor: platformColors[p.platform]?.stroke }}
-                                  />
-                                  <span className="capitalize">{p.platform}:</span>
-                                  <span className="font-medium">{formatCurrency(p.revenue)}</span>
-                                </div>
-                              ))}
-                              <div className="border-t border-border mt-1 pt-1">
-                                <p className="font-medium">Total: {formatCurrency(day.total_revenue_usd)}</p>
-                                <p className="text-muted-foreground">{day.total_orders} orders</p>
-                              </div>
+                            <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-popover text-popover-foreground px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 shadow-lg">
+                              <p className="font-medium">{day.date}</p>
+                              <p>{formatCurrency(day.total_revenue)}</p>
+                              <p>{day.total_orders} orders</p>
                             </div>
                           </div>
                         );
@@ -543,11 +475,11 @@ const Dashboard = () => {
                           <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
                             <circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" strokeWidth="20" className="text-muted/20" />
                             {filteredData.platforms?.map((platform, i) => {
-                              const totalRevenue = filteredData.platforms.reduce((acc, p) => acc + parseFloat(p.total_revenue_usd), 0);
-                              const percentage = (parseFloat(platform.total_revenue_usd) / totalRevenue) * 100;
+                              const totalRevenue = filteredData.platforms.reduce((acc, p) => acc + p.total_revenue, 0);
+                              const percentage = (platform.total_revenue / totalRevenue) * 100;
                               const offset = filteredData.platforms
                                 .slice(0, i)
-                                .reduce((acc, p) => acc + ((parseFloat(p.total_revenue_usd) / totalRevenue) * 100 * 2.51), 0);
+                                .reduce((acc, p) => acc + ((p.total_revenue / totalRevenue) * 100 * 2.51), 0);
                               const strokeColor = platformColors[platform.platform]?.stroke || "#8b5cf6";
                               return (
                                 <circle 
@@ -571,8 +503,8 @@ const Dashboard = () => {
                       </div>
                       <div className="space-y-3">
                         {filteredData.platforms?.map((platform) => {
-                          const totalRevenue = filteredData.platforms.reduce((acc, p) => acc + parseFloat(p.total_revenue_usd), 0);
-                          const percentage = ((parseFloat(platform.total_revenue_usd) / totalRevenue) * 100).toFixed(1);
+                          const totalRevenue = filteredData.platforms.reduce((acc, p) => acc + p.total_revenue, 0);
+                          const percentage = ((platform.total_revenue / totalRevenue) * 100).toFixed(1);
                           return (
                             <div key={platform.platform} className="flex items-center justify-between">
                               <div className="flex items-center gap-2">
@@ -582,7 +514,7 @@ const Dashboard = () => {
                                 />
                                 <span className="text-sm capitalize">{platform.platform}</span>
                               </div>
-                              <span className="font-semibold">{formatCurrency(platform.total_revenue_usd)} ({percentage}%)</span>
+                              <span className="font-semibold">{formatCurrency(platform.total_revenue)} ({percentage}%)</span>
                             </div>
                           );
                         })}
@@ -602,7 +534,7 @@ const Dashboard = () => {
                 <CardContent>
                   {isLoading ? (
                     <div className="space-y-3">
-                      {Array.from({ length: 4 }).map((_, i) => (
+                      {Array.from({ length: 3 }).map((_, i) => (
                         <Skeleton key={i} className="h-16 w-full" />
                       ))}
                     </div>
@@ -629,14 +561,14 @@ const Dashboard = () => {
                     </div>
                   ) : (
                     <div className="space-y-3">
-                      {filteredData.recentDays?.slice(0, 5).map((day) => (
-                        <div key={day.order_date} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
+                      {filteredData.dailyData?.slice(-5).reverse().map((day) => (
+                        <div key={day.date} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
                           <div>
-                            <p className="font-medium">{day.order_date}</p>
+                            <p className="font-medium">{day.date}</p>
                             <p className="text-sm text-muted-foreground">{day.total_orders} orders</p>
                           </div>
                           <div className="text-right">
-                            <p className="font-semibold">{formatCurrency(day.total_revenue_usd)}</p>
+                            <p className="font-semibold">{formatCurrency(day.total_revenue)}</p>
                           </div>
                         </div>
                       ))}

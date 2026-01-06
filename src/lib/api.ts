@@ -1,5 +1,5 @@
-// API client for FastAPI backend
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://datapulse-fkcq.onrender.com';
+// API client for GrowthPulse FastAPI backend
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://growthpulse-api-z5id2gn52a-uc.a.run.app';
 
 async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
@@ -17,190 +17,198 @@ async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> 
   return response.json();
 }
 
-// Types matching actual API response
+// Types matching GrowthPulse API response
+
+// Stats endpoint response
+export interface StatsResponse {
+  success: boolean;
+  data: {
+    overview: {
+      total_records: number;
+      total_orders: number;
+      total_customers: number;
+      total_products: number;
+      total_revenue: number;
+      avg_order_value: number;
+      earliest_order: string;
+      latest_order: string;
+      platforms: number;
+    };
+    by_source: {
+      source: string;
+      orders: number;
+      revenue: number;
+    }[];
+  };
+}
+
+// Sales summary endpoint response
+export interface SalesSummaryResponse {
+  success: boolean;
+  group_by: string;
+  data: SalesSummaryItem[];
+}
+
+export interface SalesSummaryItem {
+  dimension: string;
+  total_orders: number;
+  total_units: number;
+  total_sales: number;
+  avg_order_value: number;
+  earliest_order: string;
+  latest_order: string;
+}
+
+// Individual sales record
+export interface SalesRecord {
+  source: string;
+  order_id: string;
+  order_date: string | null;
+  customer_id: string | null;
+  customer_name: string | null;
+  customer_email: string | null;
+  product_id: string | null;
+  product_name: string | null;
+  quantity: number | null;
+  unit_price: number | null;
+  total_amount: number | null;
+  currency: string | null;
+  order_status: string | null;
+  payment_method: string | null;
+  shipping_address: string | null;
+  created_at: string | null;
+  updated_at: string | null;
+}
+
+export interface SalesResponse {
+  success: boolean;
+  data: SalesRecord[];
+  metadata: {
+    total: number;
+    limit: number;
+    offset: number;
+    count: number;
+  };
+}
+
+// Health check response
+export interface HealthResponse {
+  status: string;
+  timestamp: string;
+  bigquery_connected: boolean;
+  total_records: number | null;
+}
+
+// Dashboard data - transformed from API for UI consumption
+export interface DashboardData {
+  total_revenue: number;
+  total_orders: number;
+  avg_order_value: number;
+  total_customers: number;
+  total_products: number;
+  platforms: PlatformData[];
+  daily_data: DailyData[];
+}
+
 export interface PlatformData {
   platform: string;
   total_orders: number;
-  completed_orders: number;
-  cancelled_orders: number;
-  total_revenue_usd: string;
-  orders_this_month: number;
-  revenue_this_month_usd: string;
-  orders_last_month: number;
-  revenue_last_month_usd: string;
-  orders_today: number;
-  revenue_today_usd: string;
-  avg_order_value_usd: string;
-  avg_items_per_order: string;
-  payment_rate: string;
-  fulfillment_rate: string | null;
-  cancellation_rate: string;
-  first_order_date: string;
-  last_order_date: string;
-  active_days: number;
-  revenue_mom_growth_pct: string;
-  orders_mom_growth_pct: string;
-  _generated_at: string;
+  total_revenue: number;
+  total_units: number;
+  avg_order_value: number;
 }
 
 export interface DailyData {
-  order_date: string;
+  date: string;
   total_orders: number;
-  total_revenue_usd: string;
-  avg_order_value_usd: string;
-  total_items_sold: number;
-  shopify_orders: number;
-  amazon_orders: number;
-  lazada_orders: number;
-  shopee_orders: number;
-  shopify_revenue_usd: string;
-  amazon_revenue_usd: string;
-  lazada_revenue_usd: string;
-  shopee_revenue_usd: string;
-  unique_customers: number;
-  fulfilled_orders: number;
-  fulfillment_rate: string;
-  revenue_7d_avg: string;
-  orders_7d_avg: string;
-  revenue_30d_avg: string;
-  orders_30d_avg: string;
-  revenue_dod_change: string;
-  orders_dod_change: number;
-  revenue_wow_change: string;
-  orders_wow_change: number;
-  _generated_at: string;
+  total_revenue: number;
+  total_units: number;
+  avg_order_value: number;
 }
 
-export interface DashboardData {
-  total_revenue_usd: string;
-  total_orders: number;
-  avg_order_value_usd: string;
-  revenue_growth_pct: string;
-  orders_growth_pct: number;
-  total_customers: number;
-  platforms: PlatformData[];
-  recent_days: DailyData[];
-}
-
-// Product Analytics - matching actual API response
-export interface ProductAnalyticsResponse {
-  summary: {
-    total_products: number;
-    orders_with_products: number;
-    total_units_sold: number;
-    total_revenue: number;
-    avg_item_value: number;
-    period_days: number;
-  };
-  top_products: {
-    product_name: string;
-    category: string;
-    vendor: string;
-    total_orders: number;
-    units_sold: number;
-    total_revenue: number;
-    avg_price: number;
-  }[];
-  categories: {
-    category: string;
-    product_count: number;
-    units_sold: number;
-    total_revenue: number;
-  }[];
-}
-
-// Customer Analytics - matching actual API response
-export interface CustomerAnalyticsResponse {
-  summary: {
-    total_customers: number;
-    customers_with_orders: number;
-    avg_orders_per_customer: number;
-    avg_lifetime_value: number;
-    total_customer_value: number;
-  };
-  segments: {
-    segment: string;
-    customer_count: number;
-    avg_spent: number;
-    total_spent: number;
-  }[];
-  cohorts: {
-    cohort_month: string;
-    customers: number;
-    avg_orders: number;
-    avg_ltv: number;
-  }[];
-  retention: {
-    customer_type: string;
-    count: number;
-    avg_spent: number;
-  }[];
-  top_customers: {
-    name: string;
-    email: string;
-    orders_count: number;
-    total_spent: number;
-    customer_since: string;
-  }[];
-}
-
-// Profitability Analytics - matching actual API response
-export interface ProfitabilityResponse {
-  summary: {
-    gross_revenue: number;
-    total_discounts: number;
-    net_revenue: number;
-    total_orders: number;
-    avg_order_value: number;
-    discount_rate: number;
-  };
-  by_platform: {
-    platform: string;
-    gross_revenue: number;
-    discounts: number;
-    orders: number;
-  }[];
-  period_days: number;
-  note: string;
-}
-
-// API endpoints matching FastAPI structure
+// API endpoints matching GrowthPulse FastAPI structure
 export const api = {
-  // Dashboard - main KPIs overview
-  getDashboard: () =>
-    fetchAPI<DashboardData>('/api/v1/kpis/dashboard'),
-
-  // Platforms breakdown
-  getPlatforms: () =>
-    fetchAPI<PlatformData[]>('/api/v1/kpis/platforms'),
-
-  // Daily data for charts
-  getDaily: (days: number = 30) =>
-    fetchAPI<DailyData[]>(`/api/v1/kpis/daily?days=${days}`),
-
   // Health check
   healthCheck: () =>
-    fetchAPI<{ status: string }>('/health'),
+    fetchAPI<HealthResponse>('/health'),
 
-  // Product Analytics
-  getProductAnalytics: (days: number = 30, platform?: string) => {
-    const params = new URLSearchParams({ days: days.toString() });
-    if (platform && platform !== 'all') params.append('platform', platform);
-    return fetchAPI<ProductAnalyticsResponse>(`/api/v1/analytics/products?${params}`);
+  // Overall stats
+  getStats: () =>
+    fetchAPI<StatsResponse>('/api/v1/stats'),
+
+  // Sales summary by different dimensions
+  getSalesSummary: (groupBy: 'source' | 'day' | 'month' | 'status' = 'source', startDate?: string, endDate?: string) => {
+    const params = new URLSearchParams({ group_by: groupBy });
+    if (startDate) params.append('start_date', startDate);
+    if (endDate) params.append('end_date', endDate);
+    return fetchAPI<SalesSummaryResponse>(`/api/v1/sales/summary?${params}`);
   },
 
-  // Customer Analytics
-  getCustomerAnalytics: (days: number = 30, platform?: string) => {
-    const params = new URLSearchParams({ days: days.toString() });
-    if (platform && platform !== 'all') params.append('platform', platform);
-    return fetchAPI<CustomerAnalyticsResponse>(`/api/v1/analytics/customers?${params}`);
+  // Get sales records with filters
+  getSales: (options?: {
+    source?: string;
+    startDate?: string;
+    endDate?: string;
+    orderStatus?: string;
+    limit?: number;
+    offset?: number;
+  }) => {
+    const params = new URLSearchParams();
+    if (options?.source) params.append('source', options.source);
+    if (options?.startDate) params.append('start_date', options.startDate);
+    if (options?.endDate) params.append('end_date', options.endDate);
+    if (options?.orderStatus) params.append('order_status', options.orderStatus);
+    if (options?.limit) params.append('limit', options.limit.toString());
+    if (options?.offset) params.append('offset', options.offset.toString());
+    return fetchAPI<SalesResponse>(`/api/v1/sales?${params}`);
   },
 
-  // Profitability Analytics
-  getProfitability: (days: number = 30, platform?: string) => {
-    const params = new URLSearchParams({ days: days.toString() });
-    if (platform && platform !== 'all') params.append('platform', platform);
-    return fetchAPI<ProfitabilityResponse>(`/api/v1/analytics/profitability?${params}`);
+  // Get sales by specific source/platform
+  getSalesBySource: (source: string, options?: {
+    startDate?: string;
+    endDate?: string;
+    limit?: number;
+    offset?: number;
+  }) => {
+    const params = new URLSearchParams();
+    if (options?.startDate) params.append('start_date', options.startDate);
+    if (options?.endDate) params.append('end_date', options.endDate);
+    if (options?.limit) params.append('limit', options.limit.toString());
+    if (options?.offset) params.append('offset', options.offset.toString());
+    return fetchAPI<SalesResponse>(`/api/v1/sales/${source}?${params}`);
+  },
+
+  // Composite endpoint: Get full dashboard data
+  getDashboard: async (): Promise<DashboardData> => {
+    const [stats, platformSummary, dailySummary] = await Promise.all([
+      api.getStats(),
+      api.getSalesSummary('source'),
+      api.getSalesSummary('day'),
+    ]);
+
+    return {
+      total_revenue: stats.data.overview.total_revenue,
+      total_orders: stats.data.overview.total_orders,
+      avg_order_value: stats.data.overview.avg_order_value,
+      total_customers: stats.data.overview.total_customers,
+      total_products: stats.data.overview.total_products,
+      platforms: platformSummary.data.map(p => ({
+        platform: p.dimension,
+        total_orders: p.total_orders,
+        total_revenue: p.total_sales,
+        total_units: p.total_units,
+        avg_order_value: p.avg_order_value,
+      })),
+      daily_data: dailySummary.data
+        .map(d => ({
+          date: d.dimension,
+          total_orders: d.total_orders,
+          total_revenue: d.total_sales,
+          total_units: d.total_units,
+          avg_order_value: d.avg_order_value,
+        }))
+        .sort((a, b) => a.date.localeCompare(b.date)),
+    };
   },
 };
 
