@@ -5,67 +5,72 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { ShopifyLogo, TikTokLogo, StoreLogo } from "@/components/StoreLogos";
+import { ShopifyLogo, ShopeeLogo, LazadaLogo, StoreLogo } from "@/components/StoreLogos";
 import { 
   ArrowLeft, TrendingUp, TrendingDown, DollarSign, 
-  Users, ShoppingCart, Package, Eye, RotateCcw, Star, 
+  Users, ShoppingCart, Package, RotateCcw, 
   ArrowUpRight, ArrowDownRight, BarChart3, Activity, Bell, Settings, Search, Plus
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 const stores = [
   { id: "shopify", name: "Shopify", logo: ShopifyLogo, bgColor: "bg-[#96bf48]" },
-  { id: "tiktok", name: "TikTok Shop", logo: TikTokLogo, bgColor: "bg-black" },
+  { id: "shopee", name: "Shopee", logo: ShopeeLogo, bgColor: "bg-[#ee4d2d]" },
+  { id: "lazada", name: "Lazada", logo: LazadaLogo, bgColor: "bg-[#0f146d]" },
 ];
 
 // Mock data for KPIs
 const overviewKPIs = {
-  totalRevenue: { value: "$284,532", change: 12.5, trend: "up" },
-  totalOrders: { value: "3,847", change: 8.2, trend: "up" },
-  avgOrderValue: { value: "$73.95", change: -2.1, trend: "down" },
-  totalCustomers: { value: "2,156", change: 15.3, trend: "up" },
+  totalRevenue: { value: "$404,832", change: 12.5, trend: "up" },
+  totalOrders: { value: "2,319", change: 8.2, trend: "up" },
+  avgOrderValue: { value: "$174.49", change: 2.1, trend: "up" },
+  totalCustomers: { value: "1,202", change: 15.3, trend: "up" },
   conversionRate: { value: "3.24%", change: 0.8, trend: "up" },
   returnRate: { value: "4.2%", change: -1.2, trend: "down" },
 };
 
 const shopifyKPIs = {
-  revenue: { value: "$186,234", change: 14.2, trend: "up" },
-  orders: { value: "2,341", change: 9.8, trend: "up" },
-  avgOrderValue: { value: "$79.54", change: 3.2, trend: "up" },
-  customers: { value: "1,456", change: 12.1, trend: "up" },
-  newCustomers: { value: "234", change: 18.5, trend: "up" },
-  returningCustomers: { value: "1,222", change: 8.4, trend: "up" },
-  cartAbandonmentRate: { value: "68.5%", change: -2.3, trend: "down" },
-  productViews: { value: "45,234", change: 22.1, trend: "up" },
+  revenue: { value: "$27,587", change: 14.2, trend: "up" },
+  orders: { value: "100", change: 9.8, trend: "up" },
+  avgOrderValue: { value: "$275.87", change: 3.2, trend: "up" },
+  customers: { value: "89", change: 12.1, trend: "up" },
   topProducts: [
     { name: "Premium Wireless Headphones", revenue: "$12,450", units: 156 },
     { name: "Smart Watch Pro", revenue: "$9,820", units: 89 },
-    { name: "Bluetooth Speaker", revenue: "$7,340", units: 234 },
+    { name: "Bluetooth Speaker", revenue: "$5,317", units: 234 },
   ],
 };
 
-const tiktokKPIs = {
-  revenue: { value: "$98,298", change: 28.7, trend: "up" },
-  orders: { value: "1,506", change: 34.2, trend: "up" },
-  avgOrderValue: { value: "$65.27", change: -4.3, trend: "down" },
-  customers: { value: "700", change: 42.1, trend: "up" },
-  videoViews: { value: "1.2M", change: 56.3, trend: "up" },
-  engagementRate: { value: "8.4%", change: 12.1, trend: "up" },
-  affiliateSales: { value: "$23,456", change: 45.2, trend: "up" },
-  liveStreamRevenue: { value: "$15,230", change: 67.8, trend: "up" },
+const shopeeKPIs = {
+  revenue: { value: "$164,521", change: 18.7, trend: "up" },
+  orders: { value: "1,109", change: 24.2, trend: "up" },
+  avgOrderValue: { value: "$148.21", change: 4.3, trend: "up" },
+  customers: { value: "612", change: 32.1, trend: "up" },
   topProducts: [
-    { name: "Viral Beauty Serum", revenue: "$8,920", units: 445 },
-    { name: "LED Face Mask", revenue: "$6,780", units: 113 },
-    { name: "Portable Blender", revenue: "$5,430", units: 271 },
+    { name: "Hair Dryer Professional", revenue: "$8,920", units: 445 },
+    { name: "Makeup Brush Set 12pcs", revenue: "$6,780", units: 113 },
+    { name: "Resistance Bands Set", revenue: "$5,430", units: 271 },
+  ],
+};
+
+const lazadaKPIs = {
+  revenue: { value: "$212,724", change: 22.4, trend: "up" },
+  orders: { value: "1,110", change: 19.5, trend: "up" },
+  avgOrderValue: { value: "$191.64", change: 5.1, trend: "up" },
+  customers: { value: "501", change: 28.3, trend: "up" },
+  topProducts: [
+    { name: "Air Purifier HEPA Filter", revenue: "$15,320", units: 89 },
+    { name: "Water Bottle Insulated 750ml", revenue: "$8,450", units: 345 },
+    { name: "Smart LED Desk Lamp", revenue: "$6,890", units: 178 },
   ],
 };
 
 const recentOrders = [
-  { id: "#ORD-7834", customer: "Sarah M.", amount: "$127.50", status: "Delivered", store: "shopify", time: "2h ago" },
-  { id: "#ORD-7833", customer: "John D.", amount: "$89.99", status: "Processing", store: "tiktok", time: "3h ago" },
-  { id: "#ORD-7832", customer: "Emma W.", amount: "$245.00", status: "Shipped", store: "shopify", time: "4h ago" },
-  { id: "#ORD-7831", customer: "Mike R.", amount: "$56.75", status: "Delivered", store: "tiktok", time: "5h ago" },
-  { id: "#ORD-7830", customer: "Lisa K.", amount: "$312.00", status: "Processing", store: "shopify", time: "6h ago" },
+  { id: "#SHP950198", customer: "robert439", amount: "$319.96", status: "Pending", store: "shopee", time: "2h ago" },
+  { id: "#LAZ551403", customer: "Patricia Williams", amount: "$94.96", status: "Pending", store: "lazada", time: "3h ago" },
+  { id: "#LAZ391528", customer: "Sarah Smith", amount: "$541.47", status: "Shipped", store: "lazada", time: "4h ago" },
+  { id: "#SHP607760", customer: "jennifer504", amount: "$39.98", status: "Shipped", store: "shopee", time: "5h ago" },
+  { id: "#SHO-12345", customer: "Mike Johnson", amount: "$275.00", status: "Completed", store: "shopify", time: "6h ago" },
 ];
 
 const KPICard = ({ title, value, change, trend, icon: Icon, subtitle }: {
@@ -96,22 +101,16 @@ const KPICard = ({ title, value, change, trend, icon: Icon, subtitle }: {
   </Card>
 );
 
-const MiniChart = ({ data, color }: { data: number[]; color: string }) => (
-  <div className="h-16 flex items-end gap-1">
-    {data.map((h, i) => (
-      <div 
-        key={i}
-        className={`flex-1 ${color} rounded-t transition-all hover:opacity-80`}
-        style={{ height: `${h}%` }}
-      />
-    ))}
-  </div>
-);
-
 const DemoDashboard = () => {
   const navigate = useNavigate();
   const [selectedPeriod, setSelectedPeriod] = useState("30d");
   const [activeTab, setActiveTab] = useState("overview");
+
+  const platformColors: Record<string, string> = {
+    shopify: "#96bf48",
+    shopee: "#ee4d2d",
+    lazada: "#0f146d",
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -125,7 +124,7 @@ const DemoDashboard = () => {
                 Back
               </Button>
               <div className="h-6 w-px bg-border" />
-              <h1 className="text-xl font-bold text-gradient-primary">E-com.io</h1>
+              <h1 className="text-xl font-bold text-gradient-primary">GrowthPulse</h1>
             </div>
             
             <div className="flex items-center gap-4">
@@ -197,9 +196,13 @@ const DemoDashboard = () => {
               <ShopifyLogo className="w-4 h-4" />
               Shopify
             </TabsTrigger>
-            <TabsTrigger value="tiktok" className="gap-2">
-              <TikTokLogo className="w-4 h-4" />
-              TikTok Shop
+            <TabsTrigger value="shopee" className="gap-2">
+              <ShopeeLogo className="w-4 h-4" />
+              Shopee
+            </TabsTrigger>
+            <TabsTrigger value="lazada" className="gap-2">
+              <LazadaLogo className="w-4 h-4" />
+              Lazada
             </TabsTrigger>
           </TabsList>
 
@@ -222,36 +225,36 @@ const DemoDashboard = () => {
                 <CardHeader className="flex flex-row items-center justify-between">
                   <CardTitle className="text-lg">Revenue Trend</CardTitle>
                   <div className="flex gap-2">
-                    <Badge variant="outline" className="bg-green-500/10 text-green-500 border-green-500/30 flex items-center gap-1">
+                    <Badge variant="outline" className="bg-[#96bf48]/10 text-[#96bf48] border-[#96bf48]/30 flex items-center gap-1">
                       <ShopifyLogo className="w-3 h-3" /> Shopify
                     </Badge>
-                    <Badge variant="outline" className="bg-pink-500/10 text-pink-500 border-pink-500/30 flex items-center gap-1">
-                      <TikTokLogo className="w-3 h-3" /> TikTok
+                    <Badge variant="outline" className="bg-[#ee4d2d]/10 text-[#ee4d2d] border-[#ee4d2d]/30 flex items-center gap-1">
+                      <ShopeeLogo className="w-3 h-3" /> Shopee
+                    </Badge>
+                    <Badge variant="outline" className="bg-[#0f146d]/10 text-[#0f146d] border-[#0f146d]/30 flex items-center gap-1">
+                      <LazadaLogo className="w-3 h-3" /> Lazada
                     </Badge>
                   </div>
                 </CardHeader>
                 <CardContent>
                   <div className="h-48 flex items-end gap-2">
-                    {[40, 65, 45, 80, 55, 90, 75, 95, 70, 85, 60, 100].map((h, i) => (
-                      <div key={i} className="flex-1 flex flex-col gap-1">
-                        <div className="bg-green-500/60 rounded-t" style={{ height: `${h * 0.6}%` }} />
-                        <div className="bg-pink-500/60 rounded-t" style={{ height: `${h * 0.4}%` }} />
+                    {[40, 65, 45, 80, 55, 90, 75, 95].map((h, i) => (
+                      <div key={i} className="flex-1 flex flex-col gap-0.5">
+                        <div className="bg-[#96bf48]/60 rounded-t" style={{ height: `${h * 0.15}%` }} />
+                        <div className="bg-[#ee4d2d]/60 rounded-t" style={{ height: `${h * 0.40}%` }} />
+                        <div className="bg-[#0f146d]/60 rounded-t" style={{ height: `${h * 0.45}%` }} />
                       </div>
                     ))}
                   </div>
                   <div className="flex justify-between mt-4 text-xs text-muted-foreground">
-                    <span>Jan</span>
-                    <span>Feb</span>
-                    <span>Mar</span>
-                    <span>Apr</span>
-                    <span>May</span>
-                    <span>Jun</span>
-                    <span>Jul</span>
-                    <span>Aug</span>
-                    <span>Sep</span>
-                    <span>Oct</span>
-                    <span>Nov</span>
-                    <span>Dec</span>
+                    <span>Dec 29</span>
+                    <span>Dec 30</span>
+                    <span>Dec 31</span>
+                    <span>Jan 1</span>
+                    <span>Jan 2</span>
+                    <span>Jan 3</span>
+                    <span>Jan 4</span>
+                    <span>Jan 5</span>
                   </div>
                 </CardContent>
               </Card>
@@ -266,28 +269,36 @@ const DemoDashboard = () => {
                     <div className="relative w-40 h-40">
                       <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
                         <circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" strokeWidth="20" className="text-muted/20" />
-                        <circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" strokeWidth="20" className="text-green-500" strokeDasharray="165 251" />
-                        <circle cx="50" cy="50" r="40" fill="none" stroke="currentColor" strokeWidth="20" className="text-pink-500" strokeDasharray="86 251" strokeDashoffset="-165" />
+                        <circle cx="50" cy="50" r="40" fill="none" stroke="#0f146d" strokeWidth="20" strokeDasharray="132 251" />
+                        <circle cx="50" cy="50" r="40" fill="none" stroke="#ee4d2d" strokeWidth="20" strokeDasharray="102 251" strokeDashoffset="-132" />
+                        <circle cx="50" cy="50" r="40" fill="none" stroke="#96bf48" strokeWidth="20" strokeDasharray="17 251" strokeDashoffset="-234" />
                       </svg>
                       <div className="absolute inset-0 flex items-center justify-center">
-                        <span className="text-2xl font-bold">$284K</span>
+                        <span className="text-xl font-bold">$405K</span>
                       </div>
                     </div>
                   </div>
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-green-500" />
-                        <span className="text-sm">Shopify</span>
+                        <div className="w-3 h-3 rounded-full bg-[#0f146d]" />
+                        <span className="text-sm">Lazada</span>
                       </div>
-                      <span className="font-semibold">$186,234 (65%)</span>
+                      <span className="font-semibold">$212,724 (53%)</span>
                     </div>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded-full bg-pink-500" />
-                        <span className="text-sm">TikTok Shop</span>
+                        <div className="w-3 h-3 rounded-full bg-[#ee4d2d]" />
+                        <span className="text-sm">Shopee</span>
                       </div>
-                      <span className="font-semibold">$98,298 (35%)</span>
+                      <span className="font-semibold">$164,521 (41%)</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full bg-[#96bf48]" />
+                        <span className="text-sm">Shopify</span>
+                      </div>
+                      <span className="font-semibold">$27,587 (7%)</span>
                     </div>
                   </div>
                 </CardContent>
@@ -305,7 +316,10 @@ const DemoDashboard = () => {
                   {recentOrders.map((order) => (
                     <div key={order.id} className="flex items-center justify-between p-3 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
                       <div className="flex items-center gap-4">
-                        <div className={`w-8 h-8 rounded-lg ${order.store === "shopify" ? "bg-[#96bf48]" : "bg-black"} flex items-center justify-center p-1.5`}>
+                        <div 
+                          className="w-8 h-8 rounded-lg flex items-center justify-center p-1.5"
+                          style={{ backgroundColor: platformColors[order.store] }}
+                        >
                           <StoreLogo store={order.store} className="w-5 h-5 text-white" />
                         </div>
                         <div>
@@ -316,7 +330,7 @@ const DemoDashboard = () => {
                       <div className="text-right">
                         <p className="font-semibold">{order.amount}</p>
                         <div className="flex items-center gap-2">
-                          <Badge variant={order.status === "Delivered" ? "default" : order.status === "Shipped" ? "secondary" : "outline"} className="text-xs">
+                          <Badge variant={order.status === "Completed" ? "default" : order.status === "Shipped" ? "secondary" : "outline"} className="text-xs">
                             {order.status}
                           </Badge>
                           <span className="text-xs text-muted-foreground">{order.time}</span>
@@ -348,32 +362,24 @@ const DemoDashboard = () => {
               <KPICard title="Total Customers" value={shopifyKPIs.customers.value} change={shopifyKPIs.customers.change} trend="up" icon={Users} />
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <KPICard title="New Customers" value={shopifyKPIs.newCustomers.value} change={shopifyKPIs.newCustomers.change} trend="up" icon={Users} subtitle="This month" />
-              <KPICard title="Returning Customers" value={shopifyKPIs.returningCustomers.value} change={shopifyKPIs.returningCustomers.change} trend="up" icon={RotateCcw} subtitle="This month" />
-              <KPICard title="Cart Abandonment" value={shopifyKPIs.cartAbandonmentRate.value} change={shopifyKPIs.cartAbandonmentRate.change} trend="down" icon={ShoppingCart} subtitle="Lower is better" />
-              <KPICard title="Product Views" value={shopifyKPIs.productViews.value} change={shopifyKPIs.productViews.change} trend="up" icon={Eye} subtitle="This month" />
-            </div>
-
-            {/* Top Products */}
             <Card className="border-border/50 bg-card/80">
               <CardHeader>
-                <CardTitle className="text-lg">Top Selling Products</CardTitle>
+                <CardTitle className="text-lg">Top Products</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
                   {shopifyKPIs.topProducts.map((product, i) => (
                     <div key={i} className="flex items-center justify-between p-4 rounded-lg bg-muted/30">
                       <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-lg bg-green-500/20 flex items-center justify-center text-green-500 font-bold">
-                          #{i + 1}
+                        <div className="w-10 h-10 rounded-lg bg-[#96bf48]/20 flex items-center justify-center">
+                          <Package className="w-5 h-5 text-[#96bf48]" />
                         </div>
                         <div>
                           <p className="font-medium">{product.name}</p>
                           <p className="text-sm text-muted-foreground">{product.units} units sold</p>
                         </div>
                       </div>
-                      <p className="font-bold text-lg">{product.revenue}</p>
+                      <p className="font-bold">{product.revenue}</p>
                     </div>
                   ))}
                 </div>
@@ -381,51 +387,87 @@ const DemoDashboard = () => {
             </Card>
           </TabsContent>
 
-          {/* TikTok Tab */}
-          <TabsContent value="tiktok" className="space-y-6">
+          {/* Shopee Tab */}
+          <TabsContent value="shopee" className="space-y-6">
             <div className="flex items-center gap-3 mb-4">
-              <div className="w-12 h-12 rounded-xl bg-black flex items-center justify-center p-2">
-                <TikTokLogo className="w-7 h-7 text-white" />
+              <div className="w-12 h-12 rounded-xl bg-[#ee4d2d] flex items-center justify-center p-2">
+                <ShopeeLogo className="w-7 h-7 text-white" />
               </div>
               <div>
-                <h3 className="text-xl font-bold">TikTok Shop</h3>
+                <h3 className="text-xl font-bold">Shopee Store</h3>
                 <p className="text-sm text-muted-foreground">Connected • Last synced 2 mins ago</p>
               </div>
             </div>
 
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <KPICard title="Revenue" value={tiktokKPIs.revenue.value} change={tiktokKPIs.revenue.change} trend="up" icon={DollarSign} />
-              <KPICard title="Orders" value={tiktokKPIs.orders.value} change={tiktokKPIs.orders.change} trend="up" icon={ShoppingCart} />
-              <KPICard title="Avg Order Value" value={tiktokKPIs.avgOrderValue.value} change={tiktokKPIs.avgOrderValue.change} trend="down" icon={TrendingDown} />
-              <KPICard title="Total Customers" value={tiktokKPIs.customers.value} change={tiktokKPIs.customers.change} trend="up" icon={Users} />
+              <KPICard title="Revenue" value={shopeeKPIs.revenue.value} change={shopeeKPIs.revenue.change} trend="up" icon={DollarSign} />
+              <KPICard title="Orders" value={shopeeKPIs.orders.value} change={shopeeKPIs.orders.change} trend="up" icon={ShoppingCart} />
+              <KPICard title="Avg Order Value" value={shopeeKPIs.avgOrderValue.value} change={shopeeKPIs.avgOrderValue.change} trend="up" icon={TrendingUp} />
+              <KPICard title="Total Customers" value={shopeeKPIs.customers.value} change={shopeeKPIs.customers.change} trend="up" icon={Users} />
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <KPICard title="Video Views" value={tiktokKPIs.videoViews.value} change={tiktokKPIs.videoViews.change} trend="up" icon={Eye} subtitle="Total views" />
-              <KPICard title="Engagement Rate" value={tiktokKPIs.engagementRate.value} change={tiktokKPIs.engagementRate.change} trend="up" icon={Star} subtitle="Likes, comments, shares" />
-              <KPICard title="Affiliate Sales" value={tiktokKPIs.affiliateSales.value} change={tiktokKPIs.affiliateSales.change} trend="up" icon={Users} subtitle="From creators" />
-              <KPICard title="Live Stream Revenue" value={tiktokKPIs.liveStreamRevenue.value} change={tiktokKPIs.liveStreamRevenue.change} trend="up" icon={Activity} subtitle="This month" />
-            </div>
-
-            {/* Top Products */}
             <Card className="border-border/50 bg-card/80">
               <CardHeader>
-                <CardTitle className="text-lg">Top Selling Products</CardTitle>
+                <CardTitle className="text-lg">Top Products</CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
-                  {tiktokKPIs.topProducts.map((product, i) => (
+                  {shopeeKPIs.topProducts.map((product, i) => (
                     <div key={i} className="flex items-center justify-between p-4 rounded-lg bg-muted/30">
                       <div className="flex items-center gap-4">
-                        <div className="w-10 h-10 rounded-lg bg-pink-500/20 flex items-center justify-center text-pink-500 font-bold">
-                          #{i + 1}
+                        <div className="w-10 h-10 rounded-lg bg-[#ee4d2d]/20 flex items-center justify-center">
+                          <Package className="w-5 h-5 text-[#ee4d2d]" />
                         </div>
                         <div>
                           <p className="font-medium">{product.name}</p>
                           <p className="text-sm text-muted-foreground">{product.units} units sold</p>
                         </div>
                       </div>
-                      <p className="font-bold text-lg">{product.revenue}</p>
+                      <p className="font-bold">{product.revenue}</p>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Lazada Tab */}
+          <TabsContent value="lazada" className="space-y-6">
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-12 h-12 rounded-xl bg-[#0f146d] flex items-center justify-center p-2">
+                <LazadaLogo className="w-7 h-7 text-white" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold">Lazada Store</h3>
+                <p className="text-sm text-muted-foreground">Connected • Last synced 3 mins ago</p>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              <KPICard title="Revenue" value={lazadaKPIs.revenue.value} change={lazadaKPIs.revenue.change} trend="up" icon={DollarSign} />
+              <KPICard title="Orders" value={lazadaKPIs.orders.value} change={lazadaKPIs.orders.change} trend="up" icon={ShoppingCart} />
+              <KPICard title="Avg Order Value" value={lazadaKPIs.avgOrderValue.value} change={lazadaKPIs.avgOrderValue.change} trend="up" icon={TrendingUp} />
+              <KPICard title="Total Customers" value={lazadaKPIs.customers.value} change={lazadaKPIs.customers.change} trend="up" icon={Users} />
+            </div>
+
+            <Card className="border-border/50 bg-card/80">
+              <CardHeader>
+                <CardTitle className="text-lg">Top Products</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {lazadaKPIs.topProducts.map((product, i) => (
+                    <div key={i} className="flex items-center justify-between p-4 rounded-lg bg-muted/30">
+                      <div className="flex items-center gap-4">
+                        <div className="w-10 h-10 rounded-lg bg-[#0f146d]/20 flex items-center justify-center">
+                          <Package className="w-5 h-5 text-[#0f146d]" />
+                        </div>
+                        <div>
+                          <p className="font-medium">{product.name}</p>
+                          <p className="text-sm text-muted-foreground">{product.units} units sold</p>
+                        </div>
+                      </div>
+                      <p className="font-bold">{product.revenue}</p>
                     </div>
                   ))}
                 </div>

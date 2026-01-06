@@ -6,7 +6,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { ShopifyLogo, TikTokLogo, AmazonLogo, LazadaLogo, ShopeeLogo, StoreLogo } from "@/components/StoreLogos";
+import { ShopifyLogo, LazadaLogo, ShopeeLogo, StoreLogo } from "@/components/StoreLogos";
 import { 
   ArrowLeft, ArrowRight, Check, Eye, EyeOff, Key, Link2, 
   TrendingUp, DollarSign, Users, ShoppingCart, Package, Activity, 
@@ -19,40 +19,37 @@ type DemoStep = "login" | "stores" | "connect" | "dashboard";
 
 const stores = [
   { id: "shopify", name: "Shopify", logo: ShopifyLogo, bgColor: "bg-[#96bf48]", authType: "oauth" },
-  { id: "tiktok", name: "TikTok Shop", logo: TikTokLogo, bgColor: "bg-black", authType: "oauth" },
-  { id: "amazon", name: "Amazon Seller", logo: AmazonLogo, bgColor: "bg-[#ff9900]", authType: "api" },
   { id: "lazada", name: "Lazada", logo: LazadaLogo, bgColor: "bg-[#0f146d]", authType: "api" },
   { id: "shopee", name: "Shopee", logo: ShopeeLogo, bgColor: "bg-[#ee4d2d]", authType: "api" },
 ];
 
 // Mock dashboard data
 const mockDashboardData = {
-  totalRevenue: "$284,532.45",
-  totalOrders: 3847,
-  avgOrderValue: "$73.95",
+  totalRevenue: "$404,832",
+  totalOrders: 2319,
+  avgOrderValue: "$174.49",
   revenueGrowth: 12.5,
   ordersGrowth: 8.2,
   platforms: [
-    { name: "Shopify", revenue: "$186,234", orders: 2341, growth: 14.2 },
-    { name: "Amazon", revenue: "$58,298", orders: 892, growth: 8.7 },
-    { name: "Shopee", revenue: "$24,500", orders: 412, growth: 22.3 },
-    { name: "Lazada", revenue: "$15,500", orders: 202, growth: 5.1 },
+    { name: "Lazada", revenue: "$212,724", orders: 1110, growth: 22.4 },
+    { name: "Shopee", revenue: "$164,521", orders: 1109, growth: 18.7 },
+    { name: "Shopify", revenue: "$27,587", orders: 100, growth: 14.2 },
   ],
   recentDays: [
-    { day: "Mon", revenue: 12400, orders: 156 },
-    { day: "Tue", revenue: 15200, orders: 189 },
-    { day: "Wed", revenue: 13800, orders: 172 },
-    { day: "Thu", revenue: 18900, orders: 234 },
-    { day: "Fri", revenue: 22100, orders: 278 },
-    { day: "Sat", revenue: 25600, orders: 312 },
-    { day: "Sun", revenue: 19800, orders: 245 },
+    { day: "Dec 29", revenue: 31160, orders: 204 },
+    { day: "Dec 30", revenue: 42307, orders: 258 },
+    { day: "Dec 31", revenue: 46309, orders: 281 },
+    { day: "Jan 1", revenue: 49257, orders: 291 },
+    { day: "Jan 2", revenue: 52952, orders: 305 },
+    { day: "Jan 3", revenue: 54505, orders: 304 },
+    { day: "Jan 4", revenue: 57286, orders: 282 },
   ],
   topProducts: [
-    { name: "Premium Wireless Headphones", revenue: "$12,450", units: 156, platform: "shopify" },
-    { name: "Smart Watch Pro", revenue: "$9,820", units: 89, platform: "amazon" },
-    { name: "Bluetooth Speaker", revenue: "$7,340", units: 234, platform: "shopee" },
-    { name: "LED Face Mask", revenue: "$6,780", units: 113, platform: "lazada" },
-    { name: "Portable Blender", revenue: "$5,430", units: 271, platform: "shopify" },
+    { name: "Air Purifier HEPA Filter", revenue: "$15,320", units: 89, platform: "lazada" },
+    { name: "Hair Dryer Professional", revenue: "$8,920", units: 445, platform: "shopee" },
+    { name: "Water Bottle Insulated 750ml", revenue: "$8,450", units: 345, platform: "lazada" },
+    { name: "Makeup Brush Set 12pcs", revenue: "$6,780", units: 113, platform: "shopee" },
+    { name: "Smart LED Desk Lamp", revenue: "$6,890", units: 178, platform: "lazada" },
   ],
 };
 

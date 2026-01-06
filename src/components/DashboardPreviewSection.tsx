@@ -1,31 +1,31 @@
-import { ShopifyLogo, TikTokLogo } from "./StoreLogos";
-import { TrendingUp, TrendingDown, DollarSign, ShoppingCart, Users, Package, RotateCcw, Eye, ArrowUpRight } from "lucide-react";
+import { ShopifyLogo, ShopeeLogo, LazadaLogo } from "./StoreLogos";
+import { TrendingUp, TrendingDown, DollarSign, ShoppingCart, Package, RotateCcw, Eye, ArrowUpRight } from "lucide-react";
 
 // Realistic e-commerce dummy data
 const overviewKPIs = [
   { 
     label: "Total Revenue", 
-    value: "$847,293", 
+    value: "$404,832", 
     change: "+23.5%", 
     trend: "up",
     icon: DollarSign,
-    subtext: "vs $686,190 last period"
+    subtext: "vs $328,000 last period"
   },
   { 
     label: "Total Orders", 
-    value: "12,847", 
+    value: "2,319", 
     change: "+18.2%", 
     trend: "up",
     icon: ShoppingCart,
-    subtext: "10,869 last period"
+    subtext: "1,962 last period"
   },
   { 
     label: "Average Order Value", 
-    value: "$65.95", 
+    value: "$174.49", 
     change: "+4.5%", 
     trend: "up",
     icon: Package,
-    subtext: "$63.12 last period"
+    subtext: "$166.99 last period"
   },
   { 
     label: "Return Rate", 
@@ -38,24 +38,25 @@ const overviewKPIs = [
 ];
 
 const channelBreakdown = [
-  { name: "Shopify", revenue: "$523,847", orders: "7,942", percentage: 62, logo: ShopifyLogo, color: "#96bf48" },
-  { name: "TikTok Shop", revenue: "$323,446", orders: "4,905", percentage: 38, logo: TikTokLogo, color: "#ffffff" },
+  { name: "Lazada", revenue: "$212,724", orders: "1,110", percentage: 53, logo: LazadaLogo, color: "#0f146d" },
+  { name: "Shopee", revenue: "$164,521", orders: "1,109", percentage: 41, logo: ShopeeLogo, color: "#ee4d2d" },
+  { name: "Shopify", revenue: "$27,587", orders: "100", percentage: 7, logo: ShopifyLogo, color: "#96bf48" },
 ];
 
 const topProducts = [
-  { name: "Premium Wireless Earbuds", sku: "PWE-001", sales: 2847, revenue: "$142,350", channel: "Shopify" },
-  { name: "Smart Fitness Watch Pro", sku: "SFW-002", sales: 1923, revenue: "$288,450", channel: "Shopify" },
-  { name: "Organic Skincare Set", sku: "OSS-003", sales: 1654, revenue: "$82,700", channel: "TikTok" },
-  { name: "Minimalist Leather Wallet", sku: "MLW-004", sales: 1432, revenue: "$57,280", channel: "TikTok" },
-  { name: "Portable Phone Charger", sku: "PPC-005", sales: 1287, revenue: "$38,610", channel: "Shopify" },
+  { name: "Air Purifier HEPA Filter", sku: "LAZ-001", sales: 89, revenue: "$15,320", channel: "Lazada" },
+  { name: "Hair Dryer Professional", sku: "SHP-003", sales: 445, revenue: "$8,920", channel: "Shopee" },
+  { name: "Water Bottle Insulated 750ml", sku: "LAZ-005", sales: 345, revenue: "$8,450", channel: "Lazada" },
+  { name: "Makeup Brush Set 12pcs", sku: "SHP-004", sales: 113, revenue: "$6,780", channel: "Shopee" },
+  { name: "Smart LED Desk Lamp", sku: "LAZ-003", sales: 178, revenue: "$6,890", channel: "Lazada" },
 ];
 
 const recentOrders = [
-  { id: "#ORD-12847", customer: "Sarah M.", items: 3, total: "$127.50", status: "Delivered", channel: "Shopify", time: "2 min ago" },
-  { id: "#ORD-12846", customer: "John D.", items: 1, total: "$89.99", status: "Shipped", channel: "TikTok", time: "5 min ago" },
-  { id: "#ORD-12845", customer: "Emily R.", items: 2, total: "$156.00", status: "Processing", channel: "Shopify", time: "12 min ago" },
-  { id: "#ORD-12844", customer: "Mike T.", items: 4, total: "$234.80", status: "Delivered", channel: "TikTok", time: "18 min ago" },
-  { id: "#ORD-12843", customer: "Lisa K.", items: 1, total: "$49.99", status: "Shipped", channel: "Shopify", time: "25 min ago" },
+  { id: "#SHP-950198", customer: "robert439", items: 4, total: "$319.96", status: "Pending", channel: "Shopee", time: "2 min ago" },
+  { id: "#LAZ-551403", customer: "Patricia W.", items: 4, total: "$94.96", status: "Pending", channel: "Lazada", time: "5 min ago" },
+  { id: "#LAZ-391528", customer: "Sarah S.", items: 3, total: "$541.47", status: "Shipped", channel: "Lazada", time: "12 min ago" },
+  { id: "#SHP-607760", customer: "jennifer504", items: 2, total: "$39.98", status: "Shipped", channel: "Shopee", time: "18 min ago" },
+  { id: "#SHO-12345", customer: "Mike J.", items: 1, total: "$275.00", status: "Completed", channel: "Shopify", time: "25 min ago" },
 ];
 
 // Mini sparkline chart component
@@ -120,13 +121,17 @@ const DashboardPreviewSection = () => {
               <div className="flex items-center gap-4">
                 <h3 className="font-bold text-foreground">Analytics Overview</h3>
                 <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#0f146d]/20 border border-[#0f146d]/30">
+                    <LazadaLogo className="w-4 h-4" />
+                    <span className="text-xs text-foreground">Lazada</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#ee4d2d]/20 border border-[#ee4d2d]/30">
+                    <ShopeeLogo className="w-4 h-4" />
+                    <span className="text-xs text-foreground">Shopee</span>
+                  </div>
                   <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#96bf48]/20 border border-[#96bf48]/30">
                     <ShopifyLogo className="w-4 h-4" />
                     <span className="text-xs text-foreground">Shopify</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-foreground/10 border border-foreground/20">
-                    <TikTokLogo className="w-4 h-4" />
-                    <span className="text-xs text-foreground">TikTok</span>
                   </div>
                 </div>
               </div>
@@ -185,11 +190,11 @@ const DashboardPreviewSection = () => {
                     ))}
                   </div>
                   <div className="flex justify-between mt-2 text-[10px] text-muted-foreground">
-                    <span>Nov 24</span>
-                    <span>Dec 1</span>
-                    <span>Dec 8</span>
-                    <span>Dec 15</span>
-                    <span>Dec 22</span>
+                    <span>Dec 29</span>
+                    <span>Dec 31</span>
+                    <span>Jan 2</span>
+                    <span>Jan 4</span>
+                    <span>Jan 6</span>
                   </div>
                 </div>
 
@@ -255,15 +260,17 @@ const DashboardPreviewSection = () => {
                         <div className="w-8 h-8 rounded-lg bg-muted flex items-center justify-center">
                           {order.channel === "Shopify" ? (
                             <ShopifyLogo className="w-4 h-4" />
+                          ) : order.channel === "Shopee" ? (
+                            <ShopeeLogo className="w-4 h-4" />
                           ) : (
-                            <TikTokLogo className="w-4 h-4" />
+                            <LazadaLogo className="w-4 h-4" />
                           )}
                         </div>
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2">
                             <p className="text-sm font-medium text-foreground">{order.id}</p>
                             <span className={`text-[10px] px-1.5 py-0.5 rounded ${
-                              order.status === "Delivered" ? "bg-green-500/20 text-green-500" :
+                              order.status === "Completed" ? "bg-green-500/20 text-green-500" :
                               order.status === "Shipped" ? "bg-blue-500/20 text-blue-500" :
                               "bg-yellow-500/20 text-yellow-500"
                             }`}>

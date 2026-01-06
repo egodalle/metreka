@@ -1,5 +1,5 @@
 import { Check } from "lucide-react";
-import { ShopifyLogo, TikTokLogo, AmazonLogo, LazadaLogo, ShopeeLogo } from "@/components/StoreLogos";
+import { ShopifyLogo, LazadaLogo, ShopeeLogo } from "@/components/StoreLogos";
 
 const platforms = [
   {
@@ -13,30 +13,10 @@ const platforms = [
     streams: ["Orders", "Products", "Customers", "Inventory", "Transactions", "Fulfillments"],
   },
   {
-    name: "TikTok Shop",
-    logo: TikTokLogo,
-    marketShare: "18%",
-    priority: "P0",
-    color: "from-pink-500/20 to-pink-500/5",
-    borderColor: "border-pink-500/30",
-    bgColor: "bg-black",
-    streams: ["Orders", "Products", "Creators", "Videos", "Analytics", "Promotions"],
-  },
-  {
-    name: "Amazon Seller",
-    logo: AmazonLogo,
-    marketShare: "22%",
-    priority: "P0",
-    color: "from-accent/20 to-accent/5",
-    borderColor: "border-accent/30",
-    bgColor: "bg-[#ff9900]",
-    streams: ["Orders", "Order Items", "Inventory", "Financial Events", "Returns"],
-  },
-  {
     name: "Lazada",
     logo: LazadaLogo,
-    marketShare: "15%",
-    priority: "P1",
+    marketShare: "25%",
+    priority: "P0",
     color: "from-purple/20 to-purple/5",
     borderColor: "border-purple/30",
     bgColor: "bg-[#0f146d]",
@@ -45,8 +25,8 @@ const platforms = [
   {
     name: "Shopee",
     logo: ShopeeLogo,
-    marketShare: "16%",
-    priority: "P1",
+    marketShare: "28%",
+    priority: "P0",
     color: "from-orange/20 to-orange/5",
     borderColor: "border-orange/30",
     bgColor: "bg-[#ee4d2d]",
@@ -78,7 +58,7 @@ const PlatformsSection = () => {
         </div>
 
         {/* Platforms Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-5xl mx-auto">
           {platforms.map((platform, index) => (
             <div
               key={platform.name}
@@ -126,13 +106,13 @@ const PlatformsSection = () => {
           ))}
 
           {/* Coming Soon Card */}
-          <div className="glass rounded-2xl p-6 border border-dashed border-border/50 flex flex-col items-center justify-center text-center">
+          <div className="glass rounded-2xl p-6 border border-dashed border-border/50 flex flex-col items-center justify-center text-center lg:col-span-3 md:col-span-2">
             <div className="w-12 h-12 rounded-xl bg-muted/50 flex items-center justify-center mb-4">
               <span className="text-2xl">+</span>
             </div>
             <h3 className="font-bold text-lg text-foreground mb-2">More Coming</h3>
             <p className="text-sm text-muted-foreground">
-              Google Analytics 4, Meta Ads, Google Ads, Stripe, Klaviyo & more
+              TikTok Shop, Amazon Seller, Google Analytics 4, Meta Ads, Stripe, Klaviyo & more
             </p>
           </div>
         </div>
