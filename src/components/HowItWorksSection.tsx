@@ -1,22 +1,16 @@
-import { ShopifyLogo, TikTokLogo, AmazonLogo, LazadaLogo, ShopeeLogo } from "./StoreLogos";
+import { ShopifyLogo, LazadaLogo, ShopeeLogo } from "./StoreLogos";
 import { ArrowRight, Check, Plug, RefreshCw, BarChart3 } from "lucide-react";
 
 const steps = [
   {
     number: "01",
     title: "Select Your Platform",
-    description: "Choose from Shopify, TikTok Shop, Amazon, Lazada, Shopee, and more. We support all major e-commerce platforms.",
+    description: "Choose from Shopify, Lazada, Shopee, and more. We support major e-commerce platforms across SEA markets.",
     icon: Plug,
     visual: (
       <div className="flex items-center gap-3 mt-4">
         <div className="w-10 h-10 rounded-lg bg-[#96bf48]/20 flex items-center justify-center">
           <ShopifyLogo className="w-6 h-6" />
-        </div>
-        <div className="w-10 h-10 rounded-lg bg-foreground/10 flex items-center justify-center">
-          <TikTokLogo className="w-6 h-6" />
-        </div>
-        <div className="w-10 h-10 rounded-lg bg-[#FF9900]/20 flex items-center justify-center">
-          <AmazonLogo className="w-6 h-6" />
         </div>
         <div className="w-10 h-10 rounded-lg bg-[#0F1689]/20 flex items-center justify-center">
           <LazadaLogo className="w-6 h-6" />
@@ -81,10 +75,10 @@ const steps = [
       <div className="mt-4 glass rounded-lg p-3 border border-border/50">
         <div className="grid grid-cols-2 gap-2">
           {[
-            { label: "Revenue", value: "$124,500" },
-            { label: "Orders", value: "1,847" },
-            { label: "AOV", value: "$67.40" },
-            { label: "Customers", value: "1,203" },
+            { label: "Revenue", value: "$404,832" },
+            { label: "Orders", value: "2,319" },
+            { label: "AOV", value: "$174.49" },
+            { label: "Customers", value: "1,202" },
           ].map((stat) => (
             <div key={stat.label} className="text-center p-2 rounded bg-muted/30">
               <p className="text-lg font-bold text-foreground">{stat.value}</p>

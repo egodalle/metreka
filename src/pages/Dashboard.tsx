@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ThemeToggle } from "@/components/ThemeToggle";
-import { ShopifyLogo, TikTokLogo, StoreLogo } from "@/components/StoreLogos";
+import { ShopifyLogo, ShopeeLogo, LazadaLogo, StoreLogo } from "@/components/StoreLogos";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
   ArrowLeft, TrendingUp, DollarSign, 
@@ -21,8 +21,8 @@ import { ProfitabilitySection } from "@/components/dashboard/ProfitabilitySectio
 
 const stores = [
   { id: "shopify", name: "Shopify", logo: ShopifyLogo, bgColor: "bg-[#96bf48]" },
-  { id: "shopee", name: "Shopee", logo: TikTokLogo, bgColor: "bg-[#ee4d2d]" },
-  { id: "lazada", name: "Lazada", logo: TikTokLogo, bgColor: "bg-[#0f146d]" },
+  { id: "shopee", name: "Shopee", logo: ShopeeLogo, bgColor: "bg-[#ee4d2d]" },
+  { id: "lazada", name: "Lazada", logo: LazadaLogo, bgColor: "bg-[#0f146d]" },
 ];
 
 const formatCurrency = (value: number | string) => {

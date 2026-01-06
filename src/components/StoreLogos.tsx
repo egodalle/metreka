@@ -12,20 +12,6 @@ export const ShopifyLogo: React.FC<LogoProps> = ({ className = "w-6 h-6" }) => (
   </svg>
 );
 
-export const TikTokLogo: React.FC<LogoProps> = ({ className = "w-6 h-6" }) => (
-  <svg className={className} viewBox="0 0 48 48" fill="none">
-    <path d="M34.1451 0H26.0556V32.6956C26.0556 36.5913 22.9444 39.7913 19.0729 39.7913C15.2014 39.7913 12.0903 36.5913 12.0903 32.6956C12.0903 28.8696 15.1319 25.7391 18.8646 25.6V17.3913C10.6354 17.5304 4 24.2783 4 32.6956C4 41.1826 10.7743 48 19.1424 48C27.5104 48 34.2847 41.1131 34.2847 32.6956V15.9304C37.3264 18.1565 41.0591 19.4783 45 19.5478V11.3391C38.9167 11.1304 34.1451 6.12173 34.1451 0Z" fill="currentColor"/>
-  </svg>
-);
-
-export const AmazonLogo: React.FC<LogoProps> = ({ className = "w-6 h-6" }) => (
-  <svg className={className} viewBox="0 0 48 48" fill="currentColor">
-    <path d="M29.2 22.7c0 1.2.1 2.2-.5 3.2-.5.8-1.3 1.3-2.2 1.3-1.2 0-1.9-.9-1.9-2.3 0-2.7 2.4-3.2 4.6-3.2v1zm3.1 7.5c-.2.2-.5.2-.7.1-1-.8-1.2-1.2-1.7-2-1.6 1.7-2.8 2.2-4.9 2.2-2.5 0-4.4-1.5-4.4-4.6 0-2.4 1.3-4 3.1-4.8 1.6-.7 3.8-.8 5.5-1v-.4c0-.7.1-1.5-.4-2.1-.4-.5-1.1-.7-1.8-.7-1.2 0-2.3.6-2.6 1.9-.1.3-.3.6-.6.6l-3-.3c-.3-.1-.6-.3-.5-.7.7-3.9 4.3-5 7.4-5 1.6 0 3.7.4 5 1.6 1.6 1.5 1.5 3.5 1.5 5.7v5.2c0 1.6.6 2.2 1.2 3.1.2.3.3.7 0 .9-.7.6-2 1.7-2.7 2.4h-.1l.1-.1z"/>
-    <path d="M36.3 36.5c-5 3.7-12.3 5.7-18.6 5.7-8.8 0-16.7-3.3-22.7-8.7-.5-.4-.1-1 .5-.7 6.5 3.8 14.5 6.1 22.7 6.1 5.6 0 11.7-1.2 17.3-3.6.9-.3 1.6.6.8 1.2z"/>
-    <path d="M38.4 34.1c-.7-.9-4.4-.4-6.1-.2-.5.1-.6-.4-.1-.7 3-2.1 7.9-1.5 8.4-.8.6.7-.2 5.7-2.9 8.1-.4.4-.8.2-.6-.3.6-1.5 2-4.8 1.3-6.1z"/>
-  </svg>
-);
-
 export const LazadaLogo: React.FC<LogoProps> = ({ className = "w-6 h-6" }) => (
   <svg className={className} viewBox="0 0 48 48" fill="none">
     <path d="M24 4C12.95 4 4 12.95 4 24s8.95 20 20 20 20-8.95 20-20S35.05 4 24 4z" fill="#0F146D"/>
@@ -47,10 +33,6 @@ export const StoreLogo: React.FC<{ store: string } & LogoProps> = ({ store, clas
   switch (store) {
     case "shopify":
       return <ShopifyLogo className={className} />;
-    case "tiktok":
-      return <TikTokLogo className={className} />;
-    case "amazon":
-      return <AmazonLogo className={className} />;
     case "lazada":
       return <LazadaLogo className={className} />;
     case "shopee":
