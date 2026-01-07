@@ -12,6 +12,7 @@ import DemoDashboard from "./pages/DemoDashboard";
 import Dashboard from "./pages/Dashboard";
 import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
+import OAuthCallback from "./pages/OAuthCallback";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -30,6 +31,11 @@ const App = () => (
               <Route path="/onboarding" element={
                 <ProtectedRoute>
                   <Onboarding />
+                </ProtectedRoute>
+              } />
+              <Route path="/oauth/callback" element={
+                <ProtectedRoute>
+                  <OAuthCallback />
                 </ProtectedRoute>
               } />
               <Route path="/demo" element={<Demo />} />
