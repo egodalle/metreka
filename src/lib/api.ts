@@ -1,5 +1,5 @@
 // API client for GrowthPulse FastAPI backend
-import { isDemoMode } from './integrations';
+import { isDemoMode, getConnectedDemoStores, StorePlatform } from './integrations';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://growthpulse-api-z5id2gn52a-uc.a.run.app';
 const API_KEY = import.meta.env.VITE_GROWTHPULSE_API_KEY || '';
@@ -137,18 +137,15 @@ const demoData: Record<string, { stats: any; platformSummary: any; dailySummary:
   },
 };
 
-// Get connected store from session storage (set during demo onboarding)
+// Get all connected demo stores
+export function getConnectedDemoStorePlatforms(): StorePlatform[] {
+  return getConnectedDemoStores().map(s => s.platform);
+}
+
+// Legacy function for backward compatibility - returns first connected store
 export function getConnectedDemoStore(): string | null {
-  const keys = Object.keys(sessionStorage);
-  const storeKey = keys.find(k => k.startsWith('demo_store_store_'));
-  if (storeKey) {
-    const data = sessionStorage.getItem(storeKey);
-    if (data) {
-      const parsed = JSON.parse(data);
-      return parsed.platform;
-    }
-  }
-  return null;
+  const stores = getConnectedDemoStores();
+  return stores.length > 0 ? stores[0].platform : null;
 }
 
 async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> {
@@ -282,23 +279,63 @@ export const api = {
   // Health check
   healthCheck: (): Promise<HealthResponse> => {
     if (isDemoMode()) {
-      const connectedStore = getConnectedDemoStore();
+      const connectedStores = getConnectedDemoStorePlatforms();
       return Promise.resolve({
-        status: connectedStore ? 'healthy' : 'disconnected',
+        status: connectedStores.length > 0 ? 'healthy' : 'disconnected',
         timestamp: new Date().toISOString(),
-        bigquery_connected: !!connectedStore,
-        total_records: connectedStore ? demoData[connectedStore]?.stats.data.overview.total_records : 0,
+        bigquery_connected: connectedStores.length > 0,
+        total_records: connectedStores.reduce((acc, store) => 
+          acc + (demoData[store]?.stats.data.overview.total_records || 0), 0),
       });
     }
     return fetchAPI<HealthResponse>('/health');
   },
 
-  // Overall stats
+  // Overall stats - aggregates all connected stores in demo mode
   getStats: (): Promise<StatsResponse> => {
     if (isDemoMode()) {
-      const connectedStore = getConnectedDemoStore();
-      if (connectedStore && demoData[connectedStore]) {
-        return Promise.resolve(demoData[connectedStore].stats);
+      const connectedStores = getConnectedDemoStorePlatforms();
+      if (connectedStores.length > 0) {
+        // Aggregate stats from all connected stores
+        const aggregated = connectedStores.reduce((acc, store) => {
+          const storeData = demoData[store]?.stats.data.overview;
+          if (storeData) {
+            acc.total_records += storeData.total_records;
+            acc.total_orders += storeData.total_orders;
+            acc.total_customers += storeData.total_customers;
+            acc.total_products += storeData.total_products;
+            acc.total_revenue += storeData.total_revenue;
+          }
+          return acc;
+        }, {
+          total_records: 0,
+          total_orders: 0,
+          total_customers: 0,
+          total_products: 0,
+          total_revenue: 0,
+        });
+
+        const by_source = connectedStores.map(store => ({
+          source: store,
+          orders: demoData[store]?.stats.data.overview.total_orders || 0,
+          revenue: demoData[store]?.stats.data.overview.total_revenue || 0,
+        }));
+
+        return Promise.resolve({
+          success: true,
+          data: {
+            overview: {
+              ...aggregated,
+              avg_order_value: aggregated.total_orders > 0 
+                ? aggregated.total_revenue / aggregated.total_orders 
+                : 0,
+              earliest_order: '2024-01-01',
+              latest_order: '2024-12-31',
+              platforms: connectedStores.length,
+            },
+            by_source,
+          },
+        });
       }
       return Promise.resolve({
         success: false,
@@ -311,15 +348,46 @@ export const api = {
     return fetchAPI<StatsResponse>('/api/v1/stats');
   },
 
-  // Sales summary by different dimensions
+  // Sales summary by different dimensions - aggregates all connected stores
   getSalesSummary: (groupBy: 'source' | 'day' | 'month' | 'status' = 'source', startDate?: string, endDate?: string): Promise<SalesSummaryResponse> => {
     if (isDemoMode()) {
-      const connectedStore = getConnectedDemoStore();
-      if (connectedStore && demoData[connectedStore]) {
+      const connectedStores = getConnectedDemoStorePlatforms();
+      if (connectedStores.length > 0) {
         if (groupBy === 'source') {
-          return Promise.resolve(demoData[connectedStore].platformSummary);
+          // Return platform summaries for all connected stores
+          const allPlatformData = connectedStores.flatMap(store => 
+            demoData[store]?.platformSummary.data || []
+          );
+          return Promise.resolve({
+            success: true,
+            group_by: 'source',
+            data: allPlatformData,
+          });
         } else if (groupBy === 'day') {
-          return Promise.resolve(demoData[connectedStore].dailySummary);
+          // Aggregate daily data from all connected stores
+          const dailyMap = new Map<string, any>();
+          connectedStores.forEach(store => {
+            const storeDaily = demoData[store]?.dailySummary.data || [];
+            storeDaily.forEach((day: any) => {
+              if (dailyMap.has(day.dimension)) {
+                const existing = dailyMap.get(day.dimension);
+                existing.total_orders += day.total_orders;
+                existing.total_units += day.total_units;
+                existing.total_sales += day.total_sales;
+              } else {
+                dailyMap.set(day.dimension, { ...day });
+              }
+            });
+          });
+          const aggregatedDaily = Array.from(dailyMap.values()).map(d => ({
+            ...d,
+            avg_order_value: d.total_orders > 0 ? d.total_sales / d.total_orders : 0,
+          }));
+          return Promise.resolve({
+            success: true,
+            group_by: 'day',
+            data: aggregatedDaily,
+          });
         }
       }
       return Promise.resolve({ success: true, group_by: groupBy, data: [] });

@@ -17,6 +17,8 @@ import {
   getSyncStatus,
   SyncStatus,
   isDemoMode,
+  getConnectedDemoStores,
+  addConnectedDemoStore,
 } from '@/lib/integrations';
 import { Badge } from '@/components/ui/badge';
 
@@ -55,6 +57,10 @@ export default function Onboarding() {
         
         if (status.status === 'completed') {
           clearInterval(pollInterval);
+          // Save the connected store in demo mode
+          if (isDemoMode() && selectedPlatform) {
+            addConnectedDemoStore(selectedPlatform);
+          }
           setStep('complete');
           toast({
             title: 'Store connected!',
@@ -102,6 +108,15 @@ export default function Onboarding() {
       setIsLoading(false);
     }
   };
+
+  // Get already connected platforms to filter them out
+  const connectedPlatforms = isDemoMode() 
+    ? getConnectedDemoStores().map(s => s.platform)
+    : [];
+  
+  const availablePlatforms = platformConfigs.filter(
+    p => !connectedPlatforms.includes(p.id)
+  );
 
   const handlePlatformSelect = (platform: StorePlatform) => {
     setSelectedPlatform(platform);
@@ -207,33 +222,71 @@ export default function Onboarding() {
       case 'select':
         return (
           <div className="space-y-4">
-            <div className="grid gap-3">
-              {platformConfigs.map((platform) => (
-                <button
-                  key={platform.id}
-                  type="button"
-                  onClick={() => handlePlatformSelect(platform.id)}
-                  disabled={isLoading}
-                  className="flex items-center gap-4 p-4 rounded-lg border border-border bg-card hover:bg-accent hover:border-primary/50 transition-colors text-left group disabled:opacity-50"
-                >
-                  <span className="text-3xl">{platform.icon}</span>
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">
-                      {platform.name}
-                    </h3>
-                    <p className="text-sm text-muted-foreground">{platform.description}</p>
-                  </div>
-                  {platform.connectionMethod === 'oauth' ? (
-                    <ExternalLink className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                  ) : (
-                    <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
-                  )}
-                </button>
-              ))}
-            </div>
+            {/* Show already connected stores */}
+            {connectedPlatforms.length > 0 && (
+              <div className="space-y-2 mb-4">
+                <p className="text-sm font-medium text-muted-foreground">Connected stores:</p>
+                <div className="flex flex-wrap gap-2">
+                  {getConnectedDemoStores().map((store) => {
+                    const config = platformConfigs.find(p => p.id === store.platform);
+                    return (
+                      <div
+                        key={store.id}
+                        className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/30"
+                      >
+                        <span className="text-xl">{config?.icon}</span>
+                        <span className="text-sm font-medium text-green-700">{config?.name}</span>
+                        <Check className="h-4 w-4 text-green-600" />
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {availablePlatforms.length > 0 ? (
+              <>
+                <p className="text-sm font-medium text-muted-foreground">
+                  {connectedPlatforms.length > 0 ? 'Add another store:' : 'Select a platform:'}
+                </p>
+                <div className="grid gap-3">
+                  {availablePlatforms.map((platform) => (
+                    <button
+                      key={platform.id}
+                      type="button"
+                      onClick={() => handlePlatformSelect(platform.id)}
+                      disabled={isLoading}
+                      className="flex items-center gap-4 p-4 rounded-lg border border-border bg-card hover:bg-accent hover:border-primary/50 transition-colors text-left group disabled:opacity-50"
+                    >
+                      <span className="text-3xl">{platform.icon}</span>
+                      <div className="flex-1">
+                        <h3 className="font-semibold text-foreground group-hover:text-primary transition-colors">
+                          {platform.name}
+                        </h3>
+                        <p className="text-sm text-muted-foreground">{platform.description}</p>
+                      </div>
+                      {platform.connectionMethod === 'oauth' ? (
+                        <ExternalLink className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                      ) : (
+                        <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary transition-colors" />
+                      )}
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="text-center py-6">
+                <Check className="h-12 w-12 text-green-500 mx-auto mb-3" />
+                <p className="font-medium">All platforms connected!</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  You've connected all available e-commerce platforms.
+                </p>
+              </div>
+            )}
+
             <div className="pt-4 border-t">
               <Button variant="ghost" className="w-full" onClick={handleSkip}>
-                Skip for now
+                {connectedPlatforms.length > 0 ? 'Go to Dashboard' : 'Skip for now'}
               </Button>
             </div>
           </div>

@@ -14,11 +14,11 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useDashboard, useHealthCheck } from "@/hooks/useDashboardData";
-import { PlatformData, DailyData, getConnectedDemoStore } from "@/lib/api";
+import { PlatformData, DailyData, getConnectedDemoStorePlatforms } from "@/lib/api";
 import { ProductAnalyticsSection } from "@/components/dashboard/ProductAnalyticsSection";
 import { CustomerAnalyticsSection } from "@/components/dashboard/CustomerAnalyticsSection";
 import { ProfitabilitySection } from "@/components/dashboard/ProfitabilitySection";
-import { isDemoMode } from "@/lib/integrations";
+import { isDemoMode, getConnectedDemoStores } from "@/lib/integrations";
 
 const allStores = [
   { id: "shopify", name: "Shopify", logo: ShopifyLogo, bgColor: "bg-[#96bf48]" },
@@ -146,13 +146,17 @@ const Dashboard = () => {
   const [selectedPeriod, setSelectedPeriod] = useState("7d");
   const [activeTab, setActiveTab] = useState("overview");
   
-  // In demo mode, only show the connected store
-  const connectedDemoStore = isDemoMode() ? getConnectedDemoStore() : null;
-  const stores = isDemoMode() && connectedDemoStore 
-    ? allStores.filter(s => s.id === connectedDemoStore)
+  // In demo mode, only show connected stores
+  const connectedDemoStorePlatforms = isDemoMode() ? getConnectedDemoStorePlatforms() : [];
+  const stores = isDemoMode() && connectedDemoStorePlatforms.length > 0
+    ? allStores.filter(s => connectedDemoStorePlatforms.includes(s.id as any))
     : allStores;
   
-  const [selectedStore, setSelectedStore] = useState(connectedDemoStore || "all");
+  const [selectedStore, setSelectedStore] = useState(
+    isDemoMode() && connectedDemoStorePlatforms.length === 1 
+      ? connectedDemoStorePlatforms[0] 
+      : "all"
+  );
   
   const { data: healthData, isLoading: healthLoading } = useHealthCheck();
   const { data: dashboardData, isLoading, isError, error, refetch } = useDashboard();
@@ -309,7 +313,7 @@ const Dashboard = () => {
             </Select>
             <Button className="gap-2" onClick={() => navigate('/onboarding')}>
               <Plus className="w-4 h-4" />
-              {isDemoMode() && connectedDemoStore ? 'Add Another Store' : 'Add Store'}
+              {isDemoMode() && connectedDemoStorePlatforms.length > 0 ? 'Add Another Store' : 'Add Store'}
             </Button>
           </div>
         </div>
@@ -319,7 +323,7 @@ const Dashboard = () => {
           <div className="flex items-center gap-2 mb-6 flex-wrap">
             <span className="text-sm font-medium text-muted-foreground mr-2">Store:</span>
             <div className="flex items-center gap-2 flex-wrap">
-              {!isDemoMode() && (
+              {(stores.length > 1 || !isDemoMode()) && (
                 <Button
                   variant={selectedStore === "all" ? "default" : "outline"}
                   size="sm"
@@ -347,16 +351,34 @@ const Dashboard = () => {
           </div>
         )}
 
-        {/* Connected store info in demo mode */}
-        {isDemoMode() && connectedDemoStore && (
+        {/* Connected stores info in demo mode */}
+        {isDemoMode() && connectedDemoStorePlatforms.length > 0 && (
           <Card className="mb-6 border-primary/30 bg-primary/5">
-            <CardContent className="p-4 flex items-center gap-4">
-              <div className={`w-10 h-10 rounded-lg ${stores[0]?.bgColor} flex items-center justify-center`}>
-                <span className="text-white text-sm font-bold uppercase">{connectedDemoStore.charAt(0)}</span>
-              </div>
-              <div>
-                <p className="font-medium capitalize">{connectedDemoStore} Store Connected</p>
-                <p className="text-sm text-muted-foreground">Showing demo data for your connected store</p>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="flex -space-x-2">
+                    {stores.map((store) => (
+                      <div 
+                        key={store.id}
+                        className={`w-10 h-10 rounded-lg ${store.bgColor} flex items-center justify-center border-2 border-background`}
+                      >
+                        <span className="text-white text-sm font-bold uppercase">{store.id.charAt(0)}</span>
+                      </div>
+                    ))}
+                  </div>
+                  <div>
+                    <p className="font-medium">
+                      {stores.length === 1 
+                        ? `${stores[0].name} Store Connected`
+                        : `${stores.length} Stores Connected`
+                      }
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Showing demo data for your connected {stores.length === 1 ? 'store' : 'stores'}
+                    </p>
+                  </div>
+                </div>
               </div>
             </CardContent>
           </Card>

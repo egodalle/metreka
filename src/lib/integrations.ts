@@ -14,6 +14,57 @@ export function isDemoMode() {
   return demoMode;
 }
 
+// Connected stores management for demo mode
+const DEMO_STORES_KEY = 'demo_connected_stores';
+
+export interface ConnectedDemoStore {
+  id: string;
+  platform: StorePlatform;
+  store_name: string;
+  connected_at: number;
+}
+
+export function getConnectedDemoStores(): ConnectedDemoStore[] {
+  const stored = localStorage.getItem(DEMO_STORES_KEY);
+  return stored ? JSON.parse(stored) : [];
+}
+
+export function addConnectedDemoStore(platform: StorePlatform): ConnectedDemoStore {
+  const stores = getConnectedDemoStores();
+  const newStore: ConnectedDemoStore = {
+    id: `store_${platform}_${Date.now()}`,
+    platform,
+    store_name: `Demo ${platform.charAt(0).toUpperCase() + platform.slice(1)} Store`,
+    connected_at: Date.now(),
+  };
+  
+  // Don't add duplicate platforms
+  const existing = stores.find(s => s.platform === platform);
+  if (existing) {
+    return existing;
+  }
+  
+  stores.push(newStore);
+  localStorage.setItem(DEMO_STORES_KEY, JSON.stringify(stores));
+  return newStore;
+}
+
+export function removeConnectedDemoStore(storeId: string): void {
+  const stores = getConnectedDemoStores();
+  const filtered = stores.filter(s => s.id !== storeId);
+  localStorage.setItem(DEMO_STORES_KEY, JSON.stringify(filtered));
+}
+
+export function clearAllDemoStores(): void {
+  localStorage.removeItem(DEMO_STORES_KEY);
+  // Also clear session storage sync data
+  Object.keys(sessionStorage).forEach(key => {
+    if (key.startsWith('demo_store_')) {
+      sessionStorage.removeItem(key);
+    }
+  });
+}
+
 export type StorePlatform = 'shopify' | 'lazada' | 'shopee';
 
 export type ConnectionMethod = 'oauth' | 'api_key';
