@@ -3,6 +3,17 @@ import { getStoredToken } from './auth';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://datapulse-fkcq.onrender.com';
 
+// Demo mode for testing without backend
+let demoMode: boolean = import.meta.env.VITE_DEMO_MODE === 'true' || true; // Default to true for easy testing
+
+export function setDemoMode(enabled: boolean): void {
+  demoMode = enabled;
+}
+
+export function isDemoMode() {
+  return demoMode;
+}
+
 export type StorePlatform = 'shopify' | 'lazada' | 'shopee';
 
 export type ConnectionMethod = 'oauth' | 'api_key';
@@ -93,6 +104,17 @@ async function authFetch(url: string, options: RequestInit = {}): Promise<Respon
  * Step 2: Initiate integration - backend decides OAuth or API key flow
  */
 export async function startIntegration(platform: StorePlatform): Promise<IntegrationStartResponse> {
+  if (demoMode) {
+    await new Promise((r) => setTimeout(r, 800)); // Simulate network delay
+    const config = platformConfigs.find((p) => p.id === platform);
+    return {
+      integration_id: `demo_${platform}_${Date.now()}`,
+      requires_credentials: config?.connectionMethod === 'api_key',
+      // OAuth platforms would redirect, but in demo we simulate success
+      redirect_url: config?.connectionMethod === 'oauth' ? undefined : undefined,
+    };
+  }
+
   const response = await authFetch(`${API_BASE_URL}/api/v1/integrations/start`, {
     method: 'POST',
     body: JSON.stringify({ platform }),
@@ -115,6 +137,20 @@ export async function submitCredentials(
   platform: StorePlatform,
   credentials: Record<string, string>
 ): Promise<StoreConnection> {
+  if (demoMode) {
+    await new Promise((r) => setTimeout(r, 1000)); // Simulate network delay
+    const storeId = `store_${platform}_${Date.now()}`;
+    // Store in session for demo sync status polling
+    sessionStorage.setItem(`demo_store_${storeId}`, JSON.stringify({ startTime: Date.now(), platform }));
+    return {
+      id: storeId,
+      platform,
+      store_name: `Demo ${platform.charAt(0).toUpperCase() + platform.slice(1)} Store`,
+      connected: true,
+      sync_status: 'syncing',
+    };
+  }
+
   const response = await authFetch(`${API_BASE_URL}/api/v1/integrations/${integrationId}/credentials`, {
     method: 'POST',
     body: JSON.stringify({ platform, credentials }),
@@ -149,6 +185,31 @@ export async function completeOAuthCallback(code: string, state: string): Promis
  * Step 5: Poll sync status
  */
 export async function getSyncStatus(storeId: string): Promise<SyncStatus> {
+  if (demoMode) {
+    const storedData = sessionStorage.getItem(`demo_store_${storeId}`);
+    if (storedData) {
+      const { startTime } = JSON.parse(storedData);
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(100, Math.floor(elapsed / 100)); // ~10 seconds to complete
+      
+      if (progress >= 100) {
+        return { status: 'completed', progress: 100, message: 'Sync complete!' };
+      }
+      
+      const messages = [
+        'Connecting to store...',
+        'Fetching products...',
+        'Importing orders...',
+        'Processing analytics...',
+        'Finalizing...',
+      ];
+      const messageIndex = Math.min(Math.floor(progress / 20), messages.length - 1);
+      
+      return { status: 'syncing', progress, message: messages[messageIndex] };
+    }
+    return { status: 'pending', progress: 0 };
+  }
+
   const response = await authFetch(`${API_BASE_URL}/api/v1/stores/${storeId}/sync-status`);
 
   if (!response.ok) {
