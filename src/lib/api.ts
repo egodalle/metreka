@@ -4,8 +4,103 @@ import { isDemoMode, getConnectedDemoStores, StorePlatform } from './integration
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://growthpulse-api-z5id2gn52a-uc.a.run.app';
 const API_KEY = import.meta.env.VITE_GROWTHPULSE_API_KEY || '';
 
+// Demo sales records for each platform
+const generateDemoSalesRecords = (platform: string): SalesRecord[] => {
+  const products: Record<string, { name: string; price: number }[]> = {
+    shopify: [
+      { name: 'Premium Wireless Headphones', price: 149.99 },
+      { name: 'Smart Watch Pro', price: 299.99 },
+      { name: 'Leather Wallet Classic', price: 59.99 },
+      { name: 'Organic Cotton T-Shirt', price: 34.99 },
+      { name: 'Running Shoes Ultra', price: 129.99 },
+      { name: 'Yoga Mat Premium', price: 49.99 },
+      { name: 'Stainless Steel Water Bottle', price: 29.99 },
+      { name: 'Bluetooth Speaker Mini', price: 79.99 },
+      { name: 'Laptop Backpack Pro', price: 89.99 },
+      { name: 'Sunglasses Aviator', price: 119.99 },
+    ],
+    shopee: [
+      { name: 'Phone Case Silicone', price: 12.99 },
+      { name: 'USB-C Cable 3-Pack', price: 15.99 },
+      { name: 'Wireless Mouse', price: 24.99 },
+      { name: 'LED Desk Lamp', price: 32.99 },
+      { name: 'Portable Charger 10000mAh', price: 29.99 },
+      { name: 'Mechanical Keyboard RGB', price: 69.99 },
+      { name: 'Webcam HD 1080p', price: 49.99 },
+      { name: 'USB Hub 7-Port', price: 22.99 },
+      { name: 'Screen Protector 2-Pack', price: 9.99 },
+      { name: 'Earbuds Wireless', price: 39.99 },
+    ],
+    lazada: [
+      { name: 'Kitchen Blender Pro', price: 79.99 },
+      { name: 'Air Fryer 5L', price: 99.99 },
+      { name: 'Electric Kettle Smart', price: 45.99 },
+      { name: 'Non-Stick Cookware Set', price: 149.99 },
+      { name: 'Coffee Maker Drip', price: 59.99 },
+      { name: 'Vacuum Cleaner Cordless', price: 189.99 },
+      { name: 'Rice Cooker Digital', price: 69.99 },
+      { name: 'Microwave Oven Compact', price: 119.99 },
+      { name: 'Toaster 4-Slice', price: 39.99 },
+      { name: 'Food Storage Container Set', price: 29.99 },
+    ],
+  };
+
+  const customers = [
+    { id: 'C001', name: 'John Smith', email: 'john.smith@email.com' },
+    { id: 'C002', name: 'Sarah Johnson', email: 'sarah.j@email.com' },
+    { id: 'C003', name: 'Michael Brown', email: 'm.brown@email.com' },
+    { id: 'C004', name: 'Emily Davis', email: 'emily.d@email.com' },
+    { id: 'C005', name: 'David Wilson', email: 'd.wilson@email.com' },
+    { id: 'C006', name: 'Jessica Martinez', email: 'j.martinez@email.com' },
+    { id: 'C007', name: 'Chris Anderson', email: 'c.anderson@email.com' },
+    { id: 'C008', name: 'Amanda Taylor', email: 'a.taylor@email.com' },
+    { id: 'C009', name: 'Daniel Thomas', email: 'd.thomas@email.com' },
+    { id: 'C010', name: 'Ashley Garcia', email: 'a.garcia@email.com' },
+    { id: 'C011', name: 'Matthew Rodriguez', email: 'm.rodriguez@email.com' },
+    { id: 'C012', name: 'Olivia Lee', email: 'o.lee@email.com' },
+    { id: 'C013', name: 'James Harris', email: 'j.harris@email.com' },
+    { id: 'C014', name: 'Sophia Clark', email: 's.clark@email.com' },
+    { id: 'C015', name: 'William Lewis', email: 'w.lewis@email.com' },
+  ];
+
+  const platformProducts = products[platform] || products.shopify;
+  const records: SalesRecord[] = [];
+
+  // Generate 50 sales records per platform
+  for (let i = 0; i < 50; i++) {
+    const product = platformProducts[Math.floor(Math.random() * platformProducts.length)];
+    const customer = customers[Math.floor(Math.random() * customers.length)];
+    const quantity = Math.floor(Math.random() * 3) + 1;
+    const dayOffset = Math.floor(Math.random() * 30);
+    const orderDate = new Date();
+    orderDate.setDate(orderDate.getDate() - dayOffset);
+
+    records.push({
+      source: platform,
+      order_id: `${platform.toUpperCase()}-${String(i + 1).padStart(5, '0')}`,
+      order_date: orderDate.toISOString().split('T')[0],
+      customer_id: customer.id,
+      customer_name: customer.name,
+      customer_email: customer.email,
+      product_id: `PROD-${platform.toUpperCase()}-${String(platformProducts.indexOf(product) + 1).padStart(3, '0')}`,
+      product_name: product.name,
+      quantity: quantity,
+      unit_price: product.price,
+      total_amount: product.price * quantity,
+      currency: 'USD',
+      order_status: 'completed',
+      payment_method: ['credit_card', 'paypal', 'bank_transfer'][Math.floor(Math.random() * 3)],
+      shipping_address: `${Math.floor(Math.random() * 999) + 1} Main Street, City`,
+      created_at: orderDate.toISOString(),
+      updated_at: orderDate.toISOString(),
+    });
+  }
+
+  return records;
+};
+
 // Demo data for each platform
-const demoData: Record<string, { stats: any; platformSummary: any; dailySummary: any }> = {
+const demoData: Record<string, { stats: any; platformSummary: any; dailySummary: any; salesRecords: SalesRecord[] }> = {
   shopify: {
     stats: {
       success: true,
@@ -48,6 +143,7 @@ const demoData: Record<string, { stats: any; platformSummary: any; dailySummary:
         avg_order_value: 140 + Math.floor(Math.random() * 30),
       })),
     },
+    salesRecords: generateDemoSalesRecords('shopify'),
   },
   shopee: {
     stats: {
@@ -91,6 +187,7 @@ const demoData: Record<string, { stats: any; platformSummary: any; dailySummary:
         avg_order_value: 42 + Math.floor(Math.random() * 15),
       })),
     },
+    salesRecords: generateDemoSalesRecords('shopee'),
   },
   lazada: {
     stats: {
@@ -134,6 +231,7 @@ const demoData: Record<string, { stats: any; platformSummary: any; dailySummary:
         avg_order_value: 50 + Math.floor(Math.random() * 20),
       })),
     },
+    salesRecords: generateDemoSalesRecords('lazada'),
   },
 };
 
@@ -406,7 +504,45 @@ export const api = {
     orderStatus?: string;
     limit?: number;
     offset?: number;
-  }) => {
+  }): Promise<SalesResponse> => {
+    if (isDemoMode()) {
+      const connectedStores = getConnectedDemoStorePlatforms();
+      if (connectedStores.length > 0) {
+        // Get sales records from all connected stores or filter by source
+        let allSales: SalesRecord[] = [];
+        
+        if (options?.source) {
+          // Filter to specific source if requested
+          allSales = demoData[options.source]?.salesRecords || [];
+        } else {
+          // Get all sales from connected stores
+          connectedStores.forEach(store => {
+            allSales = allSales.concat(demoData[store]?.salesRecords || []);
+          });
+        }
+
+        // Apply limit and offset
+        const limit = options?.limit || 100;
+        const offset = options?.offset || 0;
+        const paginatedSales = allSales.slice(offset, offset + limit);
+
+        return Promise.resolve({
+          success: true,
+          data: paginatedSales,
+          metadata: {
+            total: allSales.length,
+            limit,
+            offset,
+            count: paginatedSales.length,
+          },
+        });
+      }
+      return Promise.resolve({
+        success: true,
+        data: [],
+        metadata: { total: 0, limit: options?.limit || 100, offset: options?.offset || 0, count: 0 },
+      });
+    }
     const params = new URLSearchParams();
     if (options?.source) params.append('source', options.source);
     if (options?.startDate) params.append('start_date', options.startDate);
