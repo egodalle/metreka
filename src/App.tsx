@@ -8,7 +8,6 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ProtectedRoute } from "@/components/ProtectedRoute";
 import Index from "./pages/Index";
 import Demo from "./pages/Demo";
-import DemoDashboard from "./pages/DemoDashboard";
 import Dashboard from "./pages/Dashboard";
 import Auth from "./pages/Auth";
 import Onboarding from "./pages/Onboarding";
@@ -39,7 +38,6 @@ const App = () => (
                 </ProtectedRoute>
               } />
               <Route path="/demo" element={<Demo />} />
-              <Route path="/demo/dashboard" element={<DemoDashboard />} />
               <Route
                 path="/dashboard"
                 element={
