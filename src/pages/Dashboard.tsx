@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,12 +14,13 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useDashboard, useHealthCheck } from "@/hooks/useDashboardData";
-import { PlatformData, DailyData } from "@/lib/api";
+import { PlatformData, DailyData, getConnectedDemoStore } from "@/lib/api";
 import { ProductAnalyticsSection } from "@/components/dashboard/ProductAnalyticsSection";
 import { CustomerAnalyticsSection } from "@/components/dashboard/CustomerAnalyticsSection";
 import { ProfitabilitySection } from "@/components/dashboard/ProfitabilitySection";
+import { isDemoMode } from "@/lib/integrations";
 
-const stores = [
+const allStores = [
   { id: "shopify", name: "Shopify", logo: ShopifyLogo, bgColor: "bg-[#96bf48]" },
   { id: "shopee", name: "Shopee", logo: ShopeeLogo, bgColor: "bg-[#ee4d2d]" },
   { id: "lazada", name: "Lazada", logo: LazadaLogo, bgColor: "bg-[#0f146d]" },
@@ -144,7 +145,14 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [selectedPeriod, setSelectedPeriod] = useState("7d");
   const [activeTab, setActiveTab] = useState("overview");
-  const [selectedStore, setSelectedStore] = useState("all");
+  
+  // In demo mode, only show the connected store
+  const connectedDemoStore = isDemoMode() ? getConnectedDemoStore() : null;
+  const stores = isDemoMode() && connectedDemoStore 
+    ? allStores.filter(s => s.id === connectedDemoStore)
+    : allStores;
+  
+  const [selectedStore, setSelectedStore] = useState(connectedDemoStore || "all");
   
   const { data: healthData, isLoading: healthLoading } = useHealthCheck();
   const { data: dashboardData, isLoading, isError, error, refetch } = useDashboard();
@@ -218,6 +226,11 @@ const Dashboard = () => {
               </Button>
               <div className="h-6 w-px bg-border" />
               <h1 className="text-xl font-bold text-gradient-primary">GrowthPulse</h1>
+              {isDemoMode() && (
+                <Badge variant="secondary" className="bg-amber-500/10 text-amber-600 border-amber-500/20">
+                  Demo Mode
+                </Badge>
+              )}
             </div>
             
             <div className="flex items-center gap-4">
@@ -294,41 +307,60 @@ const Dashboard = () => {
                 <SelectItem value="1y">Last year</SelectItem>
               </SelectContent>
             </Select>
-            <Button className="gap-2">
+            <Button className="gap-2" onClick={() => navigate('/onboarding')}>
               <Plus className="w-4 h-4" />
-              Add Store
+              {isDemoMode() && connectedDemoStore ? 'Add Another Store' : 'Add Store'}
             </Button>
           </div>
         </div>
 
-        {/* Store Filter */}
-        <div className="flex items-center gap-2 mb-6 flex-wrap">
-          <span className="text-sm font-medium text-muted-foreground mr-2">Store:</span>
-          <div className="flex items-center gap-2 flex-wrap">
-            <Button
-              variant={selectedStore === "all" ? "default" : "outline"}
-              size="sm"
-              onClick={() => setSelectedStore("all")}
-              className="gap-2"
-            >
-              All Stores
-            </Button>
-            {stores.map(store => (
-              <Button
-                key={store.id}
-                variant={selectedStore === store.id ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSelectedStore(store.id)}
-                className="gap-2"
-              >
-                <div className={`w-4 h-4 rounded ${store.bgColor} flex items-center justify-center`}>
-                  <span className="text-white text-[10px] font-bold uppercase">{store.id.charAt(0)}</span>
-                </div>
-                {store.name}
-              </Button>
-            ))}
+        {/* Store Filter - Only show if multiple stores or not in demo mode */}
+        {(!isDemoMode() || stores.length > 1) && (
+          <div className="flex items-center gap-2 mb-6 flex-wrap">
+            <span className="text-sm font-medium text-muted-foreground mr-2">Store:</span>
+            <div className="flex items-center gap-2 flex-wrap">
+              {!isDemoMode() && (
+                <Button
+                  variant={selectedStore === "all" ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setSelectedStore("all")}
+                  className="gap-2"
+                >
+                  All Stores
+                </Button>
+              )}
+              {stores.map(store => (
+                <Button
+                  key={store.id}
+                  variant={selectedStore === store.id ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setSelectedStore(store.id)}
+                  className="gap-2"
+                >
+                  <div className={`w-4 h-4 rounded ${store.bgColor} flex items-center justify-center`}>
+                    <span className="text-white text-[10px] font-bold uppercase">{store.id.charAt(0)}</span>
+                  </div>
+                  {store.name}
+                </Button>
+              ))}
+            </div>
           </div>
-        </div>
+        )}
+
+        {/* Connected store info in demo mode */}
+        {isDemoMode() && connectedDemoStore && (
+          <Card className="mb-6 border-primary/30 bg-primary/5">
+            <CardContent className="p-4 flex items-center gap-4">
+              <div className={`w-10 h-10 rounded-lg ${stores[0]?.bgColor} flex items-center justify-center`}>
+                <span className="text-white text-sm font-bold uppercase">{connectedDemoStore.charAt(0)}</span>
+              </div>
+              <div>
+                <p className="font-medium capitalize">{connectedDemoStore} Store Connected</p>
+                <p className="text-sm text-muted-foreground">Showing demo data for your connected store</p>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">

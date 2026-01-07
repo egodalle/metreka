@@ -1,6 +1,155 @@
 // API client for GrowthPulse FastAPI backend
+import { isDemoMode } from './integrations';
+
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://growthpulse-api-z5id2gn52a-uc.a.run.app';
 const API_KEY = import.meta.env.VITE_GROWTHPULSE_API_KEY || '';
+
+// Demo data for each platform
+const demoData: Record<string, { stats: any; platformSummary: any; dailySummary: any }> = {
+  shopify: {
+    stats: {
+      success: true,
+      data: {
+        overview: {
+          total_records: 1250,
+          total_orders: 847,
+          total_customers: 523,
+          total_products: 156,
+          total_revenue: 124589.50,
+          avg_order_value: 147.10,
+          earliest_order: '2024-01-01',
+          latest_order: '2024-12-31',
+          platforms: 1,
+        },
+        by_source: [{ source: 'shopify', orders: 847, revenue: 124589.50 }],
+      },
+    },
+    platformSummary: {
+      success: true,
+      group_by: 'source',
+      data: [{
+        dimension: 'shopify',
+        total_orders: 847,
+        total_units: 1523,
+        total_sales: 124589.50,
+        avg_order_value: 147.10,
+        earliest_order: '2024-01-01',
+        latest_order: '2024-12-31',
+      }],
+    },
+    dailySummary: {
+      success: true,
+      group_by: 'day',
+      data: Array.from({ length: 7 }, (_, i) => ({
+        dimension: `2024-12-${String(25 + i).padStart(2, '0')}`,
+        total_orders: 100 + Math.floor(Math.random() * 50),
+        total_units: 180 + Math.floor(Math.random() * 80),
+        total_sales: 14000 + Math.floor(Math.random() * 6000),
+        avg_order_value: 140 + Math.floor(Math.random() * 30),
+      })),
+    },
+  },
+  shopee: {
+    stats: {
+      success: true,
+      data: {
+        overview: {
+          total_records: 2340,
+          total_orders: 1892,
+          total_customers: 1456,
+          total_products: 234,
+          total_revenue: 89234.75,
+          avg_order_value: 47.17,
+          earliest_order: '2024-01-01',
+          latest_order: '2024-12-31',
+          platforms: 1,
+        },
+        by_source: [{ source: 'shopee', orders: 1892, revenue: 89234.75 }],
+      },
+    },
+    platformSummary: {
+      success: true,
+      group_by: 'source',
+      data: [{
+        dimension: 'shopee',
+        total_orders: 1892,
+        total_units: 3245,
+        total_sales: 89234.75,
+        avg_order_value: 47.17,
+        earliest_order: '2024-01-01',
+        latest_order: '2024-12-31',
+      }],
+    },
+    dailySummary: {
+      success: true,
+      group_by: 'day',
+      data: Array.from({ length: 7 }, (_, i) => ({
+        dimension: `2024-12-${String(25 + i).padStart(2, '0')}`,
+        total_orders: 250 + Math.floor(Math.random() * 80),
+        total_units: 420 + Math.floor(Math.random() * 120),
+        total_sales: 11000 + Math.floor(Math.random() * 4000),
+        avg_order_value: 42 + Math.floor(Math.random() * 15),
+      })),
+    },
+  },
+  lazada: {
+    stats: {
+      success: true,
+      data: {
+        overview: {
+          total_records: 1567,
+          total_orders: 1234,
+          total_customers: 987,
+          total_products: 189,
+          total_revenue: 67892.30,
+          avg_order_value: 55.02,
+          earliest_order: '2024-01-01',
+          latest_order: '2024-12-31',
+          platforms: 1,
+        },
+        by_source: [{ source: 'lazada', orders: 1234, revenue: 67892.30 }],
+      },
+    },
+    platformSummary: {
+      success: true,
+      group_by: 'source',
+      data: [{
+        dimension: 'lazada',
+        total_orders: 1234,
+        total_units: 2156,
+        total_sales: 67892.30,
+        avg_order_value: 55.02,
+        earliest_order: '2024-01-01',
+        latest_order: '2024-12-31',
+      }],
+    },
+    dailySummary: {
+      success: true,
+      group_by: 'day',
+      data: Array.from({ length: 7 }, (_, i) => ({
+        dimension: `2024-12-${String(25 + i).padStart(2, '0')}`,
+        total_orders: 160 + Math.floor(Math.random() * 60),
+        total_units: 280 + Math.floor(Math.random() * 100),
+        total_sales: 8500 + Math.floor(Math.random() * 3500),
+        avg_order_value: 50 + Math.floor(Math.random() * 20),
+      })),
+    },
+  },
+};
+
+// Get connected store from session storage (set during demo onboarding)
+export function getConnectedDemoStore(): string | null {
+  const keys = Object.keys(sessionStorage);
+  const storeKey = keys.find(k => k.startsWith('demo_store_store_'));
+  if (storeKey) {
+    const data = sessionStorage.getItem(storeKey);
+    if (data) {
+      const parsed = JSON.parse(data);
+      return parsed.platform;
+    }
+  }
+  return null;
+}
 
 async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
@@ -131,15 +280,50 @@ export interface DailyData {
 // API endpoints matching GrowthPulse FastAPI structure
 export const api = {
   // Health check
-  healthCheck: () =>
-    fetchAPI<HealthResponse>('/health'),
+  healthCheck: (): Promise<HealthResponse> => {
+    if (isDemoMode()) {
+      const connectedStore = getConnectedDemoStore();
+      return Promise.resolve({
+        status: connectedStore ? 'healthy' : 'disconnected',
+        timestamp: new Date().toISOString(),
+        bigquery_connected: !!connectedStore,
+        total_records: connectedStore ? demoData[connectedStore]?.stats.data.overview.total_records : 0,
+      });
+    }
+    return fetchAPI<HealthResponse>('/health');
+  },
 
   // Overall stats
-  getStats: () =>
-    fetchAPI<StatsResponse>('/api/v1/stats'),
+  getStats: (): Promise<StatsResponse> => {
+    if (isDemoMode()) {
+      const connectedStore = getConnectedDemoStore();
+      if (connectedStore && demoData[connectedStore]) {
+        return Promise.resolve(demoData[connectedStore].stats);
+      }
+      return Promise.resolve({
+        success: false,
+        data: {
+          overview: { total_records: 0, total_orders: 0, total_customers: 0, total_products: 0, total_revenue: 0, avg_order_value: 0, earliest_order: '', latest_order: '', platforms: 0 },
+          by_source: [],
+        },
+      });
+    }
+    return fetchAPI<StatsResponse>('/api/v1/stats');
+  },
 
   // Sales summary by different dimensions
-  getSalesSummary: (groupBy: 'source' | 'day' | 'month' | 'status' = 'source', startDate?: string, endDate?: string) => {
+  getSalesSummary: (groupBy: 'source' | 'day' | 'month' | 'status' = 'source', startDate?: string, endDate?: string): Promise<SalesSummaryResponse> => {
+    if (isDemoMode()) {
+      const connectedStore = getConnectedDemoStore();
+      if (connectedStore && demoData[connectedStore]) {
+        if (groupBy === 'source') {
+          return Promise.resolve(demoData[connectedStore].platformSummary);
+        } else if (groupBy === 'day') {
+          return Promise.resolve(demoData[connectedStore].dailySummary);
+        }
+      }
+      return Promise.resolve({ success: true, group_by: groupBy, data: [] });
+    }
     const params = new URLSearchParams({ group_by: groupBy });
     if (startDate) params.append('start_date', startDate);
     if (endDate) params.append('end_date', endDate);
