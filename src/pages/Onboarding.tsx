@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Store, ArrowRight, Check, ExternalLink, RefreshCw } from 'lucide-react';
+import { Loader2, Store, ArrowRight, Check, ExternalLink, RefreshCw, ShieldCheck, Package, ShoppingCart, BarChart3, Users } from 'lucide-react';
 import {
   StorePlatform,
   platformConfigs,
@@ -20,7 +20,7 @@ import {
 } from '@/lib/integrations';
 import { Badge } from '@/components/ui/badge';
 
-type OnboardingStep = 'select' | 'connecting' | 'credentials' | 'syncing' | 'complete';
+type OnboardingStep = 'select' | 'permission' | 'connecting' | 'credentials' | 'syncing' | 'complete';
 
 export default function Onboarding() {
   const [step, setStep] = useState<OnboardingStep>('select');
@@ -103,8 +103,17 @@ export default function Onboarding() {
     }
   };
 
-  const handlePlatformSelect = async (platform: StorePlatform) => {
+  const handlePlatformSelect = (platform: StorePlatform) => {
     setSelectedPlatform(platform);
+    // Go to permission step first in demo mode
+    if (isDemoMode()) {
+      setStep('permission');
+    } else {
+      initiateConnection(platform);
+    }
+  };
+
+  const initiateConnection = async (platform: StorePlatform) => {
     setIsLoading(true);
     
     try {
@@ -133,6 +142,12 @@ export default function Onboarding() {
       });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const handlePermissionGrant = () => {
+    if (selectedPlatform) {
+      initiateConnection(selectedPlatform);
     }
   };
 
@@ -219,6 +234,82 @@ export default function Onboarding() {
             <div className="pt-4 border-t">
               <Button variant="ghost" className="w-full" onClick={handleSkip}>
                 Skip for now
+              </Button>
+            </div>
+          </div>
+        );
+
+      case 'permission':
+        return (
+          <div className="space-y-6">
+            <div className="flex items-center gap-3 p-4 rounded-lg bg-primary/5 border border-primary/20">
+              <span className="text-3xl">{selectedPlatformConfig?.icon}</span>
+              <div>
+                <h3 className="font-semibold">{selectedPlatformConfig?.name}</h3>
+                <p className="text-sm text-muted-foreground">wants to access your store data</p>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <p className="text-sm font-medium text-foreground">DataPulse will access:</p>
+              <div className="space-y-2">
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                  <Package className="h-5 w-5 text-primary" />
+                  <div>
+                    <p className="text-sm font-medium">Product Catalog</p>
+                    <p className="text-xs text-muted-foreground">View your products, variants, and inventory</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                  <ShoppingCart className="h-5 w-5 text-primary" />
+                  <div>
+                    <p className="text-sm font-medium">Order History</p>
+                    <p className="text-xs text-muted-foreground">Read order details, status, and fulfillment data</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                  <Users className="h-5 w-5 text-primary" />
+                  <div>
+                    <p className="text-sm font-medium">Customer Information</p>
+                    <p className="text-xs text-muted-foreground">Access customer profiles and purchase history</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
+                  <BarChart3 className="h-5 w-5 text-primary" />
+                  <div>
+                    <p className="text-sm font-medium">Analytics & Reports</p>
+                    <p className="text-xs text-muted-foreground">Sales metrics, revenue data, and trends</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+              <ShieldCheck className="h-5 w-5 text-green-600 mt-0.5" />
+              <div>
+                <p className="text-sm font-medium text-green-700">Your data is secure</p>
+                <p className="text-xs text-muted-foreground">We use read-only access and encrypt all credentials</p>
+              </div>
+            </div>
+
+            <div className="flex gap-3 pt-2">
+              <Button
+                variant="outline"
+                className="flex-1"
+                onClick={() => {
+                  setStep('select');
+                  setSelectedPlatform(null);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button className="flex-1" onClick={handlePermissionGrant} disabled={isLoading}>
+                {isLoading ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Check className="mr-2 h-4 w-4" />
+                )}
+                Allow Access
               </Button>
             </div>
           </div>
@@ -341,6 +432,8 @@ export default function Onboarding() {
     switch (step) {
       case 'select':
         return 'Connect Your Store';
+      case 'permission':
+        return 'Grant Access';
       case 'connecting':
         return `Connecting to ${selectedPlatformConfig?.name}`;
       case 'credentials':
@@ -356,6 +449,8 @@ export default function Onboarding() {
     switch (step) {
       case 'select':
         return 'Select your e-commerce platform to get started with analytics';
+      case 'permission':
+        return 'Review the data we need to power your analytics';
       case 'connecting':
         return 'Please wait while we establish a secure connection';
       case 'credentials':
