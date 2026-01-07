@@ -16,7 +16,9 @@ import {
   completeOAuthCallback,
   getSyncStatus,
   SyncStatus,
+  isDemoMode,
 } from '@/lib/integrations';
+import { Badge } from '@/components/ui/badge';
 
 type OnboardingStep = 'select' | 'connecting' | 'credentials' | 'syncing' | 'complete';
 
@@ -115,6 +117,13 @@ export default function Onboarding() {
       } else if (response.requires_credentials) {
         // API key flow - show credentials form
         setStep('credentials');
+      } else if (isDemoMode()) {
+        // Demo mode for OAuth platforms - simulate direct connection
+        const storeId = `store_${platform}_${Date.now()}`;
+        sessionStorage.setItem(`demo_store_${storeId}`, JSON.stringify({ startTime: Date.now(), platform }));
+        setStoreId(storeId);
+        setStep('syncing');
+        setSyncStatus({ status: 'syncing', progress: 0 });
       }
     } catch (error) {
       toast({
@@ -362,6 +371,11 @@ export default function Onboarding() {
     <div className="min-h-screen flex items-center justify-center bg-background p-4">
       <Card className="w-full max-w-lg">
         <CardHeader className="text-center">
+          {isDemoMode() && (
+            <Badge variant="secondary" className="mx-auto mb-2 bg-amber-500/10 text-amber-600 border-amber-500/20">
+              Demo Mode
+            </Badge>
+          )}
           <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10">
             <Store className="h-6 w-6 text-primary" />
           </div>
