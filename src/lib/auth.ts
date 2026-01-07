@@ -5,11 +5,19 @@ export interface User {
   id: string;
   email: string;
   name?: string;
+  has_store_credentials?: boolean;
 }
 
 export interface AuthResponse {
   access_token: string;
   user: User;
+}
+
+export type StorePlatform = 'shopify' | 'lazada' | 'shopee';
+
+export interface StoreCredentials {
+  platform: StorePlatform;
+  credentials: Record<string, string>;
 }
 
 const TOKEN_KEY = 'datapulse_token';
@@ -99,4 +107,47 @@ export async function requestPasswordReset(email: string): Promise<void> {
     const error = await response.json().catch(() => ({}));
     throw new Error(error.detail || 'Failed to send reset email');
   }
+}
+
+export async function saveStoreCredentials(storeCredentials: StoreCredentials): Promise<void> {
+  const token = getStoredToken();
+  if (!token) {
+    throw new Error('Not authenticated');
+  }
+
+  const response = await fetch(`${API_BASE_URL}/api/v1/store/credentials`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+    },
+    body: JSON.stringify(storeCredentials),
+  });
+
+  if (!response.ok) {
+    const error = await response.json().catch(() => ({}));
+    throw new Error(error.detail || 'Failed to save store credentials');
+  }
+
+  // Update stored user to reflect they have credentials
+  const user = getStoredUser();
+  if (user) {
+    storeAuth(token, { ...user, has_store_credentials: true });
+  }
+}
+
+export async function getStoreCredentials(): Promise<StoreCredentials | null> {
+  const token = getStoredToken();
+  if (!token) return null;
+
+  const response = await fetch(`${API_BASE_URL}/api/v1/store/credentials`, {
+    headers: { 'Authorization': `Bearer ${token}` },
+  });
+
+  if (!response.ok) {
+    if (response.status === 404) return null;
+    throw new Error('Failed to fetch store credentials');
+  }
+
+  return response.json();
 }
