@@ -4,7 +4,7 @@ import { Check, Sparkles, ArrowRight } from "lucide-react";
 const plans = [
   {
     name: "Starter",
-    price: "$29",
+    price: "$49",
     period: "/month",
     description: "Perfect for solo sellers on 1-2 stores getting started with analytics",
     subtitle: "Solo / Small Seller",
