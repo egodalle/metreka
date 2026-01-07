@@ -4,7 +4,7 @@ import { Check, Sparkles, ArrowRight } from "lucide-react";
 const plans = [
   {
     name: "Starter",
-    price: "$59",
+    price: "$29",
     period: "/month",
     description: "Perfect for solo sellers on 1-2 stores getting started with analytics",
     subtitle: "Solo / Small Seller",
@@ -21,7 +21,7 @@ const plans = [
   },
   {
     name: "Growth",
-    price: "$179",
+    price: "$79",
     period: "/month",
     description: "For serious multi-channel sellers scaling across platforms",
     subtitle: "Most Popular",
@@ -39,7 +39,7 @@ const plans = [
   },
   {
     name: "Pro",
-    price: "$499",
+    price: "$99",
     period: "/month",
     description: "For agencies and large brands with complex operations",
     subtitle: "Agency / Brand",
