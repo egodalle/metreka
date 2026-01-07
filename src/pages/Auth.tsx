@@ -50,9 +50,9 @@ export default function Auth() {
         await refreshUser();
         toast({
           title: 'Account created!',
-          description: 'Redirecting to dashboard...',
+          description: 'Let\'s connect your store...',
         });
-        navigate('/dashboard');
+        navigate('/onboarding');
       }
     } catch (error) {
       toast({
