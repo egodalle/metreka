@@ -1,10 +1,12 @@
 // API client for GrowthPulse FastAPI backend
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://growthpulse-api-z5id2gn52a-uc.a.run.app';
+const API_KEY = import.meta.env.VITE_GROWTHPULSE_API_KEY || '';
 
 async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     headers: {
       'Content-Type': 'application/json',
+      'X-API-Key': API_KEY,
       ...options?.headers,
     },
     ...options,
