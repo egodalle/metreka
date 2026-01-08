@@ -1,0 +1,30 @@
+# GrowthPulse FastAPI Backend Dependencies
+
+# Web Framework
+fastapi==0.109.2
+uvicorn[standard]==0.27.1
+
+# Database
+supabase==2.3.4
+psycopg2-binary==2.9.9
+
+# HTTP Client
+httpx==0.26.0
+
+# Data Validation
+pydantic==2.6.1
+python-dotenv==1.0.1
+
+# Security
+python-jose[cryptography]==3.3.0
+passlib[bcrypt]==1.7.4
+
+# Stripe (for webhook handling if needed)
+stripe==7.12.0
+
+# Background Tasks
+celery==5.3.6
+redis==5.0.1
+
+# Utils
+python-dateutil==2.8.2
