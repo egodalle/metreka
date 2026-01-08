@@ -2,81 +2,61 @@ import {
   BarChart3, 
   Users, 
   Package, 
-  Truck, 
   TrendingUp,
   Target,
-  Zap
+  Zap,
+  DollarSign,
+  ShoppingCart,
+  PieChart
 } from "lucide-react";
 
 const dashboards = [
   {
-    title: "Executive Command Center",
-    subtitle: "CEO/Founder View",
+    title: "Overview",
+    subtitle: "Executive View",
     icon: BarChart3,
     color: "from-primary to-cyan",
     kpis: [
-      "Total Revenue & Growth",
-      "Orders Today (Real-time)",
-      "Avg Order Value",
+      "Total Revenue",
+      "Total Orders",
+      "Average Order Value",
       "Revenue by Platform",
-      "Daily Revenue Trends",
-      "Month-over-Month Growth",
     ],
   },
   {
-    title: "Sales Engine",
-    subtitle: "Sales Manager View",
-    icon: TrendingUp,
+    title: "Products",
+    subtitle: "Product Analytics",
+    icon: Package,
     color: "from-green to-primary",
     kpis: [
-      "Revenue by Channel",
-      "Orders by Platform",
-      "Sales by Day",
-      "7-Day Revenue Average",
-      "30-Day Revenue Average",
-      "Revenue Growth Rate",
+      "Total Products",
+      "Product Revenue",
+      "Units Sold",
+      "Top Performing Products",
     ],
   },
   {
-    title: "Platform Analytics",
-    subtitle: "Multi-Channel View",
+    title: "Customers",
+    subtitle: "Customer Analytics",
     icon: Users,
     color: "from-purple to-primary",
     kpis: [
-      "Shopify Performance",
-      "Amazon Performance",
-      "Lazada Performance",
-      "Shopee Performance",
-      "Platform Comparison",
-      "Active Days per Platform",
+      "Total Customers",
+      "Customer LTV",
+      "Orders per Customer",
+      "Top Customers",
     ],
   },
   {
-    title: "Order Insights",
-    subtitle: "Operations View",
-    icon: Package,
+    title: "Profitability",
+    subtitle: "Revenue Analysis",
+    icon: PieChart,
     color: "from-accent to-orange",
     kpis: [
-      "Total Orders",
-      "Completed Orders",
-      "Cancelled Orders",
-      "Items per Order",
-      "Unique Customers",
-      "Order Trends",
-    ],
-  },
-  {
-    title: "Fulfillment Tracker",
-    subtitle: "Ops Manager View",
-    icon: Truck,
-    color: "from-primary to-purple",
-    kpis: [
-      "Fulfillment Rate",
-      "Fulfilled Orders Today",
-      "Cancellation Rate",
-      "Payment Rate",
-      "Day-over-Day Changes",
-      "Week-over-Week Changes",
+      "Total Revenue",
+      "Platform Breakdown",
+      "Order Volume",
+      "AOV by Platform",
     ],
   },
 ];
@@ -94,11 +74,11 @@ const FeaturesSection = () => {
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass border border-border mb-6">
             <Target className="w-4 h-4 text-primary" />
             <span className="text-sm font-medium text-muted-foreground">
-              30+ KPIs Tracked
+              16+ KPIs Tracked
             </span>
           </div>
           <h2 className="text-3xl md:text-5xl font-bold mb-4">
-            5 Dashboards, <span className="text-gradient-accent">Real-Time Data</span>
+            4 Analytics Views, <span className="text-gradient-accent">Real-Time Data</span>
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Purpose-built dashboards powered by live multi-platform analytics
@@ -106,7 +86,7 @@ const FeaturesSection = () => {
         </div>
 
         {/* Dashboards Grid */}
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
+        <div className="grid md:grid-cols-2 gap-6 max-w-5xl mx-auto">
           {dashboards.map((dashboard) => (
             <div
               key={dashboard.title}
@@ -139,33 +119,6 @@ const FeaturesSection = () => {
               </div>
             </div>
           ))}
-
-          {/* Tech Stack Card */}
-          <div className="glass card-glow rounded-2xl p-6 lg:col-span-1 md:col-span-2 lg:row-span-1">
-            <div className="flex items-center gap-4 mb-6">
-              <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-secondary to-muted flex items-center justify-center">
-                <Zap className="w-7 h-7 text-primary" />
-              </div>
-              <div>
-                <h3 className="font-bold text-lg text-foreground">Enterprise Tech Stack</h3>
-                <p className="text-sm text-muted-foreground">Production-ready infrastructure</p>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              {[
-                { name: "Airbyte OSS", desc: "Data Extraction" },
-                { name: "BigQuery", desc: "Data Warehouse" },
-                { name: "DBT", desc: "Transformations" },
-                { name: "Metabase", desc: "Visualization" },
-              ].map((tech) => (
-                <div key={tech.name} className="p-3 rounded-xl bg-secondary/30">
-                  <p className="font-semibold text-foreground text-sm">{tech.name}</p>
-                  <p className="text-xs text-muted-foreground">{tech.desc}</p>
-                </div>
-              ))}
-            </div>
-          </div>
         </div>
       </div>
     </section>

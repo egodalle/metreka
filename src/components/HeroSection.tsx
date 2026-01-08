@@ -26,10 +26,10 @@ const HeroSection = () => {
   const navigate = useNavigate();
   
   const stats = [
-    { icon: TrendingUp, value: 30, suffix: "+", label: "KPIs Tracked" },
-    { icon: ShoppingCart, value: 4, suffix: "", label: "Platforms" },
+    { icon: TrendingUp, value: 16, suffix: "+", label: "KPIs Tracked" },
+    { icon: ShoppingCart, value: 3, suffix: "", label: "Platforms" },
     { icon: Users, value: 10000, suffix: "+", label: "Orders/Month" },
-    { icon: DollarSign, value: 497, prefix: "$", suffix: "", label: "Starting At" },
+    { icon: DollarSign, value: 59, prefix: "$", suffix: "", label: "Starting At" },
   ];
 
   return (
