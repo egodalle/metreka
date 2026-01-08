@@ -1,4 +1,4 @@
-// Protected route component - Version 2
+// Protected route component using Supabase Auth
 import { Navigate } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { Loader2 } from 'lucide-react';
