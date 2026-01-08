@@ -2,102 +2,67 @@ import {
   LayoutDashboard, 
   TrendingUp, 
   Package, 
-  Truck,
   DollarSign,
   ShoppingCart,
   Target,
-  BarChart3,
-  PieChart,
-  Activity,
-  Clock,
-  Percent,
-  Repeat,
-  CheckCircle,
-  XCircle,
-  Calendar,
-  CreditCard,
-  ArrowUpDown
+  PieChart
 } from "lucide-react";
 
 const dashboards = [
   {
-    id: "executive",
-    name: "Command Center",
+    id: "overview",
+    name: "Overview",
     subtitle: "Executive Dashboard",
     icon: LayoutDashboard,
-    description: "CEO/Founder view with real-time business health metrics",
+    description: "Real-time business health metrics across all connected stores",
     color: "from-primary to-accent",
     kpis: [
-      { name: "Total Revenue & Growth", icon: DollarSign, description: "Revenue with trend data" },
-      { name: "Orders Today", icon: ShoppingCart, description: "Real-time order count" },
+      { name: "Total Revenue", icon: DollarSign, description: "Revenue with trend data" },
+      { name: "Total Orders", icon: ShoppingCart, description: "Real-time order count" },
       { name: "Avg Order Value", icon: Target, description: "Revenue / Orders" },
-      { name: "Revenue by Platform", icon: PieChart, description: "Shopify, Amazon, Lazada, Shopee" },
-      { name: "Daily Revenue Trends", icon: BarChart3, description: "7-day trend analysis" },
-      { name: "MoM Growth", icon: TrendingUp, description: "Month-over-month changes" },
+      { name: "Revenue by Platform", icon: PieChart, description: "Platform breakdown" },
     ],
   },
   {
-    id: "sales",
-    name: "Sales Engine",
-    subtitle: "Sales Performance",
-    icon: TrendingUp,
-    description: "Deep dive into sales metrics and revenue optimization",
+    id: "products",
+    name: "Products",
+    subtitle: "Product Analytics",
+    icon: Package,
+    description: "Track product performance and top sellers across platforms",
     color: "from-emerald-500 to-teal-500",
     kpis: [
-      { name: "Revenue by Channel", icon: DollarSign, description: "Per-platform breakdown" },
-      { name: "Orders by Platform", icon: ShoppingCart, description: "Channel comparison" },
-      { name: "Sales by Day", icon: Calendar, description: "Daily performance" },
-      { name: "7-Day Average", icon: Activity, description: "Rolling weekly average" },
-      { name: "30-Day Average", icon: BarChart3, description: "Rolling monthly average" },
-      { name: "Revenue Growth Rate", icon: TrendingUp, description: "Growth percentage" },
+      { name: "Total Products", icon: Package, description: "Products sold" },
+      { name: "Product Revenue", icon: DollarSign, description: "Total revenue from products" },
+      { name: "Units Sold", icon: ShoppingCart, description: "Total units sold" },
+      { name: "Top Performers", icon: TrendingUp, description: "Best-selling products" },
     ],
   },
   {
-    id: "platform",
-    name: "Platform Analytics",
-    subtitle: "Multi-Channel View",
-    icon: Package,
-    description: "Compare performance across all connected platforms",
+    id: "customers",
+    name: "Customers",
+    subtitle: "Customer Analytics",
+    icon: Target,
+    description: "Understand your customers and their purchasing behavior",
     color: "from-violet-500 to-purple-500",
     kpis: [
-      { name: "Shopify Performance", icon: BarChart3, description: "Orders, revenue, AOV" },
-      { name: "Amazon Performance", icon: BarChart3, description: "Orders, revenue, AOV" },
-      { name: "Lazada Performance", icon: BarChart3, description: "Orders, revenue, AOV" },
-      { name: "Shopee Performance", icon: BarChart3, description: "Orders, revenue, AOV" },
-      { name: "Platform Comparison", icon: PieChart, description: "Side-by-side metrics" },
-      { name: "Active Days", icon: Calendar, description: "Days with sales per platform" },
+      { name: "Total Customers", icon: Target, description: "Unique customers" },
+      { name: "Customer LTV", icon: DollarSign, description: "Avg lifetime value" },
+      { name: "Orders/Customer", icon: ShoppingCart, description: "Avg orders per customer" },
+      { name: "Top Customers", icon: TrendingUp, description: "Highest spending customers" },
     ],
   },
   {
-    id: "orders",
-    name: "Order Insights",
-    subtitle: "Operations View",
-    icon: ShoppingCart,
-    description: "Track order volume, completion rates, and trends",
+    id: "profitability",
+    name: "Profitability",
+    subtitle: "Revenue Analysis",
+    icon: PieChart,
+    description: "Analyze revenue and platform performance metrics",
     color: "from-amber-500 to-orange-500",
     kpis: [
-      { name: "Total Orders", icon: ShoppingCart, description: "All-time order count" },
-      { name: "Completed Orders", icon: CheckCircle, description: "Successfully fulfilled" },
-      { name: "Cancelled Orders", icon: XCircle, description: "Order cancellations" },
-      { name: "Items per Order", icon: Package, description: "Average items sold" },
-      { name: "Unique Customers", icon: Target, description: "Daily unique buyers" },
-      { name: "Order Trends", icon: TrendingUp, description: "7-day order patterns" },
-    ],
-  },
-  {
-    id: "fulfillment",
-    name: "Fulfillment Tracker",
-    subtitle: "Ops Manager View",
-    icon: Truck,
-    description: "Monitor fulfillment efficiency and operational metrics",
-    color: "from-rose-500 to-pink-500",
-    kpis: [
-      { name: "Fulfillment Rate", icon: Percent, description: "Fulfilled / Total orders" },
-      { name: "Fulfilled Today", icon: CheckCircle, description: "Today's completions" },
-      { name: "Cancellation Rate", icon: XCircle, description: "Cancel percentage" },
-      { name: "Payment Rate", icon: CreditCard, description: "Payment success rate" },
-      { name: "Day-over-Day", icon: ArrowUpDown, description: "Daily changes" },
-      { name: "Week-over-Week", icon: Repeat, description: "Weekly changes" },
+      { name: "Total Revenue", icon: DollarSign, description: "All platform revenue" },
+      { name: "Platform Breakdown", icon: PieChart, description: "Revenue by platform" },
+      { name: "Order Volume", icon: ShoppingCart, description: "Orders by platform" },
+      { name: "Avg Order Value", icon: Target, description: "AOV by platform" },
     ],
   },
 ];
@@ -115,25 +80,23 @@ const DashboardsSection = () => {
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass border border-border mb-6">
             <LayoutDashboard className="w-4 h-4 text-primary" />
             <span className="text-sm font-medium text-muted-foreground">
-              5 Production Dashboards
+              4 Analytics Views
             </span>
           </div>
           <h2 className="text-3xl md:text-5xl font-bold mb-4">
-            30+ <span className="text-gradient-primary">KPIs</span> That Matter
+            16+ <span className="text-gradient-primary">KPIs</span> That Matter
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Enterprise-grade analytics dashboards powered by real-time multi-platform data
+            Analytics dashboards powered by real-time multi-platform data
           </p>
         </div>
 
         {/* Dashboards Grid */}
-        <div className="space-y-8">
-          {dashboards.map((dashboard, index) => (
+        <div className="grid md:grid-cols-2 gap-6">
+          {dashboards.map((dashboard) => (
             <div
               key={dashboard.id}
-              className={`glass card-glow rounded-2xl p-6 md:p-8 group hover:scale-[1.01] transition-all duration-300 ${
-                index % 2 === 0 ? "" : "md:ml-12"
-              }`}
+              className="glass card-glow rounded-2xl p-6 md:p-8 group hover:scale-[1.01] transition-all duration-300"
             >
               {/* Dashboard Header */}
               <div className="flex flex-col md:flex-row md:items-center gap-4 mb-6">
@@ -154,7 +117,7 @@ const DashboardsSection = () => {
               </div>
 
               {/* KPIs Grid */}
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+              <div className="grid grid-cols-2 gap-3">
                 {dashboard.kpis.map((kpi) => (
                   <div
                     key={kpi.name}
@@ -176,11 +139,10 @@ const DashboardsSection = () => {
           ))}
         </div>
 
-        {/* Summary Stats */}
         <div className="mt-16 grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
-            { value: "5", label: "Dashboards" },
-            { value: "30+", label: "KPIs Tracked" },
+            { value: "4", label: "Analytics Views" },
+            { value: "16+", label: "KPIs Tracked" },
             { value: "<3s", label: "Load Time" },
             { value: "99.5%", label: "Uptime SLA" },
           ].map((stat) => (

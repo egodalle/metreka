@@ -1,7 +1,7 @@
 import { ShopifyLogo, ShopeeLogo, LazadaLogo } from "./StoreLogos";
-import { TrendingUp, TrendingDown, DollarSign, ShoppingCart, Package, RotateCcw, Eye, ArrowUpRight } from "lucide-react";
+import { TrendingUp, TrendingDown, DollarSign, ShoppingCart, Package, Eye, ArrowUpRight } from "lucide-react";
 
-// Realistic e-commerce dummy data
+// Dashboard KPIs matching the actual dashboard
 const overviewKPIs = [
   { 
     label: "Total Revenue", 
@@ -26,14 +26,6 @@ const overviewKPIs = [
     trend: "up",
     icon: Package,
     subtext: "$166.99 last period"
-  },
-  { 
-    label: "Return Rate", 
-    value: "3.2%", 
-    change: "-0.8%", 
-    trend: "down",
-    icon: RotateCcw,
-    subtext: "4.0% last period"
   },
 ];
 
@@ -143,7 +135,7 @@ const DashboardPreviewSection = () => {
             {/* Dashboard Content */}
             <div className="p-6 space-y-6">
               {/* KPI Cards */}
-              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 {overviewKPIs.map((kpi) => (
                   <div key={kpi.label} className="glass rounded-xl p-4 hover:border-primary/30 transition-colors">
                     <div className="flex items-start justify-between mb-2">
