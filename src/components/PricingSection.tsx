@@ -48,9 +48,8 @@ const plans = [
     description: "For agencies and brands with complex operations",
     subtitle: "Best Value",
     features: [
-      "Up to 5 stores",
-      "All marketplaces",
-      "Real-time sync",
+      "Up to 5 stores (Shopify + Lazada + Shopee + 2 custom)",
+      "Hourly sync",
       "Custom analytics",
       "API access",
       "Full historical data",
