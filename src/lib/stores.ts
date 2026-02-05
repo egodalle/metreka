@@ -11,10 +11,8 @@ export interface StoreConnection {
   store_name: string | null;
   store_url: string | null;
   sync_status: SyncStatus;
-  sync_progress: number;
-  sync_message: string | null;
   last_sync_at: string | null;
-  error_message: string | null;
+  is_active: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -67,7 +65,11 @@ export async function getStoreConnections(): Promise<StoreConnection[]> {
     .order('created_at', { ascending: false });
 
   if (error) throw error;
-  return (data || []) as StoreConnection[];
+  return (data || []).map(row => ({
+    ...row,
+    platform: row.platform as StorePlatform,
+    sync_status: (row.sync_status || 'pending') as SyncStatus,
+  })) as StoreConnection[];
 }
 
 // Create a new store connection
@@ -87,13 +89,17 @@ export async function createStoreConnection(platform: StorePlatform, storeName?:
     .single();
 
   if (error) throw error;
-  return data as StoreConnection;
+  return {
+    ...data,
+    platform: data.platform as StorePlatform,
+    sync_status: (data.sync_status || 'pending') as SyncStatus,
+  } as StoreConnection;
 }
 
 // Update store connection sync status
 export async function updateStoreSync(
   storeId: string, 
-  updates: Partial<Pick<StoreConnection, 'sync_status' | 'sync_progress' | 'sync_message' | 'error_message' | 'last_sync_at'>>
+  updates: Partial<Pick<StoreConnection, 'sync_status' | 'last_sync_at' | 'is_active'>>
 ): Promise<StoreConnection> {
   const { data, error } = await supabase
     .from('store_connections')
@@ -103,7 +109,11 @@ export async function updateStoreSync(
     .single();
 
   if (error) throw error;
-  return data as StoreConnection;
+  return {
+    ...data,
+    platform: data.platform as StorePlatform,
+    sync_status: (data.sync_status || 'pending') as SyncStatus,
+  } as StoreConnection;
 }
 
 // Delete a store connection
@@ -125,38 +135,25 @@ export async function getStoreConnection(storeId: string): Promise<StoreConnecti
     .maybeSingle();
 
   if (error) throw error;
-  return data as StoreConnection | null;
+  if (!data) return null;
+  return {
+    ...data,
+    platform: data.platform as StorePlatform,
+    sync_status: (data.sync_status || 'pending') as SyncStatus,
+  } as StoreConnection;
 }
 
 // Simulate sync process (in production, this would be handled by edge function)
 export async function simulateSync(storeId: string): Promise<void> {
   // Start syncing
-  await updateStoreSync(storeId, { 
-    sync_status: 'syncing', 
-    sync_progress: 0, 
-    sync_message: 'Connecting to store...' 
-  });
+  await updateStoreSync(storeId, { sync_status: 'syncing' });
 
-  const steps = [
-    { progress: 20, message: 'Fetching products...' },
-    { progress: 40, message: 'Importing orders...' },
-    { progress: 60, message: 'Processing customers...' },
-    { progress: 80, message: 'Analyzing data...' },
-    { progress: 100, message: 'Sync complete!' },
-  ];
-
-  for (const step of steps) {
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    await updateStoreSync(storeId, { 
-      sync_progress: step.progress, 
-      sync_message: step.message 
-    });
-  }
+  // Simulate sync delay
+  await new Promise(resolve => setTimeout(resolve, 3000));
 
   // Complete
-  await updateStoreSync(storeId, { 
-    sync_status: 'completed', 
-    sync_progress: 100, 
-    last_sync_at: new Date().toISOString() 
+  await updateStoreSync(storeId, {
+    sync_status: 'completed',
+    last_sync_at: new Date().toISOString(),
   });
 }

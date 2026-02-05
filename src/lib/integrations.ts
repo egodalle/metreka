@@ -1,5 +1,5 @@
 // Store Integration API client
-import { getStoredToken } from './auth';
+import { supabase } from '@/integrations/supabase/client';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://datapulse-fkcq.onrender.com';
 
@@ -136,8 +136,8 @@ export const apiKeyFields: Record<string, { key: string; label: string; placehol
 };
 
 async function authFetch(url: string, options: RequestInit = {}): Promise<Response> {
-  const token = getStoredToken();
-  if (!token) {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) {
     throw new Error('Not authenticated');
   }
 
@@ -145,7 +145,7 @@ async function authFetch(url: string, options: RequestInit = {}): Promise<Respon
     ...options,
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${token}`,
+      'Authorization': `Bearer ${session.access_token}`,
       ...options.headers,
     },
   });
