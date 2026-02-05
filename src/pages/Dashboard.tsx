@@ -14,12 +14,13 @@ import {
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useDashboard, useHealthCheck } from "@/hooks/useDashboardData";
-import { PlatformData, DailyData, getConnectedDemoStorePlatforms } from "@/lib/api";
+import { PlatformData, DailyData } from "@/lib/api";
 import { ProductAnalyticsSection } from "@/components/dashboard/ProductAnalyticsSection";
 import { CustomerAnalyticsSection } from "@/components/dashboard/CustomerAnalyticsSection";
 import { ProfitabilitySection } from "@/components/dashboard/ProfitabilitySection";
- import { StoreConnectionsSection } from "@/components/dashboard/StoreConnectionsSection";
-import { isDemoMode, getConnectedDemoStores } from "@/lib/integrations";
+import { StoreConnectionsSection } from "@/components/dashboard/StoreConnectionsSection";
+import { isDemoMode } from "@/lib/integrations";
+import { useStoreConnections } from "@/hooks/useStoreConnections";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 
@@ -151,15 +152,20 @@ const Dashboard = () => {
   const [selectedPeriod, setSelectedPeriod] = useState("7d");
   const [activeTab, setActiveTab] = useState("overview");
   
-  // In demo mode, only show connected stores
-  const connectedDemoStorePlatforms = isDemoMode() ? getConnectedDemoStorePlatforms() : [];
-  const stores = isDemoMode() && connectedDemoStorePlatforms.length > 0
-    ? allStores.filter(s => connectedDemoStorePlatforms.includes(s.id as any))
-    : allStores;
+  // Get actual store connections from the database
+  const { data: storeConnections = [] } = useStoreConnections();
+  const connectedPlatforms = storeConnections
+    .filter(c => c.is_active)
+    .map(c => c.platform);
+  
+  // Filter stores to show only connected ones (empty if none connected)
+  const stores = connectedPlatforms.length > 0
+    ? allStores.filter(s => connectedPlatforms.includes(s.id as any))
+    : [];
   
   const [selectedStore, setSelectedStore] = useState(
-    isDemoMode() && connectedDemoStorePlatforms.length === 1 
-      ? connectedDemoStorePlatforms[0] 
+    connectedPlatforms.length === 1 
+      ? connectedPlatforms[0] 
       : "all"
   );
   
@@ -335,17 +341,17 @@ const Dashboard = () => {
             </Select>
             <Button className="gap-2" onClick={() => navigate('/onboarding')}>
               <Plus className="w-4 h-4" />
-              {isDemoMode() && connectedDemoStorePlatforms.length > 0 ? 'Add Another Store' : 'Add Store'}
+              {connectedPlatforms.length > 0 ? 'Add Another Store' : 'Add Store'}
             </Button>
           </div>
         </div>
 
-        {/* Store Filter - Only show if multiple stores or not in demo mode */}
-        {(!isDemoMode() || stores.length > 1) && (
+        {/* Store Filter - Only show if stores are connected */}
+        {stores.length > 0 && (
           <div className="flex items-center gap-2 mb-6 flex-wrap">
             <span className="text-sm font-medium text-muted-foreground mr-2">Store:</span>
             <div className="flex items-center gap-2 flex-wrap">
-              {(stores.length > 1 || !isDemoMode()) && (
+              {stores.length > 1 && (
                 <Button
                   variant={selectedStore === "all" ? "default" : "outline"}
                   size="sm"
@@ -373,8 +379,8 @@ const Dashboard = () => {
           </div>
         )}
 
-        {/* Connected stores info in demo mode */}
-        {isDemoMode() && connectedDemoStorePlatforms.length > 0 && (
+        {/* Connected stores info banner */}
+        {stores.length > 0 && (
           <Card className="mb-6 border-primary/30 bg-primary/5">
             <CardContent className="p-4">
               <div className="flex items-center justify-between">
@@ -397,7 +403,10 @@ const Dashboard = () => {
                       }
                     </p>
                     <p className="text-sm text-muted-foreground">
-                      Showing demo data for your connected {stores.length === 1 ? 'store' : 'stores'}
+                      {isDemoMode() 
+                        ? `Showing demo data for your connected ${stores.length === 1 ? 'store' : 'stores'}`
+                        : `Syncing data from your connected ${stores.length === 1 ? 'store' : 'stores'}`
+                      }
                     </p>
                   </div>
                 </div>
