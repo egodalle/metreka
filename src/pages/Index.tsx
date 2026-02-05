@@ -14,13 +14,13 @@ const Index = () => {
   return (
     <>
       <Helmet>
-        <title>DataPulse - E-Commerce Analytics Platform | Turn Store Data Into Sales Growth</title>
+        <title>Metrika - E-Commerce Analytics Platform | Turn Store Data Into Sales Growth</title>
         <meta 
           name="description" 
-          content="Enterprise-grade e-commerce analytics for small-to-medium businesses. Connect Shopify, TikTok Shop, Amazon & more in one unified dashboard. Starting at $59/month." 
+          content="Enterprise-grade e-commerce analytics for small-to-medium businesses. Connect Shopify, Lazada, Shopee & more in one unified dashboard. Starting at $29/month." 
         />
-        <meta name="keywords" content="e-commerce analytics, Shopify analytics, TikTok Shop analytics, Amazon seller analytics, business intelligence, data warehouse" />
-        <link rel="canonical" href="https://datapulse.io" />
+        <meta name="keywords" content="e-commerce analytics, Shopify analytics, Lazada analytics, Shopee analytics, business intelligence, data warehouse" />
+        <link rel="canonical" href="https://metrika.io" />
       </Helmet>
       
       <div className="min-h-screen bg-background">

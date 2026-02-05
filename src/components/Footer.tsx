@@ -42,7 +42,7 @@ const Footer = () => {
                 <Activity className="w-5 h-5 text-primary-foreground" />
               </div>
               <span className="text-xl font-bold text-foreground">
-                Data<span className="text-gradient-primary">Pulse</span>
+                Metr<span className="text-gradient-primary">ika</span>
               </span>
             </a>
             <p className="text-sm text-muted-foreground mb-4">
@@ -139,7 +139,7 @@ const Footer = () => {
         {/* Bottom Bar */}
         <div className="pt-8 border-t border-border/30 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-sm text-muted-foreground">
-            © {currentYear} DataPulse. All rights reserved.
+            © {currentYear} Metrika. All rights reserved.
           </p>
           <p className="text-sm text-muted-foreground">
             Built with ❤️ for e-commerce entrepreneurs
