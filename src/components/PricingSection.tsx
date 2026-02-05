@@ -1,57 +1,60 @@
 import { Button } from "@/components/ui/button";
-import { Check, Sparkles, ArrowRight } from "lucide-react";
+import { Check, Sparkles, ArrowRight, Loader2 } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useSubscription, useCreateCheckout, SUBSCRIPTION_TIERS, type SubscriptionTier } from "@/hooks/useSubscription";
+import { useNavigate } from "react-router-dom";
 
 const plans = [
   {
     name: "Starter",
-    price: "$49",
+    tier: "starter" as SubscriptionTier,
+    price: "$29",
     period: "/month",
-    description: "Perfect for solo sellers on 1-2 stores getting started with analytics",
-    subtitle: "Solo / Small Seller",
+    description: "Perfect for solo sellers getting started with analytics",
+    subtitle: "Solo Seller",
     features: [
-      "Up to 2 stores",
+      "1 store connection",
       "Daily data sync",
-      "Core KPIs (Revenue, Orders, AOV, Refunds)",
+      "Core KPIs (Revenue, Orders, AOV)",
       "Prebuilt dashboard",
-      "30-90 days historical data",
+      "30 days historical data",
       "Email support",
     ],
     popular: false,
-    trial: "3-day free trial",
   },
   {
     name: "Growth",
+    tier: "growth" as SubscriptionTier,
     price: "$79",
     period: "/month",
     description: "For serious multi-channel sellers scaling across platforms",
     subtitle: "Most Popular",
     features: [
-      "Up to 5 stores",
-      "Shopify + Amazon + Shopee/Lazada",
-      "Hourly or near-real-time sync",
-      "Advanced KPIs (Channel comparison, Product performance)",
-      "Inventory velocity & Customer cohorts",
-      "dbt-modeled clean tables",
-      "1-2 years historical data",
-      "Slack & priority support",
+      "Up to 3 stores",
+      "Shopify + Lazada + Shopee",
+      "Hourly sync",
+      "Advanced KPIs & comparisons",
+      "Customer analytics",
+      "90 days historical data",
+      "Priority support",
     ],
     popular: true,
   },
   {
-    name: "Pro",
-    price: "$99",
+    name: "Scale",
+    tier: "scale" as SubscriptionTier,
+    price: "$199",
     period: "/month",
-    description: "For agencies and large brands with complex operations",
-    subtitle: "Agency / Brand",
+    description: "For agencies and brands with complex operations",
+    subtitle: "Unlimited",
     features: [
-      "Up to 10-15 stores",
+      "Unlimited stores",
       "All marketplaces",
-      "Custom dbt models",
-      "Custom KPI definitions",
-      "Warehouse access (SQL)",
+      "Real-time sync",
+      "Custom analytics",
       "API access",
-      "White-label dashboards",
-      "Priority onboarding",
+      "Full historical data",
+      "Dedicated support",
     ],
     popular: false,
   },
@@ -66,6 +69,23 @@ const addOns = [
 ];
 
 const PricingSection = () => {
+  const { isAuthenticated } = useAuth();
+  const { data: subscription } = useSubscription();
+  const createCheckout = useCreateCheckout();
+  const navigate = useNavigate();
+
+  const handleSubscribe = (tier: SubscriptionTier) => {
+    if (!isAuthenticated) {
+      navigate('/auth');
+      return;
+    }
+    createCheckout.mutate(tier);
+  };
+
+  const isCurrentPlan = (tier: SubscriptionTier) => {
+    return subscription?.subscribed && subscription?.tier === tier;
+  };
+
   return (
     <section id="pricing" className="relative py-24 overflow-hidden">
       {/* Background */}
@@ -97,19 +117,19 @@ const PricingSection = () => {
               key={plan.name}
               className={`relative glass rounded-2xl p-6 ${
                 plan.popular ? "card-glow border-primary/50 scale-105" : "border-border/30"
-              }`}
+              } ${isCurrentPlan(plan.tier) ? "ring-2 ring-primary" : ""}`}
             >
               {/* Popular Badge */}
-              {plan.popular && (
+              {plan.popular && !isCurrentPlan(plan.tier) && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-primary to-cyan text-xs font-bold text-primary-foreground">
                   Most Popular
                 </div>
               )}
 
-              {/* Trial Badge */}
-              {plan.trial && (
+              {/* Current Plan Badge */}
+              {isCurrentPlan(plan.tier) && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-accent to-orange text-xs font-bold text-primary-foreground">
-                  {plan.trial}
+                  Your Plan
                 </div>
               )}
 
@@ -142,9 +162,22 @@ const PricingSection = () => {
               <Button
                 variant={plan.popular ? "hero" : "outline"}
                 className="w-full group"
+                onClick={() => handleSubscribe(plan.tier)}
+                disabled={isCurrentPlan(plan.tier) || createCheckout.isPending}
               >
-                Get Started
-                <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                {createCheckout.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                    Processing...
+                  </>
+                ) : isCurrentPlan(plan.tier) ? (
+                  "Current Plan"
+                ) : (
+                  <>
+                    {isAuthenticated ? "Subscribe" : "Get Started"}
+                    <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+                  </>
+                )}
               </Button>
             </div>
           ))}
