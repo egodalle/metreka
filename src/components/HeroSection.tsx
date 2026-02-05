@@ -62,7 +62,7 @@ const HeroSection = () => {
           {/* Subheadline */}
           <p className="text-lg md:text-xl text-muted-foreground max-w-3xl mx-auto mb-10 animate-slide-up" style={{ animationDelay: "0.1s" }}>
             Enterprise-grade e-commerce analytics for small-to-medium businesses. 
-            Connect Shopify, WooCommerce, Amazon & more—all in one unified dashboard.
+            Connect Shopify, Lazada, Shopee & more—all in one unified dashboard.
           </p>
 
           {/* CTA Buttons */}
