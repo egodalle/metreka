@@ -25,7 +25,7 @@ const plans = [
   {
     name: "Growth",
     tier: "growth" as SubscriptionTier,
-    price: "$79",
+    price: "$59",
     period: "/month",
     description: "For serious multi-channel sellers scaling across platforms",
     subtitle: "Most Popular",
@@ -43,12 +43,12 @@ const plans = [
   {
     name: "Scale",
     tier: "scale" as SubscriptionTier,
-    price: "$199",
+    price: "$79",
     period: "/month",
     description: "For agencies and brands with complex operations",
-    subtitle: "Unlimited",
+    subtitle: "Best Value",
     features: [
-      "Unlimited stores",
+      "Up to 5 stores",
       "All marketplaces",
       "Real-time sync",
       "Custom analytics",
@@ -183,20 +183,6 @@ const PricingSection = () => {
           ))}
         </div>
 
-        {/* Enterprise CTA */}
-        <div className="glass card-glow rounded-2xl p-8 max-w-4xl mx-auto text-center mb-16">
-          <h3 className="text-2xl font-bold text-foreground mb-2">Enterprise</h3>
-          <p className="text-muted-foreground mb-4">
-            Custom connectors, dedicated infrastructure, and custom SLAs for large-scale operations
-          </p>
-          <div className="flex items-baseline justify-center gap-2 mb-6">
-            <span className="text-3xl font-bold text-foreground">$1,000+</span>
-            <span className="text-muted-foreground">/month</span>
-          </div>
-          <Button variant="accent" size="lg">
-            Contact Sales
-          </Button>
-        </div>
 
         {/* Add-ons */}
         <div className="max-w-4xl mx-auto">
