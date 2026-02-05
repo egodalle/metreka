@@ -7,7 +7,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-// GrowthPulse Subscription Tiers - matching create-checkout
+// GrowthPulse Subscription Tiers
 const PRODUCT_TO_TIER: Record<string, { name: string; storeLimit: number }> = {
   "prod_TkylEtr5Ni2MCU": { name: "starter", storeLimit: 1 },
   "prod_TvJqLQlTaxMZwQ": { name: "growth", storeLimit: 3 },
@@ -15,15 +15,7 @@ const PRODUCT_TO_TIER: Record<string, { name: string; storeLimit: number }> = {
 };
 
 // Trial tier config (matches Growth tier)
-const TRIAL_CONFIG = {
-  name: "trial",
-  storeLimit: 3, // Same as Growth tier
-};
-
-const logStep = (step: string, details?: unknown) => {
-  const detailsStr = details ? ` - ${JSON.stringify(details)}` : "";
-  console.log(`[CHECK-SUBSCRIPTION] ${step}${detailsStr}`);
-};
+const TRIAL_CONFIG = { name: "trial", storeLimit: 3 };
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -37,15 +29,11 @@ serve(async (req) => {
   );
 
   try {
-    logStep("Function started");
-
     const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
     if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
-    logStep("Stripe key verified");
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
-      logStep("No authorization header - returning unauthenticated response");
       return new Response(
         JSON.stringify({
           subscribed: false,
@@ -55,10 +43,7 @@ serve(async (req) => {
           isTrialing: false,
           trialEndsAt: null,
         }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 200,
-        }
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );
     }
 
@@ -66,7 +51,6 @@ serve(async (req) => {
     const { data: userData, error: userError } = await supabaseClient.auth.getUser(token);
 
     if (userError || !userData.user?.email) {
-      logStep("Invalid auth token - returning unauthenticated response");
       return new Response(
         JSON.stringify({
           subscribed: false,
@@ -76,38 +60,30 @@ serve(async (req) => {
           isTrialing: false,
           trialEndsAt: null,
         }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 200,
-        }
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );
     }
     
     const user = userData.user;
-    logStep("User authenticated", { userId: user.id, email: user.email });
+    console.log("[CHECK-SUB] User:", user.id, user.email);
 
     // Get user's profile to check trial status
-    const { data: profile, error: profileError } = await supabaseClient
+    const { data: profile } = await supabaseClient
       .from("profiles")
       .select("trial_ends_at")
       .eq("id", user.id)
       .single();
 
-    if (profileError) {
-      logStep("Error fetching profile", { error: profileError.message });
-    }
-
     const trialEndsAt = profile?.trial_ends_at || null;
     const isTrialing = trialEndsAt ? new Date(trialEndsAt) > new Date() : false;
-    logStep("Trial status", { trialEndsAt, isTrialing });
+    console.log("[CHECK-SUB] Trial status:", { trialEndsAt, isTrialing });
 
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
 
     if (customers.data.length === 0) {
-      logStep("No Stripe customer found - checking trial status");
+      console.log("[CHECK-SUB] No Stripe customer, returning trial status");
       
-      // No Stripe customer, but might be on trial
       if (isTrialing) {
         return new Response(
           JSON.stringify({
@@ -118,10 +94,7 @@ serve(async (req) => {
             isTrialing: true,
             trialEndsAt,
           }),
-          {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-            status: 200,
-          }
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
         );
       }
 
@@ -134,15 +107,12 @@ serve(async (req) => {
           isTrialing: false,
           trialEndsAt,
         }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 200,
-        }
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );
     }
 
     const customerId = customers.data[0].id;
-    logStep("Found Stripe customer", { customerId });
+    console.log("[CHECK-SUB] Stripe customer:", customerId);
 
     const subscriptions = await stripe.subscriptions.list({
       customer: customerId,
@@ -150,101 +120,44 @@ serve(async (req) => {
       limit: 1,
     });
 
-    const hasActiveSub = subscriptions.data.length > 0;
-    let tier = null;
-    let storeLimit = 0;
-    let subscriptionEnd = null;
-    let stripeSubscriptionId = null;
-
-    if (hasActiveSub) {
+    if (subscriptions.data.length > 0) {
       const subscription = subscriptions.data[0];
-      stripeSubscriptionId = subscription.id;
-      subscriptionEnd = new Date(subscription.current_period_end * 1000).toISOString();
+      const subscriptionEnd = new Date(subscription.current_period_end * 1000).toISOString();
       const productId = subscription.items.data[0].price.product as string;
-      
       const tierInfo = PRODUCT_TO_TIER[productId];
-      if (tierInfo) {
-        tier = tierInfo.name;
-        storeLimit = tierInfo.storeLimit;
-      }
       
-      logStep("Active subscription found", {
-        subscriptionId: subscription.id,
-        tier,
-        storeLimit,
-        endDate: subscriptionEnd,
-      });
-
-      // Update subscription in database
-      const { error: upsertError } = await supabaseClient
-        .from("subscriptions")
-        .upsert({
-          user_id: user.id,
-          stripe_customer_id: customerId,
-          stripe_subscription_id: stripeSubscriptionId,
-          stripe_product_id: productId,
-          stripe_price_id: subscription.items.data[0].price.id,
-          plan_name: tier,
-          status: "active",
-          current_period_start: new Date(subscription.current_period_start * 1000).toISOString(),
-          current_period_end: subscriptionEnd,
-          cancel_at_period_end: subscription.cancel_at_period_end,
-          updated_at: new Date().toISOString(),
-        }, { onConflict: "user_id" });
-
-      if (upsertError) {
-        logStep("Error upserting subscription", { error: upsertError.message });
-      } else {
-        logStep("Subscription updated in database");
-      }
+      console.log("[CHECK-SUB] Active subscription found:", tierInfo?.name);
 
       return new Response(
         JSON.stringify({
           subscribed: true,
-          tier,
-          storeLimit,
+          tier: tierInfo?.name || null,
+          storeLimit: tierInfo?.storeLimit || 0,
           subscriptionEnd,
           stripeCustomerId: customerId,
           isTrialing: false,
           trialEndsAt,
         }),
-        {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 200,
-        }
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );
-    } else {
-      logStep("No active subscription found - checking trial status");
-      
-      // Update subscription status to inactive
-      await supabaseClient
-        .from("subscriptions")
-        .upsert({
-          user_id: user.id,
-          stripe_customer_id: customerId,
-          plan_name: isTrialing ? "trial" : "free",
-          status: isTrialing ? "trialing" : "inactive",
-          updated_at: new Date().toISOString(),
-        }, { onConflict: "user_id" });
+    }
 
-      // If trialing, return trial tier access
-      if (isTrialing) {
-        return new Response(
-          JSON.stringify({
-            subscribed: false,
-            tier: TRIAL_CONFIG.name,
-            storeLimit: TRIAL_CONFIG.storeLimit,
-            subscriptionEnd: null,
-            stripeCustomerId: customerId,
-            isTrialing: true,
-            trialEndsAt,
-          }),
-          {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-            status: 200,
-          }
-        );
-      }
+    // No active subscription - check trial
+    console.log("[CHECK-SUB] No active subscription, trial:", isTrialing);
+    
+    if (isTrialing) {
+      return new Response(
+        JSON.stringify({
+          subscribed: false,
+          tier: TRIAL_CONFIG.name,
+          storeLimit: TRIAL_CONFIG.storeLimit,
+          subscriptionEnd: null,
+          stripeCustomerId: customerId,
+          isTrialing: true,
+          trialEndsAt,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+      );
     }
 
     return new Response(
@@ -257,15 +170,11 @@ serve(async (req) => {
         isTrialing: false,
         trialEndsAt,
       }),
-      {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
-      }
+      { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );
   } catch (error) {
-    const errorMessage = error instanceof Error ? error.message : String(error);
-    logStep("ERROR", { message: errorMessage });
-    return new Response(JSON.stringify({ error: errorMessage }), {
+    console.error("[CHECK-SUB] Error:", error);
+    return new Response(JSON.stringify({ error: String(error) }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 500,
     });
