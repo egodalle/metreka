@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { 
   ArrowLeft, TrendingUp, DollarSign, 
   Users, ShoppingCart, Package, Activity, Bell, Settings, Search, Plus, LogOut,
-  ArrowUpRight, ArrowDownRight, BarChart3, AlertCircle, RefreshCw, PieChart
+   ArrowUpRight, ArrowDownRight, BarChart3, AlertCircle, RefreshCw, PieChart, Link2
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useDashboard, useHealthCheck } from "@/hooks/useDashboardData";
@@ -18,6 +18,7 @@ import { PlatformData, DailyData, getConnectedDemoStorePlatforms } from "@/lib/a
 import { ProductAnalyticsSection } from "@/components/dashboard/ProductAnalyticsSection";
 import { CustomerAnalyticsSection } from "@/components/dashboard/CustomerAnalyticsSection";
 import { ProfitabilitySection } from "@/components/dashboard/ProfitabilitySection";
+ import { StoreConnectionsSection } from "@/components/dashboard/StoreConnectionsSection";
 import { isDemoMode, getConnectedDemoStores } from "@/lib/integrations";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -424,6 +425,10 @@ const Dashboard = () => {
               <PieChart className="w-4 h-4" />
               Profitability
             </TabsTrigger>
+             <TabsTrigger value="integrations" className="gap-2">
+               <Link2 className="w-4 h-4" />
+               Integrations
+             </TabsTrigger>
           </TabsList>
 
           {/* Product Analytics Tab */}
@@ -453,6 +458,11 @@ const Dashboard = () => {
               onStoreChange={setSelectedStore}
             />
           </TabsContent>
+ 
+           {/* Integrations Tab */}
+           <TabsContent value="integrations" className="space-y-6">
+             <StoreConnectionsSection />
+           </TabsContent>
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
