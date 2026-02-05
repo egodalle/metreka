@@ -17,6 +17,7 @@ import { useSalesSummary } from "@/hooks/useDashboardData";
 interface ProfitabilitySectionProps {
   isLoading?: boolean;
   selectedStore?: string;
+  connectedPlatforms?: string[];
   onStoreChange?: (store: string) => void;
 }
 
@@ -26,7 +27,7 @@ const formatCurrency = (value: number) =>
 const formatNumber = (value: number) => 
   new Intl.NumberFormat('en-US').format(value);
 
-export function ProfitabilitySection({ isLoading: externalLoading, selectedStore = "all" }: ProfitabilitySectionProps) {
+export function ProfitabilitySection({ isLoading: externalLoading, selectedStore = "all", connectedPlatforms = [] }: ProfitabilitySectionProps) {
   const { data, isLoading: queryLoading } = useSalesSummary('source');
   
   const isLoading = externalLoading || queryLoading;
@@ -54,10 +55,15 @@ export function ProfitabilitySection({ isLoading: externalLoading, selectedStore
     );
   }
 
+  // First filter by connected platforms, then by selected store
+  const connectedData = connectedPlatforms.length > 0
+    ? data.data.filter(p => connectedPlatforms.includes(p.dimension))
+    : data.data;
+  
   // Filter data if a specific store is selected
   const platforms = selectedStore === "all" 
-    ? data.data 
-    : data.data.filter(p => p.dimension === selectedStore);
+    ? connectedData 
+    : connectedData.filter(p => p.dimension === selectedStore);
 
   const totalRevenue = platforms.reduce((acc, p) => acc + p.total_sales, 0);
   const totalOrders = platforms.reduce((acc, p) => acc + p.total_orders, 0);

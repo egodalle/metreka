@@ -193,7 +193,7 @@ const Dashboard = () => {
     }
   };
 
-  // Get filtered data based on selected store filter
+  // Get filtered data based on selected store filter AND connected platforms
   const getFilteredData = () => {
     if (!dashboardData) {
       return {
@@ -207,21 +207,30 @@ const Dashboard = () => {
       };
     }
 
-    // If "all" stores selected, return full dashboard data
+    // First filter platforms to only include connected ones
+    const connectedPlatformData = dashboardData.platforms?.filter(
+      p => (connectedPlatforms as string[]).includes(p.platform)
+    ) || [];
+
+    // If "all" stores selected, aggregate from connected platforms only
     if (selectedStore === "all") {
+      const totalRevenue = connectedPlatformData.reduce((acc, p) => acc + p.total_revenue, 0);
+      const totalOrders = connectedPlatformData.reduce((acc, p) => acc + p.total_orders, 0);
+      const totalUnits = connectedPlatformData.reduce((acc, p) => acc + p.total_units, 0);
+      
       return {
-        totalRevenue: dashboardData.total_revenue,
-        totalOrders: dashboardData.total_orders,
-        avgOrderValue: dashboardData.avg_order_value,
+        totalRevenue,
+        totalOrders,
+        avgOrderValue: totalOrders > 0 ? totalRevenue / totalOrders : 0,
         totalCustomers: dashboardData.total_customers,
         totalProducts: dashboardData.total_products,
-        platforms: dashboardData.platforms,
+        platforms: connectedPlatformData,
         dailyData: dashboardData.daily_data,
       };
     }
 
-    // Find the selected platform
-    const platform = dashboardData.platforms?.find(p => p.platform === selectedStore);
+    // Find the selected platform (must also be connected)
+    const platform = connectedPlatformData.find(p => p.platform === selectedStore);
     if (!platform) {
       return {
         totalRevenue: 0,
@@ -241,7 +250,7 @@ const Dashboard = () => {
       totalCustomers: 0,
       totalProducts: 0,
       platforms: [platform],
-      dailyData: dashboardData.daily_data, // Daily data is aggregate only for now
+      dailyData: dashboardData.daily_data,
     };
   };
 
@@ -450,6 +459,7 @@ const Dashboard = () => {
             <ProductAnalyticsSection 
               isLoading={isLoading} 
               selectedStore={selectedStore}
+              connectedPlatforms={connectedPlatforms}
               onStoreChange={setSelectedStore}
             />
           </TabsContent>
@@ -460,6 +470,7 @@ const Dashboard = () => {
             <CustomerAnalyticsSection 
               isLoading={isLoading}
               selectedStore={selectedStore}
+              connectedPlatforms={connectedPlatforms}
               onStoreChange={setSelectedStore}
             />
           </TabsContent>
@@ -469,6 +480,7 @@ const Dashboard = () => {
             <ProfitabilitySection 
               isLoading={isLoading}
               selectedStore={selectedStore}
+              connectedPlatforms={connectedPlatforms}
               onStoreChange={setSelectedStore}
             />
           </TabsContent>

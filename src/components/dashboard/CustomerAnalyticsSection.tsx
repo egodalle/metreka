@@ -17,6 +17,7 @@ import { useSales } from "@/hooks/useDashboardData";
 interface CustomerAnalyticsSectionProps {
   isLoading?: boolean;
   selectedStore?: string;
+  connectedPlatforms?: string[];
   onStoreChange?: (store: string) => void;
 }
 
@@ -26,7 +27,7 @@ const formatCurrency = (value: number) =>
 const formatNumber = (value: number) => 
   new Intl.NumberFormat('en-US').format(value);
 
-export function CustomerAnalyticsSection({ isLoading: externalLoading, selectedStore = "all" }: CustomerAnalyticsSectionProps) {
+export function CustomerAnalyticsSection({ isLoading: externalLoading, selectedStore = "all", connectedPlatforms = [] }: CustomerAnalyticsSectionProps) {
   const { data, isLoading: queryLoading } = useSales({ 
     source: selectedStore !== "all" ? selectedStore : undefined,
     limit: 500
@@ -57,6 +58,11 @@ export function CustomerAnalyticsSection({ isLoading: externalLoading, selectedS
     );
   }
 
+  // Filter by connected platforms when in "all" mode
+  const filteredSales = connectedPlatforms.length > 0 && selectedStore === "all"
+    ? data.data.filter(s => connectedPlatforms.includes(s.source))
+    : data.data;
+
   // Aggregate customer data from sales records
   const customerMap = new Map<string, { 
     name: string; 
@@ -66,7 +72,7 @@ export function CustomerAnalyticsSection({ isLoading: externalLoading, selectedS
     firstOrder: string;
   }>();
 
-  data.data.forEach(sale => {
+  filteredSales.forEach(sale => {
     const customerId = sale.customer_id || sale.customer_name || 'Unknown';
     const existing = customerMap.get(customerId) || { 
       name: sale.customer_name || 'Unknown Customer', 
@@ -90,7 +96,7 @@ export function CustomerAnalyticsSection({ isLoading: externalLoading, selectedS
   const totalCustomers = customerMap.size;
   const totalSpent = Array.from(customerMap.values()).reduce((acc, c) => acc + c.totalSpent, 0);
   const avgLTV = totalCustomers > 0 ? totalSpent / totalCustomers : 0;
-  const avgOrdersPerCustomer = totalCustomers > 0 ? data.data.length / totalCustomers : 0;
+  const avgOrdersPerCustomer = totalCustomers > 0 ? filteredSales.length / totalCustomers : 0;
 
   return (
     <div className="space-y-6">
