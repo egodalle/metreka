@@ -67,6 +67,7 @@ const PricingSection = () => {
   const createCheckout = useCreateCheckout();
   const navigate = useNavigate();
   const [processingTier, setProcessingTier] = useState<SubscriptionTier | null>(null);
+  const [selectedTier, setSelectedTier] = useState<SubscriptionTier>("growth");
 
   const handleSubscribe = (tier: SubscriptionTier) => {
     if (!isAuthenticated) {
@@ -79,12 +80,20 @@ const PricingSection = () => {
     });
   };
 
+  const handleSelectTier = (tier: SubscriptionTier) => {
+    setSelectedTier(tier);
+  };
+
   const isCurrentPlan = (tier: SubscriptionTier) => {
     return subscription?.subscribed && subscription?.tier === tier;
   };
 
   const isProcessing = (tier: SubscriptionTier) => {
     return processingTier === tier;
+  };
+
+  const isSelected = (tier: SubscriptionTier) => {
+    return selectedTier === tier;
   };
 
   return (
@@ -116,14 +125,15 @@ const PricingSection = () => {
           {plans.map((plan) => (
             <div
               key={plan.name}
-              className={`relative glass rounded-2xl p-6 ${
-                plan.popular ? "card-glow border-primary/50 scale-105" : "border-border/30"
+              onClick={() => handleSelectTier(plan.tier)}
+              className={`relative glass rounded-2xl p-6 cursor-pointer transition-all duration-300 ${
+                isSelected(plan.tier) ? "card-glow border-primary/50 scale-105" : "border-border/30 hover:border-primary/30"
               } ${isCurrentPlan(plan.tier) ? "ring-2 ring-primary" : ""}`}
             >
-              {/* Popular Badge */}
-              {plan.popular && !isCurrentPlan(plan.tier) && (
+              {/* Selected Badge */}
+              {isSelected(plan.tier) && !isCurrentPlan(plan.tier) && (
                 <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full bg-gradient-to-r from-primary to-cyan text-xs font-bold text-primary-foreground">
-                  Most Popular
+                  {plan.popular ? "Most Popular" : "Selected"}
                 </div>
               )}
 
