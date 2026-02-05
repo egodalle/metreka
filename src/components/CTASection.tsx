@@ -30,12 +30,21 @@ const CTASection = () => {
 
             {/* CTA Buttons */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mb-12">
-              <Button variant="hero" size="xl" className="group">
+              <Button 
+                variant="hero" 
+                size="xl" 
+                className="group"
+                onClick={() => window.open("mailto:hello@metreka.com?subject=Beta%20Access%20Application&body=Hi%20Metreka%20Team%2C%0A%0AI'm%20interested%20in%20joining%20the%20beta%20program.%0A%0AMy%20store%20details%3A%0A-%20Platform%3A%20%0A-%20Monthly%20orders%3A%20%0A-%20Website%3A%20%0A%0AThanks!", "_blank")}
+              >
                 <MessageSquare className="w-5 h-5" />
                 Apply for Beta Access
                 <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
               </Button>
-              <Button variant="hero-outline" size="xl">
+              <Button 
+                variant="hero-outline" 
+                size="xl"
+                onClick={() => window.open("https://calendly.com/metreka/demo", "_blank")}
+              >
                 <Calendar className="w-5 h-5" />
                 Book a Demo Call
               </Button>
