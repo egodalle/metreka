@@ -23,7 +23,7 @@ const Careers = () => {
               </p>
               <div className="glass rounded-2xl p-8 text-left">
                 <p className="text-muted-foreground">
-                  No open positions at the moment. Check back soon or reach out to hello@metreka.com.
+                  No open positions at the moment. Check back soon or reach out to careers@metreka.com.
                 </p>
               </div>
             </div>
