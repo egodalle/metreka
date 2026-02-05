@@ -138,9 +138,8 @@ export function ProfitabilitySection({ isLoading: externalLoading, selectedStore
             <CardTitle className="text-lg">Revenue by Platform</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {data.data.map((platform) => {
-              const allPlatformRevenue = data.data.reduce((acc, p) => acc + p.total_sales, 0);
-              const revenuePercent = (platform.total_sales / allPlatformRevenue) * 100;
+            {platforms.map((platform) => {
+              const revenuePercent = totalRevenue > 0 ? (platform.total_sales / totalRevenue) * 100 : 0;
               return (
                 <div key={platform.dimension} className="space-y-2">
                   <div className="flex items-center justify-between">
@@ -179,7 +178,7 @@ export function ProfitabilitySection({ isLoading: externalLoading, selectedStore
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data.data.map((platform) => (
+                {platforms.map((platform) => (
                   <TableRow key={platform.dimension} className="hover:bg-muted/50">
                     <TableCell className="font-medium capitalize">{platform.dimension}</TableCell>
                     <TableCell className="text-right">{formatNumber(platform.total_orders)}</TableCell>
