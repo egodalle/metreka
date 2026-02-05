@@ -1,4 +1,5 @@
 import { Activity, Github, Linkedin, Twitter } from "lucide-react";
+import { Link } from "react-router-dom";
 
 const Footer = () => {
   const currentYear = new Date().getFullYear();
@@ -12,20 +13,18 @@ const Footer = () => {
     ],
     platforms: [
       { label: "Shopify", href: "#platforms" },
-      { label: "WooCommerce", href: "#platforms" },
-      { label: "Amazon", href: "#platforms" },
-      { label: "BigCommerce", href: "#platforms" },
+      { label: "Lazada", href: "#platforms" },
+      { label: "Shopee", href: "#platforms" },
     ],
     company: [
-      { label: "About", href: "#" },
-      { label: "Blog", href: "#" },
-      { label: "Careers", href: "#" },
-      { label: "Contact", href: "#" },
+      { label: "About", href: "/about" },
+      { label: "Careers", href: "/careers" },
+      { label: "Contact", href: "/contact" },
     ],
     legal: [
-      { label: "Privacy", href: "#" },
-      { label: "Terms", href: "#" },
-      { label: "Security", href: "#" },
+      { label: "Privacy", href: "/privacy" },
+      { label: "Terms", href: "/terms" },
+      { label: "Security", href: "/security" },
     ],
   };
 
@@ -108,12 +107,12 @@ const Footer = () => {
             <ul className="space-y-2">
               {links.company.map((link) => (
                 <li key={link.label}>
-                  <a
-                    href={link.href}
+                  <Link
+                    to={link.href}
                     className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                   >
                     {link.label}
-                  </a>
+                  </Link>
                 </li>
               ))}
             </ul>
@@ -124,12 +123,12 @@ const Footer = () => {
             <ul className="space-y-2">
               {links.legal.map((link) => (
                 <li key={link.label}>
-                  <a
-                    href={link.href}
+                  <Link
+                    to={link.href}
                     className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                   >
                     {link.label}
-                  </a>
+                  </Link>
                 </li>
               ))}
             </ul>
