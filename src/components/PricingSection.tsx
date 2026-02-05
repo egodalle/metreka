@@ -60,13 +60,6 @@ const plans = [
   },
 ];
 
-const addOns = [
-  { name: "Extra Store", price: "$29/mo" },
-  { name: "Real-time Sync", price: "$75/mo" },
-  { name: "Historical Backfill (per year)", price: "$75" },
-  { name: "Custom KPIs / dbt models", price: "$200" },
-  { name: "Setup & Onboarding", price: "$299" },
-];
 
 const PricingSection = () => {
   const { isAuthenticated } = useAuth();
@@ -111,7 +104,7 @@ const PricingSection = () => {
         </div>
 
         {/* Pricing Cards */}
-        <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto mb-16">
+        <div className="grid md:grid-cols-3 gap-6 max-w-5xl mx-auto">
           {plans.map((plan) => (
             <div
               key={plan.name}
@@ -183,24 +176,6 @@ const PricingSection = () => {
           ))}
         </div>
 
-
-        {/* Add-ons */}
-        <div className="max-w-4xl mx-auto">
-          <h4 className="text-lg font-bold text-foreground text-center mb-6">
-            Available Add-ons
-          </h4>
-          <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-            {addOns.map((addon) => (
-              <div
-                key={addon.name}
-                className="glass rounded-xl p-4 text-center hover:border-primary/30 transition-colors"
-              >
-                <p className="text-sm font-medium text-foreground mb-1">{addon.name}</p>
-                <p className="text-xs text-primary font-mono">{addon.price}</p>
-              </div>
-            ))}
-          </div>
-        </div>
       </div>
     </section>
   );
