@@ -1,8 +1,34 @@
 // API client for GrowthPulse FastAPI backend
-import { isDemoMode, getConnectedDemoStores, StorePlatform } from './integrations';
+import { isDemoMode, StorePlatform } from './integrations';
+import { supabase } from '@/integrations/supabase/client';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://growthpulse-api-z5id2gn52a-uc.a.run.app';
 const API_KEY = import.meta.env.VITE_GROWTHPULSE_API_KEY || '';
+
+// Cache for connected platforms (refreshed on each API call)
+let cachedConnectedPlatforms: StorePlatform[] = [];
+
+// Fetch connected platforms from Supabase
+async function fetchConnectedPlatforms(): Promise<StorePlatform[]> {
+  try {
+    const { data, error } = await supabase
+      .from('store_connections')
+      .select('platform')
+      .eq('is_active', true);
+    
+    if (error) {
+      console.error('Failed to fetch connected platforms:', error);
+      return cachedConnectedPlatforms;
+    }
+    
+    const platforms = [...new Set((data || []).map(row => row.platform as StorePlatform))];
+    cachedConnectedPlatforms = platforms;
+    return platforms;
+  } catch (err) {
+    console.error('Error fetching connected platforms:', err);
+    return cachedConnectedPlatforms;
+  }
+}
 
 // Demo sales records for each platform
 const generateDemoSalesRecords = (platform: string): SalesRecord[] => {
@@ -235,15 +261,14 @@ const demoData: Record<string, { stats: any; platformSummary: any; dailySummary:
   },
 };
 
-// Get all connected demo stores
+// Get all connected platforms - uses cached value synchronously
 export function getConnectedDemoStorePlatforms(): StorePlatform[] {
-  return getConnectedDemoStores().map(s => s.platform);
+  return cachedConnectedPlatforms;
 }
 
 // Legacy function for backward compatibility - returns first connected store
 export function getConnectedDemoStore(): string | null {
-  const stores = getConnectedDemoStores();
-  return stores.length > 0 ? stores[0].platform : null;
+  return cachedConnectedPlatforms.length > 0 ? cachedConnectedPlatforms[0] : null;
 }
 
 async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> {
@@ -375,24 +400,24 @@ export interface DailyData {
 // API endpoints matching GrowthPulse FastAPI structure
 export const api = {
   // Health check
-  healthCheck: (): Promise<HealthResponse> => {
+  healthCheck: async (): Promise<HealthResponse> => {
     if (isDemoMode()) {
-      const connectedStores = getConnectedDemoStorePlatforms();
-      return Promise.resolve({
+      const connectedStores = await fetchConnectedPlatforms();
+      return {
         status: connectedStores.length > 0 ? 'healthy' : 'disconnected',
         timestamp: new Date().toISOString(),
         bigquery_connected: connectedStores.length > 0,
         total_records: connectedStores.reduce((acc, store) => 
           acc + (demoData[store]?.stats.data.overview.total_records || 0), 0),
-      });
+      };
     }
     return fetchAPI<HealthResponse>('/health');
   },
 
   // Overall stats - aggregates all connected stores in demo mode
-  getStats: (): Promise<StatsResponse> => {
+  getStats: async (): Promise<StatsResponse> => {
     if (isDemoMode()) {
-      const connectedStores = getConnectedDemoStorePlatforms();
+      const connectedStores = await fetchConnectedPlatforms();
       if (connectedStores.length > 0) {
         // Aggregate stats from all connected stores
         const aggregated = connectedStores.reduce((acc, store) => {
@@ -419,7 +444,7 @@ export const api = {
           revenue: demoData[store]?.stats.data.overview.total_revenue || 0,
         }));
 
-        return Promise.resolve({
+        return {
           success: true,
           data: {
             overview: {
@@ -433,34 +458,34 @@ export const api = {
             },
             by_source,
           },
-        });
+        };
       }
-      return Promise.resolve({
+      return {
         success: false,
         data: {
           overview: { total_records: 0, total_orders: 0, total_customers: 0, total_products: 0, total_revenue: 0, avg_order_value: 0, earliest_order: '', latest_order: '', platforms: 0 },
           by_source: [],
         },
-      });
+      };
     }
     return fetchAPI<StatsResponse>('/api/v1/stats');
   },
 
   // Sales summary by different dimensions - aggregates all connected stores
-  getSalesSummary: (groupBy: 'source' | 'day' | 'month' | 'status' = 'source', startDate?: string, endDate?: string): Promise<SalesSummaryResponse> => {
+  getSalesSummary: async (groupBy: 'source' | 'day' | 'month' | 'status' = 'source', startDate?: string, endDate?: string): Promise<SalesSummaryResponse> => {
     if (isDemoMode()) {
-      const connectedStores = getConnectedDemoStorePlatforms();
+      const connectedStores = await fetchConnectedPlatforms();
       if (connectedStores.length > 0) {
         if (groupBy === 'source') {
           // Return platform summaries for all connected stores
           const allPlatformData = connectedStores.flatMap(store => 
             demoData[store]?.platformSummary.data || []
           );
-          return Promise.resolve({
+          return {
             success: true,
             group_by: 'source',
             data: allPlatformData,
-          });
+          };
         } else if (groupBy === 'day') {
           // Aggregate daily data from all connected stores
           const dailyMap = new Map<string, any>();
@@ -481,14 +506,14 @@ export const api = {
             ...d,
             avg_order_value: d.total_orders > 0 ? d.total_sales / d.total_orders : 0,
           }));
-          return Promise.resolve({
+          return {
             success: true,
             group_by: 'day',
             data: aggregatedDaily,
-          });
+          };
         }
       }
-      return Promise.resolve({ success: true, group_by: groupBy, data: [] });
+      return { success: true, group_by: groupBy, data: [] };
     }
     const params = new URLSearchParams({ group_by: groupBy });
     if (startDate) params.append('start_date', startDate);
@@ -497,7 +522,7 @@ export const api = {
   },
 
   // Get sales records with filters
-  getSales: (options?: {
+  getSales: async (options?: {
     source?: string;
     startDate?: string;
     endDate?: string;
@@ -506,7 +531,7 @@ export const api = {
     offset?: number;
   }): Promise<SalesResponse> => {
     if (isDemoMode()) {
-      const connectedStores = getConnectedDemoStorePlatforms();
+      const connectedStores = await fetchConnectedPlatforms();
       if (connectedStores.length > 0) {
         // Get sales records from all connected stores or filter by source
         let allSales: SalesRecord[] = [];
@@ -526,7 +551,7 @@ export const api = {
         const offset = options?.offset || 0;
         const paginatedSales = allSales.slice(offset, offset + limit);
 
-        return Promise.resolve({
+        return {
           success: true,
           data: paginatedSales,
           metadata: {
@@ -535,13 +560,13 @@ export const api = {
             offset,
             count: paginatedSales.length,
           },
-        });
+        };
       }
-      return Promise.resolve({
+      return {
         success: true,
         data: [],
         metadata: { total: 0, limit: options?.limit || 100, offset: options?.offset || 0, count: 0 },
-      });
+      };
     }
     const params = new URLSearchParams();
     if (options?.source) params.append('source', options.source);
