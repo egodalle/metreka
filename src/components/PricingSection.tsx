@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Check, Sparkles, ArrowRight, Loader2 } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
@@ -65,17 +66,25 @@ const PricingSection = () => {
   const { data: subscription } = useSubscription();
   const createCheckout = useCreateCheckout();
   const navigate = useNavigate();
+  const [processingTier, setProcessingTier] = useState<SubscriptionTier | null>(null);
 
   const handleSubscribe = (tier: SubscriptionTier) => {
     if (!isAuthenticated) {
       navigate('/auth');
       return;
     }
-    createCheckout.mutate(tier);
+    setProcessingTier(tier);
+    createCheckout.mutate(tier, {
+      onSettled: () => setProcessingTier(null),
+    });
   };
 
   const isCurrentPlan = (tier: SubscriptionTier) => {
     return subscription?.subscribed && subscription?.tier === tier;
+  };
+
+  const isProcessing = (tier: SubscriptionTier) => {
+    return processingTier === tier;
   };
 
   return (
@@ -155,9 +164,9 @@ const PricingSection = () => {
                 variant={plan.popular ? "hero" : "outline"}
                 className="w-full group"
                 onClick={() => handleSubscribe(plan.tier)}
-                disabled={isCurrentPlan(plan.tier) || createCheckout.isPending}
+                disabled={isCurrentPlan(plan.tier) || processingTier !== null}
               >
-                {createCheckout.isPending ? (
+                {isProcessing(plan.tier) ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin mr-2" />
                     Processing...
