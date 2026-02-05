@@ -611,26 +611,12 @@ const Dashboard = () => {
                         const maxRevenue = Math.max(...revenues, 1);
                         const totalHeight = (day.total_revenue / maxRevenue) * 100;
                         
-                        // Determine bar color based on selected store
-                        const getBarColor = () => {
-                          if (selectedStore !== "all" && platformColors[selectedStore]) {
-                            return platformColors[selectedStore].stroke;
-                          }
-                          // For "all stores", use a gradient or primary color
-                          // If only one platform is connected, use its color
-                          if (connectedPlatforms.length === 1) {
-                            return platformColors[connectedPlatforms[0]]?.stroke || "hsl(var(--primary))";
-                          }
-                          return "hsl(var(--primary))";
-                        };
-                        
                         return (
                           <div 
                             key={i} 
-                            className="flex-1 rounded-t hover:opacity-90 transition-opacity cursor-pointer group relative"
+                            className="flex-1 rounded-t hover:opacity-90 transition-opacity cursor-pointer group relative bg-primary"
                             style={{ 
                               height: `${Math.max(totalHeight, 5)}%`,
-                              backgroundColor: getBarColor(),
                             }}
                           >
                             <div className="absolute bottom-full mb-2 left-1/2 -translate-x-1/2 bg-popover text-popover-foreground px-2 py-1 rounded text-xs opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10 shadow-lg">
