@@ -17,10 +17,10 @@ import {
   getSyncStatus,
   SyncStatus,
   isDemoMode,
-  getConnectedDemoStores,
   addConnectedDemoStore,
 } from '@/lib/integrations';
 import { Badge } from '@/components/ui/badge';
+import { useStoreConnections } from '@/hooks/useStoreConnections';
 
 type OnboardingStep = 'select' | 'permission' | 'connecting' | 'credentials' | 'syncing' | 'complete';
 
@@ -109,13 +109,14 @@ export default function Onboarding() {
     }
   };
 
-  // Get already connected platforms to filter them out
-  const connectedPlatforms = isDemoMode() 
-    ? getConnectedDemoStores().map(s => s.platform)
-    : [];
+  // Get already connected platforms from the database
+  const { data: storeConnections = [] } = useStoreConnections();
+  const connectedPlatforms = storeConnections
+    .filter(c => c.is_active)
+    .map(c => c.platform);
   
   const availablePlatforms = platformConfigs.filter(
-    p => !connectedPlatforms.includes(p.id)
+    p => !connectedPlatforms.includes(p.id as any)
   );
 
   const handlePlatformSelect = (platform: StorePlatform) => {
@@ -227,7 +228,7 @@ export default function Onboarding() {
               <div className="space-y-2 mb-4">
                 <p className="text-sm font-medium text-muted-foreground">Connected stores:</p>
                 <div className="flex flex-wrap gap-2">
-                  {getConnectedDemoStores().map((store) => {
+                  {storeConnections.filter(c => c.is_active).map((store) => {
                     const config = platformConfigs.find(p => p.id === store.platform);
                     return (
                       <div
