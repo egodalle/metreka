@@ -64,11 +64,11 @@ const CTASection = () => {
             </p>
             <div className="flex flex-wrap items-center justify-center gap-6">
               <a
-                href="mailto:hello@datapulse.io"
+                href="mailto:hello@metreka.com"
                 className="flex items-center gap-2 text-foreground hover:text-primary transition-colors"
               >
                 <Mail className="w-5 h-5" />
-                hello@datapulse.io
+                hello@metreka.com
               </a>
             </div>
           </div>
