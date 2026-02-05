@@ -17,6 +17,7 @@ import { useSales } from "@/hooks/useDashboardData";
 interface ProductAnalyticsSectionProps {
   isLoading?: boolean;
   selectedStore?: string;
+  connectedPlatforms?: string[];
   onStoreChange?: (store: string) => void;
 }
 
@@ -26,7 +27,7 @@ const formatCurrency = (value: number) =>
 const formatNumber = (value: number) => 
   new Intl.NumberFormat('en-US').format(value);
 
-export function ProductAnalyticsSection({ isLoading: externalLoading, selectedStore = "all" }: ProductAnalyticsSectionProps) {
+export function ProductAnalyticsSection({ isLoading: externalLoading, selectedStore = "all", connectedPlatforms = [] }: ProductAnalyticsSectionProps) {
   const { data, isLoading: queryLoading } = useSales({ 
     source: selectedStore !== "all" ? selectedStore : undefined,
     limit: 100
@@ -57,6 +58,11 @@ export function ProductAnalyticsSection({ isLoading: externalLoading, selectedSt
     );
   }
 
+  // Filter by connected platforms when in "all" mode
+  const filteredSales = connectedPlatforms.length > 0 && selectedStore === "all"
+    ? data.data.filter(s => connectedPlatforms.includes(s.source))
+    : data.data;
+
   // Aggregate product data from sales records
   const productMap = new Map<string, { 
     name: string; 
@@ -66,7 +72,7 @@ export function ProductAnalyticsSection({ isLoading: externalLoading, selectedSt
     avgPrice: number;
   }>();
 
-  data.data.forEach(sale => {
+  filteredSales.forEach(sale => {
     const productName = sale.product_name || 'Unknown Product';
     const existing = productMap.get(productName) || { 
       name: productName, 
@@ -87,8 +93,8 @@ export function ProductAnalyticsSection({ isLoading: externalLoading, selectedSt
     .slice(0, 10);
 
   const totalProducts = productMap.size;
-  const totalRevenue = data.data.reduce((acc, s) => acc + (s.total_amount || 0), 0);
-  const totalUnits = data.data.reduce((acc, s) => acc + (s.quantity || 0), 0);
+  const totalRevenue = filteredSales.reduce((acc, s) => acc + (s.total_amount || 0), 0);
+  const totalUnits = filteredSales.reduce((acc, s) => acc + (s.quantity || 0), 0);
   const avgItemValue = totalUnits > 0 ? totalRevenue / totalUnits : 0;
 
   return (
