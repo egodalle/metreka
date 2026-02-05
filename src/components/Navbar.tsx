@@ -1,11 +1,13 @@
 import { Button } from "@/components/ui/button";
-import { Activity, Menu, X } from "lucide-react";
+import { Activity, Menu, X, LogOut } from "lucide-react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 
 const Navbar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
+  const { isAuthenticated, signOut, isLoading } = useAuth();
 
   const navLinks = [
     { label: "How It Works", href: "#how-it-works" },
@@ -13,6 +15,11 @@ const Navbar = () => {
     { label: "Features", href: "#features" },
     { label: "Pricing", href: "#pricing" },
   ];
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/");
+  };
 
   return (
     <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-border/30">
@@ -43,12 +50,28 @@ const Navbar = () => {
 
           {/* CTA Buttons */}
           <div className="hidden md:flex items-center gap-3">
-            <Button variant="ghost" size="sm" onClick={() => navigate("/auth")}>
-              Sign In
-            </Button>
-            <Button variant="hero" size="sm" onClick={() => navigate("/auth")}>
-              Get Started
-            </Button>
+            {!isLoading && (
+              isAuthenticated ? (
+                <>
+                  <Button variant="ghost" size="sm" onClick={() => navigate("/dashboard")}>
+                    Dashboard
+                  </Button>
+                  <Button variant="outline" size="sm" onClick={handleSignOut} className="gap-2">
+                    <LogOut className="w-4 h-4" />
+                    Sign Out
+                  </Button>
+                </>
+              ) : (
+                <>
+                  <Button variant="ghost" size="sm" onClick={() => navigate("/auth")}>
+                    Sign In
+                  </Button>
+                  <Button variant="hero" size="sm" onClick={() => navigate("/auth")}>
+                    Get Started
+                  </Button>
+                </>
+              )
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -75,12 +98,28 @@ const Navbar = () => {
                 </a>
               ))}
               <div className="flex flex-col gap-2 pt-4 border-t border-border/30">
-                <Button variant="ghost" className="w-full justify-center" onClick={() => navigate("/auth")}>
-                  Sign In
-                </Button>
-                <Button variant="hero" className="w-full justify-center" onClick={() => navigate("/auth")}>
-                  Get Started
-                </Button>
+                {!isLoading && (
+                  isAuthenticated ? (
+                    <>
+                      <Button variant="ghost" className="w-full justify-center" onClick={() => { navigate("/dashboard"); setIsOpen(false); }}>
+                        Dashboard
+                      </Button>
+                      <Button variant="outline" className="w-full justify-center gap-2" onClick={() => { handleSignOut(); setIsOpen(false); }}>
+                        <LogOut className="w-4 h-4" />
+                        Sign Out
+                      </Button>
+                    </>
+                  ) : (
+                    <>
+                      <Button variant="ghost" className="w-full justify-center" onClick={() => navigate("/auth")}>
+                        Sign In
+                      </Button>
+                      <Button variant="hero" className="w-full justify-center" onClick={() => navigate("/auth")}>
+                        Get Started
+                      </Button>
+                    </>
+                  )
+                )}
               </div>
             </div>
           </div>

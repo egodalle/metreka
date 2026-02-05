@@ -9,7 +9,7 @@ import { ShopifyLogo, ShopeeLogo, LazadaLogo, StoreLogo } from "@/components/Sto
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
   ArrowLeft, TrendingUp, DollarSign, 
-  Users, ShoppingCart, Package, Activity, Bell, Settings, Search, Plus,
+  Users, ShoppingCart, Package, Activity, Bell, Settings, Search, Plus, LogOut,
   ArrowUpRight, ArrowDownRight, BarChart3, AlertCircle, RefreshCw, PieChart
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
@@ -19,6 +19,8 @@ import { ProductAnalyticsSection } from "@/components/dashboard/ProductAnalytics
 import { CustomerAnalyticsSection } from "@/components/dashboard/CustomerAnalyticsSection";
 import { ProfitabilitySection } from "@/components/dashboard/ProfitabilitySection";
 import { isDemoMode, getConnectedDemoStores } from "@/lib/integrations";
+import { useAuth } from "@/contexts/AuthContext";
+import { useToast } from "@/hooks/use-toast";
 
 const allStores = [
   { id: "shopify", name: "Shopify", logo: ShopifyLogo, bgColor: "bg-[#96bf48]" },
@@ -143,6 +145,8 @@ const ConnectionStatus = ({ isConnected, isLoading }: { isConnected: boolean; is
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { signOut } = useAuth();
+  const { toast } = useToast();
   const [selectedPeriod, setSelectedPeriod] = useState("7d");
   const [activeTab, setActiveTab] = useState("overview");
   
@@ -162,6 +166,20 @@ const Dashboard = () => {
   const { data: dashboardData, isLoading, isError, error, refetch } = useDashboard();
 
   const isConnected = healthData?.status === "healthy";
+
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      toast({ title: "Signed out successfully" });
+      navigate("/");
+    } catch (error) {
+      toast({ 
+        title: "Error signing out", 
+        description: error instanceof Error ? error.message : "Something went wrong",
+        variant: "destructive" 
+      });
+    }
+  };
 
   // Get filtered data based on selected store filter
   const getFilteredData = () => {
@@ -260,6 +278,9 @@ const Dashboard = () => {
               <ThemeToggle />
               <Button variant="ghost" size="icon">
                 <Settings className="w-5 h-5" />
+              </Button>
+              <Button variant="ghost" size="icon" onClick={handleSignOut} title="Sign Out">
+                <LogOut className="w-5 h-5" />
               </Button>
             </div>
           </div>
