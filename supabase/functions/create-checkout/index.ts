@@ -16,16 +16,16 @@ const SUBSCRIPTION_TIERS = {
     storeLimit: 1,
   },
   growth: {
-    priceId: "price_1SnSo9JLHaTFxreKhQy6QkDh",
-    productId: "prod_TkylIKtbMrM7l4",
+    priceId: "price_1SxTDBJLHaTFxreKviAk1JWC",
+    productId: "prod_TvJqLQlTaxMZwQ",
     name: "Growth",
     storeLimit: 3,
   },
   scale: {
-    priceId: "price_1SnSoMJLHaTFxreK7CBPesPn",
-    productId: "prod_Tkyl24tIxr2ilj",
+    priceId: "price_1SxTDPJLHaTFxreKwqIOs423",
+    productId: "prod_TvJr3qK5W7rUcB",
     name: "Scale",
-    storeLimit: -1, // unlimited
+    storeLimit: 5,
   },
 };
 

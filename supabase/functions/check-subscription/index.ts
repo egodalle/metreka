@@ -10,8 +10,8 @@ const corsHeaders = {
 // GrowthPulse Subscription Tiers - matching create-checkout
 const PRODUCT_TO_TIER: Record<string, { name: string; storeLimit: number }> = {
   "prod_TkylEtr5Ni2MCU": { name: "starter", storeLimit: 1 },
-  "prod_TkylIKtbMrM7l4": { name: "growth", storeLimit: 3 },
-  "prod_Tkyl24tIxr2ilj": { name: "scale", storeLimit: 5 },
+  "prod_TvJqLQlTaxMZwQ": { name: "growth", storeLimit: 3 },
+  "prod_TvJr3qK5W7rUcB": { name: "scale", storeLimit: 5 },
 };
 
 // Trial tier config (matches Growth tier)
