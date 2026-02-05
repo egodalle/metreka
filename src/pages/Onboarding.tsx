@@ -5,46 +5,65 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Progress } from '@/components/ui/progress';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Store, ArrowRight, Check, ExternalLink, RefreshCw, ShieldCheck, Package, ShoppingCart, BarChart3, Users } from 'lucide-react';
+import { Loader2, Store, ArrowRight, Check, ExternalLink, RefreshCw, ShieldCheck, Package, ShoppingCart, BarChart3, Users, Unlink, ArrowLeft } from 'lucide-react';
 import {
   StorePlatform,
   platformConfigs,
   apiKeyFields,
-  startIntegration,
-  submitCredentials,
-  completeOAuthCallback,
   getSyncStatus,
   SyncStatus,
   isDemoMode,
-  addConnectedDemoStore,
 } from '@/lib/integrations';
 import { Badge } from '@/components/ui/badge';
-import { useStoreConnections } from '@/hooks/useStoreConnections';
+import { useStoreConnections, useConnectStore, useDisconnectStore } from '@/hooks/useStoreConnections';
 
 type OnboardingStep = 'select' | 'permission' | 'connecting' | 'credentials' | 'syncing' | 'complete';
 
 export default function Onboarding() {
   const [step, setStep] = useState<OnboardingStep>('select');
   const [selectedPlatform, setSelectedPlatform] = useState<StorePlatform | null>(null);
-  const [integrationId, setIntegrationId] = useState<string | null>(null);
   const [storeId, setStoreId] = useState<string | null>(null);
   const [credentials, setCredentials] = useState<Record<string, string>>({});
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
 
-  // Handle OAuth callback
-  useEffect(() => {
-    const code = searchParams.get('code');
-    const state = searchParams.get('state');
-    
-    if (code && state) {
-      handleOAuthCallback(code, state);
-    }
-  }, [searchParams]);
+  // Database hooks for store management
+  const { data: storeConnections = [], refetch: refetchConnections } = useStoreConnections();
+  const connectStore = useConnectStore();
+  const disconnectStore = useDisconnectStore();
+
+  // Disconnect dialog state
+  const [disconnectDialog, setDisconnectDialog] = useState<{
+    open: boolean;
+    storeId: string | null;
+    storeName: string | null;
+    platform: string | null;
+  }>({
+    open: false,
+    storeId: null,
+    storeName: null,
+    platform: null,
+  });
+
+  // Get connected platforms from database
+  const connectedPlatforms = storeConnections
+    .filter(c => c.is_active)
+    .map(c => c.platform);
+
+  const availablePlatforms = platformConfigs.filter(
+    p => !connectedPlatforms.includes(p.id as any)
+  );
 
   // Poll sync status when in syncing step
   useEffect(() => {
@@ -57,10 +76,8 @@ export default function Onboarding() {
         
         if (status.status === 'completed') {
           clearInterval(pollInterval);
-          // Save the connected store in demo mode
-          if (isDemoMode() && selectedPlatform) {
-            addConnectedDemoStore(selectedPlatform);
-          }
+          // Refetch connections to update the list
+          refetchConnections();
           setStep('complete');
           toast({
             title: 'Store connected!',
@@ -80,84 +97,35 @@ export default function Onboarding() {
     }, 3000);
 
     return () => clearInterval(pollInterval);
-  }, [step, storeId, toast]);
-
-  const handleOAuthCallback = async (code: string, state: string) => {
-    setStep('connecting');
-    setIsLoading(true);
-    
-    try {
-      const connection = await completeOAuthCallback(code, state);
-      setStoreId(connection.id);
-      setSelectedPlatform(connection.platform);
-      
-      if (connection.sync_status === 'syncing' || connection.sync_status === 'pending') {
-        setStep('syncing');
-        setSyncStatus({ status: connection.sync_status });
-      } else if (connection.sync_status === 'completed') {
-        setStep('complete');
-      }
-    } catch (error) {
-      toast({
-        title: 'Connection failed',
-        description: error instanceof Error ? error.message : 'Failed to complete OAuth',
-        variant: 'destructive',
-      });
-      setStep('select');
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  // Get already connected platforms from the database
-  const { data: storeConnections = [] } = useStoreConnections();
-  const connectedPlatforms = storeConnections
-    .filter(c => c.is_active)
-    .map(c => c.platform);
-  
-  const availablePlatforms = platformConfigs.filter(
-    p => !connectedPlatforms.includes(p.id as any)
-  );
+  }, [step, storeId, toast, refetchConnections]);
 
   const handlePlatformSelect = (platform: StorePlatform) => {
     setSelectedPlatform(platform);
-    // Go to permission step first in demo mode
-    if (isDemoMode()) {
-      setStep('permission');
-    } else {
-      initiateConnection(platform);
-    }
+    setStep('permission');
   };
 
   const initiateConnection = async (platform: StorePlatform) => {
-    setIsLoading(true);
+    const config = platformConfigs.find(p => p.id === platform);
     
-    try {
-      const response = await startIntegration(platform);
-      setIntegrationId(response.integration_id);
-      
-      if (response.redirect_url) {
-        // OAuth flow - redirect to platform
-        window.location.href = response.redirect_url;
-      } else if (response.requires_credentials) {
-        // API key flow - show credentials form
-        setStep('credentials');
-      } else if (isDemoMode()) {
-        // Demo mode for OAuth platforms - simulate direct connection
-        const storeId = `store_${platform}_${Date.now()}`;
-        sessionStorage.setItem(`demo_store_${storeId}`, JSON.stringify({ startTime: Date.now(), platform }));
-        setStoreId(storeId);
+    if (config?.connectionMethod === 'api_key') {
+      // API key flow - show credentials form
+      setStep('credentials');
+    } else {
+      // OAuth flow - connect directly (simulated in demo mode)
+      setStep('connecting');
+      try {
+        const connection = await connectStore.mutateAsync({ platform });
+        setStoreId(connection.id);
         setStep('syncing');
         setSyncStatus({ status: 'syncing', progress: 0 });
+      } catch (error) {
+        toast({
+          title: 'Connection failed',
+          description: error instanceof Error ? error.message : 'Failed to connect store',
+          variant: 'destructive',
+        });
+        setStep('select');
       }
-    } catch (error) {
-      toast({
-        title: 'Connection failed',
-        description: error instanceof Error ? error.message : 'Failed to start integration',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
     }
   };
 
@@ -173,12 +141,10 @@ export default function Onboarding() {
 
   const handleCredentialsSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedPlatform || !integrationId) return;
+    if (!selectedPlatform) return;
 
-    setIsLoading(true);
     try {
-      // Submit credentials - they're sent ONCE, encrypted, never returned
-      const connection = await submitCredentials(integrationId, selectedPlatform, credentials);
+      const connection = await connectStore.mutateAsync({ platform: selectedPlatform });
       
       // Clear credentials from state immediately (security)
       setCredentials({});
@@ -198,21 +164,42 @@ export default function Onboarding() {
         description: error instanceof Error ? error.message : 'Failed to save credentials',
         variant: 'destructive',
       });
-    } finally {
-      setIsLoading(false);
+    }
+  };
+
+  const handleDisconnect = (storeId: string, storeName: string | null, platform: string) => {
+    setDisconnectDialog({ 
+      open: true, 
+      storeId, 
+      storeName: storeName || 'this store',
+      platform 
+    });
+  };
+
+  const confirmDisconnect = async () => {
+    if (!disconnectDialog.storeId) return;
+    try {
+      await disconnectStore.mutateAsync(disconnectDialog.storeId);
+      setDisconnectDialog({ open: false, storeId: null, storeName: null, platform: null });
+      refetchConnections();
+    } catch (error) {
+      // Error handled by mutation
     }
   };
 
   const handleSkip = () => {
-    toast({
-      title: 'Setup skipped',
-      description: 'You can connect your store later from the dashboard settings.',
-    });
     navigate('/dashboard');
   };
 
   const handleGoToDashboard = () => {
     navigate('/dashboard');
+  };
+
+  const handleAddAnother = () => {
+    setStep('select');
+    setSelectedPlatform(null);
+    setStoreId(null);
+    setSyncStatus(null);
   };
 
   const selectedPlatformConfig = platformConfigs.find((p) => p.id === selectedPlatform);
@@ -223,21 +210,37 @@ export default function Onboarding() {
       case 'select':
         return (
           <div className="space-y-4">
-            {/* Show already connected stores */}
+            {/* Show already connected stores with disconnect option */}
             {connectedPlatforms.length > 0 && (
-              <div className="space-y-2 mb-4">
+              <div className="space-y-3 mb-6">
                 <p className="text-sm font-medium text-muted-foreground">Connected stores:</p>
-                <div className="flex flex-wrap gap-2">
+                <div className="space-y-2">
                   {storeConnections.filter(c => c.is_active).map((store) => {
                     const config = platformConfigs.find(p => p.id === store.platform);
                     return (
                       <div
                         key={store.id}
-                        className="flex items-center gap-2 px-3 py-2 rounded-lg bg-green-500/10 border border-green-500/30"
+                        className="flex items-center justify-between p-3 rounded-lg bg-green-500/10 border border-green-500/30"
                       >
-                        <span className="text-xl">{config?.icon}</span>
-                        <span className="text-sm font-medium text-green-700">{config?.name}</span>
-                        <Check className="h-4 w-4 text-green-600" />
+                        <div className="flex items-center gap-3">
+                          <span className="text-xl">{config?.icon}</span>
+                          <div>
+                            <span className="font-medium text-green-700 dark:text-green-400">{config?.name}</span>
+                            {store.store_name && (
+                              <p className="text-xs text-muted-foreground">{store.store_name}</p>
+                            )}
+                          </div>
+                          <Check className="h-4 w-4 text-green-600" />
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                          onClick={() => handleDisconnect(store.id, store.store_name, store.platform)}
+                        >
+                          <Unlink className="h-4 w-4 mr-1" />
+                          Disconnect
+                        </Button>
                       </div>
                     );
                   })}
@@ -256,7 +259,7 @@ export default function Onboarding() {
                       key={platform.id}
                       type="button"
                       onClick={() => handlePlatformSelect(platform.id)}
-                      disabled={isLoading}
+                      disabled={connectStore.isPending}
                       className="flex items-center gap-4 p-4 rounded-lg border border-border bg-card hover:bg-accent hover:border-primary/50 transition-colors text-left group disabled:opacity-50"
                     >
                       <span className="text-3xl">{platform.icon}</span>
@@ -287,7 +290,8 @@ export default function Onboarding() {
 
             <div className="pt-4 border-t">
               <Button variant="ghost" className="w-full" onClick={handleSkip}>
-                {connectedPlatforms.length > 0 ? 'Go to Dashboard' : 'Skip for now'}
+                <ArrowLeft className="mr-2 h-4 w-4" />
+                {connectedPlatforms.length > 0 ? 'Back to Dashboard' : 'Skip for now'}
               </Button>
             </div>
           </div>
@@ -305,7 +309,7 @@ export default function Onboarding() {
             </div>
 
             <div className="space-y-3">
-              <p className="text-sm font-medium text-foreground">DataPulse will access:</p>
+              <p className="text-sm font-medium text-foreground">GrowthPulse will access:</p>
               <div className="space-y-2">
                 <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
                   <Package className="h-5 w-5 text-primary" />
@@ -341,7 +345,7 @@ export default function Onboarding() {
             <div className="flex items-start gap-2 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
               <ShieldCheck className="h-5 w-5 text-green-600 mt-0.5" />
               <div>
-                <p className="text-sm font-medium text-green-700">Your data is secure</p>
+                <p className="text-sm font-medium text-green-700 dark:text-green-400">Your data is secure</p>
                 <p className="text-xs text-muted-foreground">We use read-only access and encrypt all credentials</p>
               </div>
             </div>
@@ -357,8 +361,12 @@ export default function Onboarding() {
               >
                 Cancel
               </Button>
-              <Button className="flex-1" onClick={handlePermissionGrant} disabled={isLoading}>
-                {isLoading ? (
+              <Button 
+                className="flex-1" 
+                onClick={handlePermissionGrant} 
+                disabled={connectStore.isPending}
+              >
+                {connectStore.isPending ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
                   <Check className="mr-2 h-4 w-4" />
@@ -396,7 +404,7 @@ export default function Onboarding() {
                   value={credentials[field.key] || ''}
                   onChange={(e) => handleCredentialChange(field.key, e.target.value)}
                   required
-                  disabled={isLoading}
+                  disabled={connectStore.isPending}
                 />
               </div>
             ))}
@@ -410,14 +418,13 @@ export default function Onboarding() {
                   setStep('select');
                   setSelectedPlatform(null);
                   setCredentials({});
-                  setIntegrationId(null);
                 }}
-                disabled={isLoading}
+                disabled={connectStore.isPending}
               >
                 Back
               </Button>
-              <Button type="submit" className="flex-1" disabled={isLoading}>
-                {isLoading ? (
+              <Button type="submit" className="flex-1" disabled={connectStore.isPending}>
+                {connectStore.isPending ? (
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
                   <Check className="mr-2 h-4 w-4" />
@@ -473,10 +480,18 @@ export default function Onboarding() {
               </div>
             </div>
             
-            <Button className="w-full" onClick={handleGoToDashboard}>
-              Go to Dashboard
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
+            <div className="space-y-3">
+              <Button className="w-full" onClick={handleGoToDashboard}>
+                Go to Dashboard
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+              
+              {availablePlatforms.length > 0 && (
+                <Button variant="outline" className="w-full" onClick={handleAddAnother}>
+                  Add Another Store
+                </Button>
+              )}
+            </div>
           </div>
         );
     }
@@ -485,7 +500,7 @@ export default function Onboarding() {
   const getTitle = () => {
     switch (step) {
       case 'select':
-        return 'Connect Your Store';
+        return connectedPlatforms.length > 0 ? 'Manage Stores' : 'Connect Your Store';
       case 'permission':
         return 'Grant Access';
       case 'connecting':
@@ -502,7 +517,9 @@ export default function Onboarding() {
   const getDescription = () => {
     switch (step) {
       case 'select':
-        return 'Select your e-commerce platform to get started with analytics';
+        return connectedPlatforms.length > 0 
+          ? 'Add new stores or manage existing connections'
+          : 'Select your e-commerce platform to get started with analytics';
       case 'permission':
         return 'Review the data we need to power your analytics';
       case 'connecting':
@@ -533,6 +550,27 @@ export default function Onboarding() {
         </CardHeader>
         <CardContent>{renderStep()}</CardContent>
       </Card>
+
+      {/* Disconnect Confirmation Dialog */}
+      <Dialog open={disconnectDialog.open} onOpenChange={(open) => setDisconnectDialog({ ...disconnectDialog, open })}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Disconnect Store</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to disconnect "{disconnectDialog.storeName}"? This will stop syncing data from this store.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDisconnectDialog({ open: false, storeId: null, storeName: null, platform: null })}>
+              Cancel
+            </Button>
+            <Button variant="destructive" onClick={confirmDisconnect} disabled={disconnectStore.isPending}>
+              {disconnectStore.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Disconnect
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

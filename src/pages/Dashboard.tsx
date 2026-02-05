@@ -10,7 +10,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { 
   ArrowLeft, TrendingUp, DollarSign, 
   Users, ShoppingCart, Package, Activity, Bell, Settings, Search, Plus, LogOut,
-   ArrowUpRight, ArrowDownRight, BarChart3, AlertCircle, RefreshCw, PieChart, Link2
+   ArrowUpRight, ArrowDownRight, BarChart3, AlertCircle, RefreshCw, PieChart
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useDashboard, useHealthCheck } from "@/hooks/useDashboardData";
@@ -18,7 +18,6 @@ import { PlatformData, DailyData } from "@/lib/api";
 import { ProductAnalyticsSection } from "@/components/dashboard/ProductAnalyticsSection";
 import { CustomerAnalyticsSection } from "@/components/dashboard/CustomerAnalyticsSection";
 import { ProfitabilitySection } from "@/components/dashboard/ProfitabilitySection";
-import { StoreConnectionsSection } from "@/components/dashboard/StoreConnectionsSection";
 import { isDemoMode } from "@/lib/integrations";
 import { useStoreConnections } from "@/hooks/useStoreConnections";
 import { useAuth } from "@/contexts/AuthContext";
@@ -466,10 +465,6 @@ const Dashboard = () => {
               <PieChart className="w-4 h-4" />
               Profitability
             </TabsTrigger>
-             <TabsTrigger value="integrations" className="gap-2">
-               <Link2 className="w-4 h-4" />
-               Integrations
-             </TabsTrigger>
           </TabsList>
 
           {/* Product Analytics Tab */}
@@ -503,10 +498,6 @@ const Dashboard = () => {
             />
           </TabsContent>
  
-           {/* Integrations Tab */}
-           <TabsContent value="integrations" className="space-y-6">
-             <StoreConnectionsSection />
-           </TabsContent>
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
