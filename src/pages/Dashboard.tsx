@@ -312,7 +312,7 @@ const Dashboard = () => {
                 Back
               </Button>
               <div className="h-6 w-px bg-border" />
-              <h1 className="text-xl font-bold text-gradient-primary">GrowthPulse</h1>
+              <h1 className="text-xl font-bold text-gradient-primary">Metreka</h1>
               {isDemoMode() && (
                 <Badge variant="secondary" className="bg-amber-500/10 text-amber-600 border-amber-500/20">
                   Demo Mode
