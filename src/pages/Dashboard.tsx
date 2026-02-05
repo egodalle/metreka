@@ -152,13 +152,16 @@ const Dashboard = () => {
   const [activeTab, setActiveTab] = useState("overview");
   
   // Get actual store connections from the database
-  const { data: storeConnections = [] } = useStoreConnections();
+  const { data: storeConnections = [], isLoading: storeConnectionsLoading } = useStoreConnections();
   const connectedPlatforms = storeConnections
     .filter(c => c.is_active)
     .map(c => c.platform);
   
+  // Check if any stores are connected (only after loading completes)
+  const hasConnectedStores = !storeConnectionsLoading && connectedPlatforms.length > 0;
+  
   // Filter stores to show only connected ones (empty if none connected)
-  const stores = connectedPlatforms.length > 0
+  const stores = hasConnectedStores
     ? allStores.filter(s => connectedPlatforms.includes(s.id as any))
     : [];
   
@@ -174,7 +177,10 @@ const Dashboard = () => {
   }, [connectedPlatforms.length]);
   
   const { data: healthData, isLoading: healthLoading } = useHealthCheck();
-  const { data: dashboardData, isLoading, isError, error, refetch } = useDashboard();
+  const { data: dashboardData, isLoading: dashboardLoading, isError, error, refetch } = useDashboard();
+  
+  // Combined loading state: still loading if either connections or dashboard data loading
+  const isLoading = storeConnectionsLoading || dashboardLoading;
   
   const isConnected = healthData?.status === "healthy";
 
@@ -195,7 +201,8 @@ const Dashboard = () => {
   // Get filtered data based on selected store filter AND connected platforms
   // Uses platform stats from the API - no need for separate sales query
   const getFilteredData = () => {
-    if (!dashboardData) {
+    // Return empty data if no dashboard data OR no stores connected
+    if (!dashboardData || !hasConnectedStores) {
       return {
         totalRevenue: 0,
         totalOrders: 0,
@@ -467,40 +474,67 @@ const Dashboard = () => {
             </TabsTrigger>
           </TabsList>
 
+          {/* Empty State - No Stores Connected */}
+          {!isLoading && !hasConnectedStores && (
+            <Card className="border-dashed border-2 border-muted-foreground/20">
+              <CardContent className="flex flex-col items-center justify-center py-16 text-center">
+                <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                  <Package className="w-8 h-8 text-muted-foreground" />
+                </div>
+                <h3 className="text-xl font-semibold mb-2">No Stores Connected</h3>
+                <p className="text-muted-foreground mb-6 max-w-md">
+                  Connect your first store to start seeing your sales data, analytics, and insights across all your platforms.
+                </p>
+                <Button onClick={() => navigate('/onboarding')} className="gap-2">
+                  <Plus className="w-4 h-4" />
+                  Connect Your First Store
+                </Button>
+              </CardContent>
+            </Card>
+          )}
+
           {/* Product Analytics Tab */}
           <TabsContent value="products" className="space-y-6">
-            <ProductAnalyticsSection 
-              isLoading={isLoading} 
-              selectedStore={selectedStore}
-              connectedPlatforms={connectedPlatforms}
-              onStoreChange={setSelectedStore}
-            />
+            {hasConnectedStores ? (
+              <ProductAnalyticsSection 
+                isLoading={isLoading} 
+                selectedStore={selectedStore}
+                connectedPlatforms={connectedPlatforms}
+                onStoreChange={setSelectedStore}
+              />
+            ) : null}
           </TabsContent>
 
 
           {/* Customer Analytics Tab */}
           <TabsContent value="customers" className="space-y-6">
-            <CustomerAnalyticsSection 
-              isLoading={isLoading}
-              selectedStore={selectedStore}
-              connectedPlatforms={connectedPlatforms}
-              onStoreChange={setSelectedStore}
-            />
+            {hasConnectedStores ? (
+              <CustomerAnalyticsSection 
+                isLoading={isLoading}
+                selectedStore={selectedStore}
+                connectedPlatforms={connectedPlatforms}
+                onStoreChange={setSelectedStore}
+              />
+            ) : null}
           </TabsContent>
 
           {/* Profitability Tab */}
           <TabsContent value="profitability" className="space-y-6">
-            <ProfitabilitySection 
-              isLoading={isLoading}
-              selectedStore={selectedStore}
-              connectedPlatforms={connectedPlatforms}
-              onStoreChange={setSelectedStore}
-            />
+            {hasConnectedStores ? (
+              <ProfitabilitySection 
+                isLoading={isLoading}
+                selectedStore={selectedStore}
+                connectedPlatforms={connectedPlatforms}
+                onStoreChange={setSelectedStore}
+              />
+            ) : null}
           </TabsContent>
  
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
+            {hasConnectedStores && (
+            <>
             {/* KPI Grid */}
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
               {isLoading ? (
@@ -697,6 +731,8 @@ const Dashboard = () => {
                 </CardContent>
               </Card>
             </div>
+            </>
+            )}
           </TabsContent>
 
         </Tabs>
