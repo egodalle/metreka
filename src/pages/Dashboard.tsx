@@ -163,11 +163,16 @@ const Dashboard = () => {
     ? allStores.filter(s => connectedPlatforms.includes(s.id as any))
     : [];
   
-  const [selectedStore, setSelectedStore] = useState(
-    connectedPlatforms.length === 1 
-      ? connectedPlatforms[0] 
-      : "all"
-  );
+  const [selectedStore, setSelectedStore] = useState("all");
+  
+  // Sync selectedStore when connections load - if only 1 store, auto-select it
+  useEffect(() => {
+    if (connectedPlatforms.length === 1) {
+      setSelectedStore(connectedPlatforms[0]);
+    } else if (connectedPlatforms.length > 1) {
+      setSelectedStore("all");
+    }
+  }, [connectedPlatforms.length]);
   
   const { data: healthData, isLoading: healthLoading } = useHealthCheck();
   const { data: dashboardData, isLoading, isError, error, refetch } = useDashboard();
