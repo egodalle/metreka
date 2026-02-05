@@ -17,14 +17,14 @@ export const SUBSCRIPTION_TIERS = {
     productId: 'prod_TkylIKtbMrM7l4',
     name: 'Growth',
     storeLimit: 3,
-    price: 79,
+    price: 59,
   },
   scale: {
     priceId: 'price_1SnSoMJLHaTFxreK7CBPesPn',
     productId: 'prod_Tkyl24tIxr2ilj',
     name: 'Scale',
-    storeLimit: -1,
-    price: 199,
+    storeLimit: 5,
+    price: 79,
   },
 } as const;
 
