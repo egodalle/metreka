@@ -13,7 +13,7 @@ import {
    ArrowUpRight, ArrowDownRight, BarChart3, AlertCircle, RefreshCw, PieChart, Link2
 } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useDashboard, useHealthCheck } from "@/hooks/useDashboardData";
+import { useDashboard, useHealthCheck, useSales } from "@/hooks/useDashboardData";
 import { PlatformData, DailyData } from "@/lib/api";
 import { ProductAnalyticsSection } from "@/components/dashboard/ProductAnalyticsSection";
 import { CustomerAnalyticsSection } from "@/components/dashboard/CustomerAnalyticsSection";
@@ -176,6 +176,12 @@ const Dashboard = () => {
   
   const { data: healthData, isLoading: healthLoading } = useHealthCheck();
   const { data: dashboardData, isLoading, isError, error, refetch } = useDashboard();
+  
+  // Fetch sales data to calculate per-platform customer and product counts
+  const { data: salesData } = useSales({ 
+    source: selectedStore !== "all" ? selectedStore : undefined,
+    limit: 500 
+  });
 
   const isConnected = healthData?.status === "healthy";
 
@@ -207,6 +213,28 @@ const Dashboard = () => {
       };
     }
 
+    // Calculate unique customers and products from sales data
+    const calculateFromSales = (sales: typeof salesData) => {
+      if (!sales?.data || sales.data.length === 0) {
+        return { customers: 0, products: 0 };
+      }
+      
+      // Filter by connected platforms if in "all" mode
+      const filteredSales = selectedStore === "all" && connectedPlatforms.length > 0
+        ? sales.data.filter(s => (connectedPlatforms as string[]).includes(s.source))
+        : sales.data;
+      
+      const uniqueCustomers = new Set(
+        filteredSales.map(s => s.customer_id || s.customer_name || s.customer_email).filter(Boolean)
+      );
+      const uniqueProducts = new Set(
+        filteredSales.map(s => s.product_name).filter(Boolean)
+      );
+      return { customers: uniqueCustomers.size, products: uniqueProducts.size };
+    };
+
+    const salesCounts = calculateFromSales(salesData);
+
     // First filter platforms to only include connected ones
     const connectedPlatformData = dashboardData.platforms?.filter(
       p => (connectedPlatforms as string[]).includes(p.platform)
@@ -216,14 +244,13 @@ const Dashboard = () => {
     if (selectedStore === "all") {
       const totalRevenue = connectedPlatformData.reduce((acc, p) => acc + p.total_revenue, 0);
       const totalOrders = connectedPlatformData.reduce((acc, p) => acc + p.total_orders, 0);
-      const totalUnits = connectedPlatformData.reduce((acc, p) => acc + p.total_units, 0);
       
       return {
         totalRevenue,
         totalOrders,
         avgOrderValue: totalOrders > 0 ? totalRevenue / totalOrders : 0,
-        totalCustomers: dashboardData.total_customers,
-        totalProducts: dashboardData.total_products,
+        totalCustomers: salesCounts.customers || dashboardData.total_customers,
+        totalProducts: salesCounts.products || dashboardData.total_products,
         platforms: connectedPlatformData,
         dailyData: dashboardData.daily_data,
       };
@@ -247,8 +274,8 @@ const Dashboard = () => {
       totalRevenue: platform.total_revenue,
       totalOrders: platform.total_orders,
       avgOrderValue: platform.avg_order_value,
-      totalCustomers: 0,
-      totalProducts: 0,
+      totalCustomers: salesCounts.customers,
+      totalProducts: salesCounts.products,
       platforms: [platform],
       dailyData: dashboardData.daily_data,
     };
