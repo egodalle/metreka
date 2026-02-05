@@ -4,7 +4,9 @@ import { supabase } from '@/integrations/supabase/client';
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://datapulse-fkcq.onrender.com';
 
 // Demo mode for testing without backend
-let demoMode: boolean = import.meta.env.VITE_DEMO_MODE === 'true' || true; // Default to true for easy testing
+// Only use demo mode if explicitly set via environment variable
+// Authenticated users with real store connections should NOT use demo mode
+let demoMode: boolean = import.meta.env.VITE_DEMO_MODE === 'true';
 
 export function setDemoMode(enabled: boolean): void {
   demoMode = enabled;
