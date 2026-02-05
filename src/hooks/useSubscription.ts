@@ -79,8 +79,8 @@ export function useCreateCheckout() {
       return data.url as string;
     },
     onSuccess: (url) => {
-      // Open Stripe checkout in new tab
-      window.open(url, '_blank');
+      // Navigate to Stripe checkout (using location.href to avoid popup blockers)
+      window.location.href = url;
     },
     onError: (error) => {
       toast({
