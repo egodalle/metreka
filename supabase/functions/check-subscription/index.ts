@@ -11,7 +11,13 @@ const corsHeaders = {
 const PRODUCT_TO_TIER: Record<string, { name: string; storeLimit: number }> = {
   "prod_TkylEtr5Ni2MCU": { name: "starter", storeLimit: 1 },
   "prod_TkylIKtbMrM7l4": { name: "growth", storeLimit: 3 },
-  "prod_Tkyl24tIxr2ilj": { name: "scale", storeLimit: -1 },
+  "prod_Tkyl24tIxr2ilj": { name: "scale", storeLimit: 5 },
+};
+
+// Trial tier config (matches Growth tier)
+const TRIAL_CONFIG = {
+  name: "trial",
+  storeLimit: 3, // Same as Growth tier
 };
 
 const logStep = (step: string, details?: unknown) => {
@@ -46,6 +52,8 @@ serve(async (req) => {
           tier: null,
           storeLimit: 0,
           subscriptionEnd: null,
+          isTrialing: false,
+          trialEndsAt: null,
         }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -65,6 +73,8 @@ serve(async (req) => {
           tier: null,
           storeLimit: 0,
           subscriptionEnd: null,
+          isTrialing: false,
+          trialEndsAt: null,
         }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -76,17 +86,53 @@ serve(async (req) => {
     const user = userData.user;
     logStep("User authenticated", { userId: user.id, email: user.email });
 
+    // Get user's profile to check trial status
+    const { data: profile, error: profileError } = await supabaseClient
+      .from("profiles")
+      .select("trial_ends_at")
+      .eq("id", user.id)
+      .single();
+
+    if (profileError) {
+      logStep("Error fetching profile", { error: profileError.message });
+    }
+
+    const trialEndsAt = profile?.trial_ends_at || null;
+    const isTrialing = trialEndsAt ? new Date(trialEndsAt) > new Date() : false;
+    logStep("Trial status", { trialEndsAt, isTrialing });
+
     const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
     const customers = await stripe.customers.list({ email: user.email, limit: 1 });
 
     if (customers.data.length === 0) {
-      logStep("No Stripe customer found");
+      logStep("No Stripe customer found - checking trial status");
+      
+      // No Stripe customer, but might be on trial
+      if (isTrialing) {
+        return new Response(
+          JSON.stringify({
+            subscribed: false,
+            tier: TRIAL_CONFIG.name,
+            storeLimit: TRIAL_CONFIG.storeLimit,
+            subscriptionEnd: null,
+            isTrialing: true,
+            trialEndsAt,
+          }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 200,
+          }
+        );
+      }
+
       return new Response(
         JSON.stringify({
           subscribed: false,
           tier: null,
           storeLimit: 0,
           subscriptionEnd: null,
+          isTrialing: false,
+          trialEndsAt,
         }),
         {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -151,8 +197,24 @@ serve(async (req) => {
       } else {
         logStep("Subscription updated in database");
       }
+
+      return new Response(
+        JSON.stringify({
+          subscribed: true,
+          tier,
+          storeLimit,
+          subscriptionEnd,
+          stripeCustomerId: customerId,
+          isTrialing: false,
+          trialEndsAt,
+        }),
+        {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        }
+      );
     } else {
-      logStep("No active subscription found");
+      logStep("No active subscription found - checking trial status");
       
       // Update subscription status to inactive
       await supabaseClient
@@ -160,19 +222,40 @@ serve(async (req) => {
         .upsert({
           user_id: user.id,
           stripe_customer_id: customerId,
-          plan_name: "free",
-          status: "inactive",
+          plan_name: isTrialing ? "trial" : "free",
+          status: isTrialing ? "trialing" : "inactive",
           updated_at: new Date().toISOString(),
         }, { onConflict: "user_id" });
+
+      // If trialing, return trial tier access
+      if (isTrialing) {
+        return new Response(
+          JSON.stringify({
+            subscribed: false,
+            tier: TRIAL_CONFIG.name,
+            storeLimit: TRIAL_CONFIG.storeLimit,
+            subscriptionEnd: null,
+            stripeCustomerId: customerId,
+            isTrialing: true,
+            trialEndsAt,
+          }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 200,
+          }
+        );
+      }
     }
 
     return new Response(
       JSON.stringify({
-        subscribed: hasActiveSub,
-        tier,
-        storeLimit,
-        subscriptionEnd,
+        subscribed: false,
+        tier: null,
+        storeLimit: 0,
+        subscriptionEnd: null,
         stripeCustomerId: customerId,
+        isTrialing: false,
+        trialEndsAt,
       }),
       {
         headers: { ...corsHeaders, "Content-Type": "application/json" },

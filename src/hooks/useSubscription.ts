@@ -36,6 +36,8 @@ interface SubscriptionStatus {
   storeLimit: number;
   subscriptionEnd: string | null;
   stripeCustomerId?: string;
+  isTrialing: boolean;
+  trialEndsAt: string | null;
 }
 
 export function useSubscription() {
@@ -57,6 +59,27 @@ export function useSubscription() {
     staleTime: 60000, // 1 minute
     refetchInterval: 60000, // Auto-refresh every minute
   });
+}
+
+// Helper hook to check if user has active access (subscribed OR trialing)
+export function useHasAccess() {
+  const { data: subscription, isLoading } = useSubscription();
+  
+  const hasAccess = subscription?.subscribed || subscription?.isTrialing || false;
+  const isTrialing = subscription?.isTrialing || false;
+  const trialEndsAt = subscription?.trialEndsAt ? new Date(subscription.trialEndsAt) : null;
+  const daysLeftInTrial = trialEndsAt 
+    ? Math.max(0, Math.ceil((trialEndsAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24)))
+    : 0;
+
+  return {
+    hasAccess,
+    isTrialing,
+    trialEndsAt,
+    daysLeftInTrial,
+    isLoading,
+    subscription,
+  };
 }
 
 export function useCreateCheckout() {

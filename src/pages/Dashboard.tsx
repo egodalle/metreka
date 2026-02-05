@@ -22,6 +22,9 @@ import { isDemoMode } from "@/lib/integrations";
 import { useStoreConnections } from "@/hooks/useStoreConnections";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { useHasAccess } from "@/hooks/useSubscription";
+import { TrialBanner } from "@/components/TrialBanner";
+import { PaywallModal } from "@/components/PaywallModal";
 
 const allStores = [
   { id: "shopify", name: "Shopify", logo: ShopifyLogo, bgColor: "bg-[#96bf48]" },
@@ -150,6 +153,17 @@ const Dashboard = () => {
   const { toast } = useToast();
   const [selectedPeriod, setSelectedPeriod] = useState("7d");
   const [activeTab, setActiveTab] = useState("overview");
+  
+  // Check subscription/trial access
+  const { hasAccess, isTrialing, isLoading: accessLoading } = useHasAccess();
+  const [showPaywall, setShowPaywall] = useState(false);
+  
+  // Show paywall if access check is done and user has no access
+  useEffect(() => {
+    if (!accessLoading && !hasAccess) {
+      setShowPaywall(true);
+    }
+  }, [accessLoading, hasAccess]);
   
   // Get actual store connections from the database
   const { data: storeConnections = [], isLoading: storeConnectionsLoading } = useStoreConnections();
@@ -282,6 +296,12 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Paywall Modal for expired trials */}
+      <PaywallModal open={showPaywall} trialExpired={true} />
+      
+      {/* Trial Banner */}
+      <TrialBanner />
+      
       {/* Header */}
       <header className="border-b border-border/50 bg-background/80 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4">
