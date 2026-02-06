@@ -1,17 +1,17 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import Stripe from "npm:stripe@18.5.0";
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// Subscription Tiers
+// Paddle Product to Tier mapping
+// Update these with your actual Paddle product IDs after creating them
 const PRODUCT_TO_TIER: Record<string, { name: string; storeLimit: number }> = {
-  "prod_TkylEtr5Ni2MCU": { name: "starter", storeLimit: 1 },
-  "prod_TvJqLQlTaxMZwQ": { name: "growth", storeLimit: 3 },
-  "prod_TvJr3qK5W7rUcB": { name: "scale", storeLimit: 5 },
+  "pro_starter": { name: "starter", storeLimit: 1 },
+  "pro_growth": { name: "growth", storeLimit: 3 },
+  "pro_scale": { name: "scale", storeLimit: 5 },
 };
 
 const TRIAL_CONFIG = { name: "trial", storeLimit: 3 };
@@ -28,8 +28,8 @@ serve(async (req) => {
   );
 
   try {
-    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
-    if (!stripeKey) throw new Error("STRIPE_SECRET_KEY is not set");
+    const paddleApiKey = Deno.env.get("PADDLE_API_KEY");
+    if (!paddleApiKey) throw new Error("PADDLE_API_KEY is not set");
 
     const authHeader = req.headers.get("Authorization");
     if (!authHeader) {
@@ -69,10 +69,20 @@ serve(async (req) => {
     const isTrialing = trialEndsAt ? new Date(trialEndsAt) > new Date() : false;
     console.log("[CHECK-SUB] Trial:", isTrialing, trialEndsAt);
 
-    const stripe = new Stripe(stripeKey, { apiVersion: "2025-08-27.basil" });
-    const customers = await stripe.customers.list({ email: user.email, limit: 1 });
+    // Check for Paddle subscriptions by customer email
+    const customersResponse = await fetch(
+      `https://api.paddle.com/customers?email=${encodeURIComponent(user.email)}`,
+      {
+        headers: {
+          "Authorization": `Bearer ${paddleApiKey}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
 
-    if (customers.data.length === 0) {
+    if (!customersResponse.ok) {
+      console.log("[CHECK-SUB] Failed to fetch Paddle customers");
+      // Return trial status if available
       if (isTrialing) {
         return new Response(
           JSON.stringify({
@@ -91,23 +101,81 @@ serve(async (req) => {
       );
     }
 
-    const customerId = customers.data[0].id;
-    const subscriptions = await stripe.subscriptions.list({
-      customer: customerId, status: "active", limit: 1,
-    });
+    const customersData = await customersResponse.json();
+    const customers = customersData.data || [];
 
-    if (subscriptions.data.length > 0) {
-      const sub = subscriptions.data[0];
-      const productId = sub.items.data[0].price.product as string;
+    if (customers.length === 0) {
+      console.log("[CHECK-SUB] No Paddle customer found");
+      if (isTrialing) {
+        return new Response(
+          JSON.stringify({
+            subscribed: false, tier: TRIAL_CONFIG.name, storeLimit: TRIAL_CONFIG.storeLimit,
+            subscriptionEnd: null, isTrialing: true, trialEndsAt,
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+        );
+      }
+      return new Response(
+        JSON.stringify({
+          subscribed: false, tier: null, storeLimit: 0,
+          subscriptionEnd: null, isTrialing: false, trialEndsAt,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+      );
+    }
+
+    const customerId = customers[0].id;
+    console.log("[CHECK-SUB] Paddle customer:", customerId);
+
+    // Get active subscriptions for this customer
+    const subscriptionsResponse = await fetch(
+      `https://api.paddle.com/subscriptions?customer_id=${customerId}&status=active`,
+      {
+        headers: {
+          "Authorization": `Bearer ${paddleApiKey}`,
+          "Content-Type": "application/json",
+        },
+      }
+    );
+
+    if (!subscriptionsResponse.ok) {
+      console.log("[CHECK-SUB] Failed to fetch Paddle subscriptions");
+      if (isTrialing) {
+        return new Response(
+          JSON.stringify({
+            subscribed: false, tier: TRIAL_CONFIG.name, storeLimit: TRIAL_CONFIG.storeLimit,
+            subscriptionEnd: null, paddleCustomerId: customerId, isTrialing: true, trialEndsAt,
+          }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+        );
+      }
+      return new Response(
+        JSON.stringify({
+          subscribed: false, tier: null, storeLimit: 0,
+          subscriptionEnd: null, paddleCustomerId: customerId, isTrialing: false, trialEndsAt,
+        }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
+      );
+    }
+
+    const subscriptionsData = await subscriptionsResponse.json();
+    const subscriptions = subscriptionsData.data || [];
+
+    if (subscriptions.length > 0) {
+      const sub = subscriptions[0];
+      const productId = sub.items?.[0]?.price?.product_id || sub.items?.[0]?.product?.id;
       const tierInfo = PRODUCT_TO_TIER[productId];
+      const subscriptionEnd = sub.current_billing_period?.ends_at || sub.next_billed_at;
+      
+      console.log("[CHECK-SUB] Active subscription found:", sub.id, productId);
       
       return new Response(
         JSON.stringify({
           subscribed: true,
           tier: tierInfo?.name || null,
           storeLimit: tierInfo?.storeLimit || 0,
-          subscriptionEnd: new Date(sub.current_period_end * 1000).toISOString(),
-          stripeCustomerId: customerId,
+          subscriptionEnd: subscriptionEnd || null,
+          paddleCustomerId: customerId,
           isTrialing: false,
           trialEndsAt,
         }),
@@ -116,11 +184,12 @@ serve(async (req) => {
     }
 
     // No active subscription - check trial
+    console.log("[CHECK-SUB] No active subscription");
     if (isTrialing) {
       return new Response(
         JSON.stringify({
           subscribed: false, tier: TRIAL_CONFIG.name, storeLimit: TRIAL_CONFIG.storeLimit,
-          subscriptionEnd: null, stripeCustomerId: customerId, isTrialing: true, trialEndsAt,
+          subscriptionEnd: null, paddleCustomerId: customerId, isTrialing: true, trialEndsAt,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
       );
@@ -129,7 +198,7 @@ serve(async (req) => {
     return new Response(
       JSON.stringify({
         subscribed: false, tier: null, storeLimit: 0,
-        subscriptionEnd: null, stripeCustomerId: customerId, isTrialing: false, trialEndsAt,
+        subscriptionEnd: null, paddleCustomerId: customerId, isTrialing: false, trialEndsAt,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 }
     );

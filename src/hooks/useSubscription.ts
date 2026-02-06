@@ -3,25 +3,25 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
 
-// Subscription tiers matching Stripe products
+// Subscription tiers - Update these with your Paddle product/price IDs
 export const SUBSCRIPTION_TIERS = {
   starter: {
-    priceId: 'price_1SnSnqJLHaTFxreKdAeLcRqM',
-    productId: 'prod_TkylEtr5Ni2MCU',
+    priceId: 'pri_starter_monthly', // Replace with actual Paddle price ID
+    productId: 'pro_starter', // Replace with actual Paddle product ID
     name: 'Starter',
     storeLimit: 1,
     price: 29,
   },
   growth: {
-    priceId: 'price_1SxTDBJLHaTFxreKviAk1JWC',
-    productId: 'prod_TvJqLQlTaxMZwQ',
+    priceId: 'pri_growth_monthly',
+    productId: 'pro_growth',
     name: 'Growth',
     storeLimit: 3,
     price: 59,
   },
   scale: {
-    priceId: 'price_1SxTDPJLHaTFxreKwqIOs423',
-    productId: 'prod_TvJr3qK5W7rUcB',
+    priceId: 'pri_scale_monthly',
+    productId: 'pro_scale',
     name: 'Scale',
     storeLimit: 5,
     price: 79,
@@ -35,7 +35,7 @@ interface SubscriptionStatus {
   tier: string | null;
   storeLimit: number;
   subscriptionEnd: string | null;
-  stripeCustomerId?: string;
+  paddleCustomerId?: string;
   isTrialing: boolean;
   trialEndsAt: string | null;
 }
@@ -95,15 +95,28 @@ export function useCreateCheckout() {
         throw new Error(error.message || 'Failed to create checkout session');
       }
       
+      if (data?.useOverlay && data?.transactionId) {
+        // For Paddle overlay checkout
+        return { type: 'overlay' as const, transactionId: data.transactionId };
+      }
+      
       if (!data?.url) {
         throw new Error('No checkout URL returned');
       }
       
-      return data.url as string;
+      return { type: 'redirect' as const, url: data.url as string };
     },
-    onSuccess: (url) => {
-      // Open Stripe checkout in a new tab (works better in iframes/preview)
-      window.open(url, '_blank');
+    onSuccess: (result) => {
+      if (result.type === 'redirect') {
+        // Open Paddle checkout in a new tab
+        window.open(result.url, '_blank');
+      } else {
+        // For overlay, the component will handle it
+        toast({
+          title: 'Checkout ready',
+          description: 'Opening payment form...',
+        });
+      }
     },
     onError: (error) => {
       toast({
@@ -126,14 +139,26 @@ export function useCustomerPortal() {
         throw new Error(error.message || 'Failed to open customer portal');
       }
       
+      if (data?.manageInApp) {
+        // Paddle doesn't have a direct portal like Stripe
+        return { type: 'inApp' as const, subscriptionId: data.subscriptionId };
+      }
+      
       if (!data?.url) {
         throw new Error('No portal URL returned');
       }
       
-      return data.url as string;
+      return { type: 'redirect' as const, url: data.url as string };
     },
-    onSuccess: (url) => {
-      window.open(url, '_blank');
+    onSuccess: (result) => {
+      if (result.type === 'redirect') {
+        window.open(result.url, '_blank');
+      } else {
+        toast({
+          title: 'Manage Subscription',
+          description: 'You can cancel or modify your subscription from the dashboard settings.',
+        });
+      }
     },
     onError: (error) => {
       toast({
