@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api, { 
   DashboardData, 
   StatsResponse,
@@ -77,5 +77,35 @@ export function useHealthCheck() {
     queryFn: () => api.healthCheck(),
     staleTime: 60000,
     retry: 1,
+  });
+}
+
+// Trigger data sync
+export function useTriggerSync() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: (options?: {
+      userId?: string;
+      storeConnectionId?: string;
+      platform?: string;
+    }) => api.triggerSync(options),
+    onSuccess: () => {
+      // Invalidate all dashboard-related queries after sync
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['stats'] });
+      queryClient.invalidateQueries({ queryKey: ['sales'] });
+      queryClient.invalidateQueries({ queryKey: ['salesSummary'] });
+      queryClient.invalidateQueries({ queryKey: ['syncLogs'] });
+    },
+  });
+}
+
+// Get sync logs
+export function useSyncLogs(storeConnectionId?: string) {
+  return useQuery({
+    queryKey: ['syncLogs', storeConnectionId],
+    queryFn: () => api.getSyncLogs(storeConnectionId),
+    staleTime: 30000,
   });
 }

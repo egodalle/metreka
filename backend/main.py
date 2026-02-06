@@ -439,27 +439,258 @@ async def get_dashboard(
 
 @app.get("/api/v1/stats")
 async def get_stats(user=Depends(get_current_user)):
-    """Get overall statistics"""
+    """Get overall statistics from synced data tables"""
     supabase = get_supabase()
     
-    # Get counts
-    orders = supabase.table("orders").select("id, total_amount", count="exact").eq("user_id", user.id).execute()
-    products = supabase.table("products").select("id", count="exact").eq("user_id", user.id).execute()
-    customers = supabase.table("customers").select("id", count="exact").eq("user_id", user.id).execute()
+    # Get connected platforms
+    stores = supabase.table("store_connections")\
+        .select("platform")\
+        .eq("user_id", user.id)\
+        .eq("is_active", True)\
+        .execute()
     
-    total_revenue = sum(o.get("total_amount", 0) for o in (orders.data or []))
-    total_orders = orders.count or 0
+    platforms = [s["platform"] for s in (stores.data or [])]
+    
+    if not platforms:
+        return {
+            "success": True,
+            "data": {
+                "overview": {
+                    "total_records": 0,
+                    "total_orders": 0,
+                    "total_revenue": 0,
+                    "total_products": 0,
+                    "total_customers": 0,
+                    "avg_order_value": 0,
+                    "earliest_order": "",
+                    "latest_order": "",
+                    "platforms": 0,
+                },
+                "by_source": [],
+            }
+        }
+    
+    # Get orders from synced_orders table
+    orders = supabase.table("synced_orders")\
+        .select("platform, total_amount, order_date, quantity")\
+        .eq("user_id", user.id)\
+        .in_("platform", platforms)\
+        .execute()
+    
+    # Get products count
+    products = supabase.table("synced_products")\
+        .select("id", count="exact")\
+        .eq("user_id", user.id)\
+        .in_("platform", platforms)\
+        .execute()
+    
+    # Get customers count
+    customers = supabase.table("synced_customers")\
+        .select("id", count="exact")\
+        .eq("user_id", user.id)\
+        .in_("platform", platforms)\
+        .execute()
+    
+    order_data = orders.data or []
+    total_revenue = sum(float(o.get("total_amount", 0) or 0) for o in order_data)
+    total_orders = len(order_data)
+    
+    # Get date range
+    dates = [o["order_date"] for o in order_data if o.get("order_date")]
+    dates.sort()
+    
+    # Group by platform
+    by_source = []
+    for platform in platforms:
+        platform_orders = [o for o in order_data if o.get("platform") == platform]
+        by_source.append({
+            "source": platform,
+            "orders": len(platform_orders),
+            "revenue": sum(float(o.get("total_amount", 0) or 0) for o in platform_orders),
+        })
     
     return {
         "success": True,
         "data": {
             "overview": {
+                "total_records": total_orders,
                 "total_orders": total_orders,
                 "total_revenue": total_revenue,
                 "total_products": products.count or 0,
                 "total_customers": customers.count or 0,
                 "avg_order_value": total_revenue / total_orders if total_orders > 0 else 0,
-            }
+                "earliest_order": dates[0] if dates else "",
+                "latest_order": dates[-1] if dates else "",
+                "platforms": len(platforms),
+            },
+            "by_source": by_source,
+        }
+    }
+
+
+@app.get("/api/v1/sales/summary")
+async def get_sales_summary(
+    group_by: str = Query("source", regex="^(source|day|month|status)$"),
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    user=Depends(get_current_user)
+):
+    """Get sales summary grouped by dimension from synced data"""
+    supabase = get_supabase()
+    
+    # Get connected platforms
+    stores = supabase.table("store_connections")\
+        .select("platform")\
+        .eq("user_id", user.id)\
+        .eq("is_active", True)\
+        .execute()
+    
+    platforms = [s["platform"] for s in (stores.data or [])]
+    
+    if not platforms:
+        return {"success": True, "group_by": group_by, "data": []}
+    
+    # Build query
+    query = supabase.table("synced_orders")\
+        .select("platform, order_date, total_amount, quantity, order_status")\
+        .eq("user_id", user.id)\
+        .in_("platform", platforms)
+    
+    if start_date:
+        query = query.gte("order_date", start_date)
+    if end_date:
+        query = query.lte("order_date", end_date)
+    
+    orders = query.execute()
+    order_data = orders.data or []
+    
+    # Group by dimension
+    grouped = {}
+    for order in order_data:
+        if group_by == "source":
+            key = order.get("platform", "unknown")
+        elif group_by == "day":
+            key = (order.get("order_date") or "")[:10]
+        elif group_by == "month":
+            key = (order.get("order_date") or "")[:7]
+        elif group_by == "status":
+            key = order.get("order_status", "unknown")
+        else:
+            key = "unknown"
+        
+        if key not in grouped:
+            grouped[key] = {"orders": 0, "units": 0, "sales": 0, "dates": []}
+        
+        grouped[key]["orders"] += 1
+        grouped[key]["units"] += order.get("quantity", 0) or 0
+        grouped[key]["sales"] += float(order.get("total_amount", 0) or 0)
+        if order.get("order_date"):
+            grouped[key]["dates"].append(order["order_date"])
+    
+    # Format response
+    data = []
+    for dimension, stats in grouped.items():
+        if dimension and dimension != "unknown":
+            stats["dates"].sort()
+            data.append({
+                "dimension": dimension,
+                "total_orders": stats["orders"],
+                "total_units": stats["units"],
+                "total_sales": stats["sales"],
+                "avg_order_value": stats["sales"] / stats["orders"] if stats["orders"] > 0 else 0,
+                "earliest_order": stats["dates"][0] if stats["dates"] else "",
+                "latest_order": stats["dates"][-1] if stats["dates"] else "",
+            })
+    
+    # Sort by dimension
+    data.sort(key=lambda x: x["dimension"])
+    
+    return {"success": True, "group_by": group_by, "data": data}
+
+
+@app.get("/api/v1/sales")
+async def get_sales(
+    source: Optional[str] = None,
+    start_date: Optional[str] = None,
+    end_date: Optional[str] = None,
+    order_status: Optional[str] = None,
+    limit: int = Query(100, le=1000),
+    offset: int = Query(0),
+    user=Depends(get_current_user)
+):
+    """Get sales records from synced data with filters"""
+    supabase = get_supabase()
+    
+    # Get connected platforms
+    stores = supabase.table("store_connections")\
+        .select("platform")\
+        .eq("user_id", user.id)\
+        .eq("is_active", True)\
+        .execute()
+    
+    platforms = [s["platform"] for s in (stores.data or [])]
+    
+    if not platforms:
+        return {
+            "success": True,
+            "data": [],
+            "metadata": {"total": 0, "limit": limit, "offset": offset, "count": 0}
+        }
+    
+    # Build query
+    query = supabase.table("synced_orders")\
+        .select("*", count="exact")\
+        .eq("user_id", user.id)
+    
+    if source:
+        query = query.eq("platform", source)
+    else:
+        query = query.in_("platform", platforms)
+    
+    if start_date:
+        query = query.gte("order_date", start_date)
+    if end_date:
+        query = query.lte("order_date", end_date)
+    if order_status:
+        query = query.eq("order_status", order_status)
+    
+    query = query.order("order_date", desc=True).range(offset, offset + limit - 1)
+    
+    result = query.execute()
+    order_data = result.data or []
+    
+    # Transform to SalesRecord format
+    sales_records = [
+        {
+            "source": o["platform"],
+            "order_id": o["external_order_id"],
+            "order_date": o["order_date"],
+            "customer_id": o.get("customer_id"),
+            "customer_name": o.get("customer_name"),
+            "customer_email": o.get("customer_email"),
+            "product_id": o.get("product_id"),
+            "product_name": o.get("product_name"),
+            "quantity": o.get("quantity"),
+            "unit_price": float(o.get("unit_price", 0) or 0),
+            "total_amount": float(o.get("total_amount", 0) or 0),
+            "currency": o.get("currency"),
+            "order_status": o.get("order_status"),
+            "payment_method": o.get("payment_status"),
+            "shipping_address": None,
+            "created_at": o.get("created_at"),
+            "updated_at": o.get("updated_at"),
+        }
+        for o in order_data
+    ]
+    
+    return {
+        "success": True,
+        "data": sales_records,
+        "metadata": {
+            "total": result.count or 0,
+            "limit": limit,
+            "offset": offset,
+            "count": len(sales_records),
         }
     }
 
