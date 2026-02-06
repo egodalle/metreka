@@ -10,17 +10,17 @@ const corsHeaders = {
 // You'll need to create these products in Paddle dashboard and update these IDs
 const SUBSCRIPTION_TIERS = {
   starter: {
-    priceId: "pri_starter_monthly", // Replace with actual Paddle price ID
+    priceId: "pri_01kgsn8a67q8807nv12a33acrx",
     name: "Starter",
     storeLimit: 1,
   },
   growth: {
-    priceId: "pri_growth_monthly", // Replace with actual Paddle price ID
+    priceId: "pri_01kgsnc7c20hfc1ekgav6j0bss",
     name: "Growth",
     storeLimit: 3,
   },
   scale: {
-    priceId: "pri_scale_monthly", // Replace with actual Paddle price ID
+    priceId: "pri_01kgsng6sr909mx5xkm0ccdvh5",
     name: "Scale",
     storeLimit: 5,
   },
