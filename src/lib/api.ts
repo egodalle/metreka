@@ -1,8 +1,8 @@
-// API client for GrowthPulse FastAPI backend
-import { isDemoMode, StorePlatform } from './integrations';
+// API client for GrowthPulse - pulls data from synced PostgreSQL tables
+import { StorePlatform } from './integrations';
 import { supabase } from '@/integrations/supabase/client';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://growthpulse-api-z5id2gn52a-uc.a.run.app';
+const API_BASE_URL = import.meta.env.VITE_API_URL || '';
 const API_KEY = import.meta.env.VITE_GROWTHPULSE_API_KEY || '';
 
 // Cache for connected platforms (refreshed on each API call)
@@ -30,237 +30,6 @@ async function fetchConnectedPlatforms(): Promise<StorePlatform[]> {
   }
 }
 
-// Demo sales records for each platform
-const generateDemoSalesRecords = (platform: string): SalesRecord[] => {
-  const products: Record<string, { name: string; price: number }[]> = {
-    shopify: [
-      { name: 'Premium Wireless Headphones', price: 149.99 },
-      { name: 'Smart Watch Pro', price: 299.99 },
-      { name: 'Leather Wallet Classic', price: 59.99 },
-      { name: 'Organic Cotton T-Shirt', price: 34.99 },
-      { name: 'Running Shoes Ultra', price: 129.99 },
-      { name: 'Yoga Mat Premium', price: 49.99 },
-      { name: 'Stainless Steel Water Bottle', price: 29.99 },
-      { name: 'Bluetooth Speaker Mini', price: 79.99 },
-      { name: 'Laptop Backpack Pro', price: 89.99 },
-      { name: 'Sunglasses Aviator', price: 119.99 },
-    ],
-    shopee: [
-      { name: 'Phone Case Silicone', price: 12.99 },
-      { name: 'USB-C Cable 3-Pack', price: 15.99 },
-      { name: 'Wireless Mouse', price: 24.99 },
-      { name: 'LED Desk Lamp', price: 32.99 },
-      { name: 'Portable Charger 10000mAh', price: 29.99 },
-      { name: 'Mechanical Keyboard RGB', price: 69.99 },
-      { name: 'Webcam HD 1080p', price: 49.99 },
-      { name: 'USB Hub 7-Port', price: 22.99 },
-      { name: 'Screen Protector 2-Pack', price: 9.99 },
-      { name: 'Earbuds Wireless', price: 39.99 },
-    ],
-    lazada: [
-      { name: 'Kitchen Blender Pro', price: 79.99 },
-      { name: 'Air Fryer 5L', price: 99.99 },
-      { name: 'Electric Kettle Smart', price: 45.99 },
-      { name: 'Non-Stick Cookware Set', price: 149.99 },
-      { name: 'Coffee Maker Drip', price: 59.99 },
-      { name: 'Vacuum Cleaner Cordless', price: 189.99 },
-      { name: 'Rice Cooker Digital', price: 69.99 },
-      { name: 'Microwave Oven Compact', price: 119.99 },
-      { name: 'Toaster 4-Slice', price: 39.99 },
-      { name: 'Food Storage Container Set', price: 29.99 },
-    ],
-  };
-
-  const customers = [
-    { id: 'C001', name: 'John Smith', email: 'john.smith@email.com' },
-    { id: 'C002', name: 'Sarah Johnson', email: 'sarah.j@email.com' },
-    { id: 'C003', name: 'Michael Brown', email: 'm.brown@email.com' },
-    { id: 'C004', name: 'Emily Davis', email: 'emily.d@email.com' },
-    { id: 'C005', name: 'David Wilson', email: 'd.wilson@email.com' },
-    { id: 'C006', name: 'Jessica Martinez', email: 'j.martinez@email.com' },
-    { id: 'C007', name: 'Chris Anderson', email: 'c.anderson@email.com' },
-    { id: 'C008', name: 'Amanda Taylor', email: 'a.taylor@email.com' },
-    { id: 'C009', name: 'Daniel Thomas', email: 'd.thomas@email.com' },
-    { id: 'C010', name: 'Ashley Garcia', email: 'a.garcia@email.com' },
-    { id: 'C011', name: 'Matthew Rodriguez', email: 'm.rodriguez@email.com' },
-    { id: 'C012', name: 'Olivia Lee', email: 'o.lee@email.com' },
-    { id: 'C013', name: 'James Harris', email: 'j.harris@email.com' },
-    { id: 'C014', name: 'Sophia Clark', email: 's.clark@email.com' },
-    { id: 'C015', name: 'William Lewis', email: 'w.lewis@email.com' },
-  ];
-
-  const platformProducts = products[platform] || products.shopify;
-  const records: SalesRecord[] = [];
-
-  // Generate 50 sales records per platform
-  for (let i = 0; i < 50; i++) {
-    const product = platformProducts[Math.floor(Math.random() * platformProducts.length)];
-    const customer = customers[Math.floor(Math.random() * customers.length)];
-    const quantity = Math.floor(Math.random() * 3) + 1;
-    const dayOffset = Math.floor(Math.random() * 30);
-    const orderDate = new Date();
-    orderDate.setDate(orderDate.getDate() - dayOffset);
-
-    records.push({
-      source: platform,
-      order_id: `${platform.toUpperCase()}-${String(i + 1).padStart(5, '0')}`,
-      order_date: orderDate.toISOString().split('T')[0],
-      customer_id: customer.id,
-      customer_name: customer.name,
-      customer_email: customer.email,
-      product_id: `PROD-${platform.toUpperCase()}-${String(platformProducts.indexOf(product) + 1).padStart(3, '0')}`,
-      product_name: product.name,
-      quantity: quantity,
-      unit_price: product.price,
-      total_amount: product.price * quantity,
-      currency: 'USD',
-      order_status: 'completed',
-      payment_method: ['credit_card', 'paypal', 'bank_transfer'][Math.floor(Math.random() * 3)],
-      shipping_address: `${Math.floor(Math.random() * 999) + 1} Main Street, City`,
-      created_at: orderDate.toISOString(),
-      updated_at: orderDate.toISOString(),
-    });
-  }
-
-  return records;
-};
-
-// Demo data for each platform
-const demoData: Record<string, { stats: any; platformSummary: any; dailySummary: any; salesRecords: SalesRecord[] }> = {
-  shopify: {
-    stats: {
-      success: true,
-      data: {
-        overview: {
-          total_records: 1250,
-          total_orders: 847,
-          total_customers: 523,
-          total_products: 156,
-          total_revenue: 124589.50,
-          avg_order_value: 147.10,
-          earliest_order: '2024-01-01',
-          latest_order: '2024-12-31',
-          platforms: 1,
-        },
-        by_source: [{ source: 'shopify', orders: 847, revenue: 124589.50 }],
-      },
-    },
-    platformSummary: {
-      success: true,
-      group_by: 'source',
-      data: [{
-        dimension: 'shopify',
-        total_orders: 847,
-        total_units: 1523,
-        total_sales: 124589.50,
-        avg_order_value: 147.10,
-        earliest_order: '2024-01-01',
-        latest_order: '2024-12-31',
-      }],
-    },
-    dailySummary: {
-      success: true,
-      group_by: 'day',
-      data: Array.from({ length: 7 }, (_, i) => ({
-        dimension: `2024-12-${String(25 + i).padStart(2, '0')}`,
-        total_orders: 100 + Math.floor(Math.random() * 50),
-        total_units: 180 + Math.floor(Math.random() * 80),
-        total_sales: 14000 + Math.floor(Math.random() * 6000),
-        avg_order_value: 140 + Math.floor(Math.random() * 30),
-      })),
-    },
-    salesRecords: generateDemoSalesRecords('shopify'),
-  },
-  shopee: {
-    stats: {
-      success: true,
-      data: {
-        overview: {
-          total_records: 2340,
-          total_orders: 1892,
-          total_customers: 1456,
-          total_products: 234,
-          total_revenue: 89234.75,
-          avg_order_value: 47.17,
-          earliest_order: '2024-01-01',
-          latest_order: '2024-12-31',
-          platforms: 1,
-        },
-        by_source: [{ source: 'shopee', orders: 1892, revenue: 89234.75 }],
-      },
-    },
-    platformSummary: {
-      success: true,
-      group_by: 'source',
-      data: [{
-        dimension: 'shopee',
-        total_orders: 1892,
-        total_units: 3245,
-        total_sales: 89234.75,
-        avg_order_value: 47.17,
-        earliest_order: '2024-01-01',
-        latest_order: '2024-12-31',
-      }],
-    },
-    dailySummary: {
-      success: true,
-      group_by: 'day',
-      data: Array.from({ length: 7 }, (_, i) => ({
-        dimension: `2024-12-${String(25 + i).padStart(2, '0')}`,
-        total_orders: 250 + Math.floor(Math.random() * 80),
-        total_units: 420 + Math.floor(Math.random() * 120),
-        total_sales: 11000 + Math.floor(Math.random() * 4000),
-        avg_order_value: 42 + Math.floor(Math.random() * 15),
-      })),
-    },
-    salesRecords: generateDemoSalesRecords('shopee'),
-  },
-  lazada: {
-    stats: {
-      success: true,
-      data: {
-        overview: {
-          total_records: 1567,
-          total_orders: 1234,
-          total_customers: 987,
-          total_products: 189,
-          total_revenue: 67892.30,
-          avg_order_value: 55.02,
-          earliest_order: '2024-01-01',
-          latest_order: '2024-12-31',
-          platforms: 1,
-        },
-        by_source: [{ source: 'lazada', orders: 1234, revenue: 67892.30 }],
-      },
-    },
-    platformSummary: {
-      success: true,
-      group_by: 'source',
-      data: [{
-        dimension: 'lazada',
-        total_orders: 1234,
-        total_units: 2156,
-        total_sales: 67892.30,
-        avg_order_value: 55.02,
-        earliest_order: '2024-01-01',
-        latest_order: '2024-12-31',
-      }],
-    },
-    dailySummary: {
-      success: true,
-      group_by: 'day',
-      data: Array.from({ length: 7 }, (_, i) => ({
-        dimension: `2024-12-${String(25 + i).padStart(2, '0')}`,
-        total_orders: 160 + Math.floor(Math.random() * 60),
-        total_units: 280 + Math.floor(Math.random() * 100),
-        total_sales: 8500 + Math.floor(Math.random() * 3500),
-        avg_order_value: 50 + Math.floor(Math.random() * 20),
-      })),
-    },
-    salesRecords: generateDemoSalesRecords('lazada'),
-  },
-};
-
 // Get all connected platforms - uses cached value synchronously
 export function getConnectedDemoStorePlatforms(): StorePlatform[] {
   return cachedConnectedPlatforms;
@@ -272,6 +41,10 @@ export function getConnectedDemoStore(): string | null {
 }
 
 async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  if (!API_BASE_URL) {
+    throw new Error('API URL not configured');
+  }
+  
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     headers: {
       'Content-Type': 'application/json',
@@ -288,9 +61,7 @@ async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> 
   return response.json();
 }
 
-// Types matching GrowthPulse API response
-
-// Stats endpoint response
+// Types matching API response
 export interface StatsResponse {
   success: boolean;
   data: {
@@ -313,7 +84,6 @@ export interface StatsResponse {
   };
 }
 
-// Sales summary endpoint response
 export interface SalesSummaryResponse {
   success: boolean;
   group_by: string;
@@ -330,7 +100,6 @@ export interface SalesSummaryItem {
   latest_order: string;
 }
 
-// Individual sales record
 export interface SalesRecord {
   source: string;
   order_id: string;
@@ -362,7 +131,6 @@ export interface SalesResponse {
   };
 }
 
-// Health check response
 export interface HealthResponse {
   status: string;
   timestamp: string;
@@ -370,7 +138,6 @@ export interface HealthResponse {
   total_records: number | null;
 }
 
-// Dashboard data - transformed from API for UI consumption
 export interface DashboardData {
   total_revenue: number;
   total_orders: number;
@@ -397,128 +164,397 @@ export interface DailyData {
   avg_order_value: number;
 }
 
-// API endpoints matching GrowthPulse FastAPI structure
-export const api = {
-  // Health check
-  healthCheck: async (): Promise<HealthResponse> => {
-    if (isDemoMode()) {
-      const connectedStores = await fetchConnectedPlatforms();
-      return {
-        status: connectedStores.length > 0 ? 'healthy' : 'disconnected',
-        timestamp: new Date().toISOString(),
-        bigquery_connected: connectedStores.length > 0,
-        total_records: connectedStores.reduce((acc, store) => 
-          acc + (demoData[store]?.stats.data.overview.total_records || 0), 0),
-      };
-    }
-    return fetchAPI<HealthResponse>('/health');
-  },
+// ============================================
+// DATA ACCESS LAYER - Fetches from synced PostgreSQL tables
+// ============================================
 
-  // Overall stats - aggregates all connected stores in demo mode
-  getStats: async (): Promise<StatsResponse> => {
-    if (isDemoMode()) {
-      const connectedStores = await fetchConnectedPlatforms();
-      if (connectedStores.length > 0) {
-        // Aggregate stats from all connected stores
-        const aggregated = connectedStores.reduce((acc, store) => {
-          const storeData = demoData[store]?.stats.data.overview;
-          if (storeData) {
-            acc.total_records += storeData.total_records;
-            acc.total_orders += storeData.total_orders;
-            acc.total_customers += storeData.total_customers;
-            acc.total_products += storeData.total_products;
-            acc.total_revenue += storeData.total_revenue;
-          }
-          return acc;
-        }, {
+async function getStatsFromDB(): Promise<StatsResponse> {
+  const connectedPlatforms = await fetchConnectedPlatforms();
+  
+  if (connectedPlatforms.length === 0) {
+    return {
+      success: true,
+      data: {
+        overview: {
           total_records: 0,
           total_orders: 0,
           total_customers: 0,
           total_products: 0,
           total_revenue: 0,
-        });
-
-        const by_source = connectedStores.map(store => ({
-          source: store,
-          orders: demoData[store]?.stats.data.overview.total_orders || 0,
-          revenue: demoData[store]?.stats.data.overview.total_revenue || 0,
-        }));
-
-        return {
-          success: true,
-          data: {
-            overview: {
-              ...aggregated,
-              avg_order_value: aggregated.total_orders > 0 
-                ? aggregated.total_revenue / aggregated.total_orders 
-                : 0,
-              earliest_order: '2024-01-01',
-              latest_order: '2024-12-31',
-              platforms: connectedStores.length,
-            },
-            by_source,
-          },
-        };
-      }
-      return {
-        success: false,
-        data: {
-          overview: { total_records: 0, total_orders: 0, total_customers: 0, total_products: 0, total_revenue: 0, avg_order_value: 0, earliest_order: '', latest_order: '', platforms: 0 },
-          by_source: [],
+          avg_order_value: 0,
+          earliest_order: '',
+          latest_order: '',
+          platforms: 0,
         },
-      };
-    }
-    return fetchAPI<StatsResponse>('/api/v1/stats');
+        by_source: [],
+      },
+    };
+  }
+
+  // Fetch aggregated order stats
+  const { data: orders, error: ordersError } = await supabase
+    .from('synced_orders')
+    .select('platform, total_amount, order_date, quantity')
+    .in('platform', connectedPlatforms);
+
+  if (ordersError) {
+    console.error('Failed to fetch orders:', ordersError);
+    throw new Error('Failed to fetch order statistics');
+  }
+
+  // Fetch unique customer count
+  const { data: customers, error: customersError } = await supabase
+    .from('synced_customers')
+    .select('id, platform')
+    .in('platform', connectedPlatforms);
+
+  // Fetch unique product count
+  const { data: products, error: productsError } = await supabase
+    .from('synced_products')
+    .select('id, platform')
+    .in('platform', connectedPlatforms);
+
+  const orderData = orders || [];
+  const totalRevenue = orderData.reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0);
+  const totalOrders = orderData.length;
+  const totalUnits = orderData.reduce((sum, o) => sum + (o.quantity || 0), 0);
+  
+  // Get unique orders by grouping
+  const uniqueOrderIds = new Set(orderData.map(o => `${o.platform}-${o.order_date}`));
+  
+  const dates = orderData
+    .filter(o => o.order_date)
+    .map(o => o.order_date!)
+    .sort();
+
+  // Group by platform
+  const byPlatform = connectedPlatforms.map(platform => {
+    const platformOrders = orderData.filter(o => o.platform === platform);
+    return {
+      source: platform,
+      orders: platformOrders.length,
+      revenue: platformOrders.reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0),
+    };
+  });
+
+  return {
+    success: true,
+    data: {
+      overview: {
+        total_records: orderData.length,
+        total_orders: totalOrders,
+        total_customers: customers?.length || 0,
+        total_products: products?.length || 0,
+        total_revenue: totalRevenue,
+        avg_order_value: totalOrders > 0 ? totalRevenue / totalOrders : 0,
+        earliest_order: dates[0] || '',
+        latest_order: dates[dates.length - 1] || '',
+        platforms: connectedPlatforms.length,
+      },
+      by_source: byPlatform,
+    },
+  };
+}
+
+async function getSalesSummaryFromDB(
+  groupBy: 'source' | 'day' | 'month' | 'status' = 'source',
+  startDate?: string,
+  endDate?: string
+): Promise<SalesSummaryResponse> {
+  const connectedPlatforms = await fetchConnectedPlatforms();
+  
+  if (connectedPlatforms.length === 0) {
+    return { success: true, group_by: groupBy, data: [] };
+  }
+
+  let query = supabase
+    .from('synced_orders')
+    .select('platform, order_date, total_amount, quantity, order_status')
+    .in('platform', connectedPlatforms);
+
+  if (startDate) {
+    query = query.gte('order_date', startDate);
+  }
+  if (endDate) {
+    query = query.lte('order_date', endDate);
+  }
+
+  const { data: orders, error } = await query;
+
+  if (error) {
+    console.error('Failed to fetch sales summary:', error);
+    throw new Error('Failed to fetch sales summary');
+  }
+
+  const orderData = orders || [];
+
+  if (groupBy === 'source') {
+    const grouped = new Map<string, {
+      orders: number;
+      units: number;
+      sales: number;
+      dates: string[];
+    }>();
+
+    orderData.forEach(order => {
+      const key = order.platform;
+      const existing = grouped.get(key) || { orders: 0, units: 0, sales: 0, dates: [] };
+      existing.orders += 1;
+      existing.units += order.quantity || 0;
+      existing.sales += Number(order.total_amount) || 0;
+      if (order.order_date) existing.dates.push(order.order_date);
+      grouped.set(key, existing);
+    });
+
+    const data: SalesSummaryItem[] = Array.from(grouped.entries()).map(([dimension, stats]) => ({
+      dimension,
+      total_orders: stats.orders,
+      total_units: stats.units,
+      total_sales: stats.sales,
+      avg_order_value: stats.orders > 0 ? stats.sales / stats.orders : 0,
+      earliest_order: stats.dates.sort()[0] || '',
+      latest_order: stats.dates.sort()[stats.dates.length - 1] || '',
+    }));
+
+    return { success: true, group_by: 'source', data };
+  }
+
+  if (groupBy === 'day') {
+    const grouped = new Map<string, {
+      orders: number;
+      units: number;
+      sales: number;
+    }>();
+
+    orderData.forEach(order => {
+      const key = order.order_date?.split('T')[0] || 'unknown';
+      const existing = grouped.get(key) || { orders: 0, units: 0, sales: 0 };
+      existing.orders += 1;
+      existing.units += order.quantity || 0;
+      existing.sales += Number(order.total_amount) || 0;
+      grouped.set(key, existing);
+    });
+
+    const data: SalesSummaryItem[] = Array.from(grouped.entries())
+      .filter(([dim]) => dim !== 'unknown')
+      .map(([dimension, stats]) => ({
+        dimension,
+        total_orders: stats.orders,
+        total_units: stats.units,
+        total_sales: stats.sales,
+        avg_order_value: stats.orders > 0 ? stats.sales / stats.orders : 0,
+        earliest_order: dimension,
+        latest_order: dimension,
+      }))
+      .sort((a, b) => a.dimension.localeCompare(b.dimension));
+
+    return { success: true, group_by: 'day', data };
+  }
+
+  if (groupBy === 'month') {
+    const grouped = new Map<string, {
+      orders: number;
+      units: number;
+      sales: number;
+    }>();
+
+    orderData.forEach(order => {
+      const date = order.order_date?.split('T')[0];
+      const key = date ? date.substring(0, 7) : 'unknown'; // YYYY-MM
+      const existing = grouped.get(key) || { orders: 0, units: 0, sales: 0 };
+      existing.orders += 1;
+      existing.units += order.quantity || 0;
+      existing.sales += Number(order.total_amount) || 0;
+      grouped.set(key, existing);
+    });
+
+    const data: SalesSummaryItem[] = Array.from(grouped.entries())
+      .filter(([dim]) => dim !== 'unknown')
+      .map(([dimension, stats]) => ({
+        dimension,
+        total_orders: stats.orders,
+        total_units: stats.units,
+        total_sales: stats.sales,
+        avg_order_value: stats.orders > 0 ? stats.sales / stats.orders : 0,
+        earliest_order: dimension,
+        latest_order: dimension,
+      }))
+      .sort((a, b) => a.dimension.localeCompare(b.dimension));
+
+    return { success: true, group_by: 'month', data };
+  }
+
+  if (groupBy === 'status') {
+    const grouped = new Map<string, {
+      orders: number;
+      units: number;
+      sales: number;
+    }>();
+
+    orderData.forEach(order => {
+      const key = order.order_status || 'unknown';
+      const existing = grouped.get(key) || { orders: 0, units: 0, sales: 0 };
+      existing.orders += 1;
+      existing.units += order.quantity || 0;
+      existing.sales += Number(order.total_amount) || 0;
+      grouped.set(key, existing);
+    });
+
+    const data: SalesSummaryItem[] = Array.from(grouped.entries()).map(([dimension, stats]) => ({
+      dimension,
+      total_orders: stats.orders,
+      total_units: stats.units,
+      total_sales: stats.sales,
+      avg_order_value: stats.orders > 0 ? stats.sales / stats.orders : 0,
+      earliest_order: '',
+      latest_order: '',
+    }));
+
+    return { success: true, group_by: 'status', data };
+  }
+
+  return { success: true, group_by: groupBy, data: [] };
+}
+
+async function getSalesFromDB(options?: {
+  source?: string;
+  startDate?: string;
+  endDate?: string;
+  orderStatus?: string;
+  limit?: number;
+  offset?: number;
+}): Promise<SalesResponse> {
+  const connectedPlatforms = await fetchConnectedPlatforms();
+  const limit = options?.limit || 100;
+  const offset = options?.offset || 0;
+
+  if (connectedPlatforms.length === 0) {
+    return {
+      success: true,
+      data: [],
+      metadata: { total: 0, limit, offset, count: 0 },
+    };
+  }
+
+  // Build query with filters
+  let query = supabase
+    .from('synced_orders')
+    .select('*', { count: 'exact' });
+
+  if (options?.source) {
+    query = query.eq('platform', options.source);
+  } else {
+    query = query.in('platform', connectedPlatforms);
+  }
+
+  if (options?.startDate) {
+    query = query.gte('order_date', options.startDate);
+  }
+  if (options?.endDate) {
+    query = query.lte('order_date', options.endDate);
+  }
+  if (options?.orderStatus) {
+    query = query.eq('order_status', options.orderStatus);
+  }
+
+  // Apply pagination
+  query = query
+    .order('order_date', { ascending: false })
+    .range(offset, offset + limit - 1);
+
+  const { data, error, count } = await query;
+
+  if (error) {
+    console.error('Failed to fetch sales:', error);
+    throw new Error('Failed to fetch sales data');
+  }
+
+  // Transform to SalesRecord format
+  const salesRecords: SalesRecord[] = (data || []).map(order => ({
+    source: order.platform,
+    order_id: order.external_order_id,
+    order_date: order.order_date,
+    customer_id: order.customer_id,
+    customer_name: order.customer_name,
+    customer_email: order.customer_email,
+    product_id: order.product_id,
+    product_name: order.product_name,
+    quantity: order.quantity,
+    unit_price: Number(order.unit_price),
+    total_amount: Number(order.total_amount),
+    currency: order.currency,
+    order_status: order.order_status,
+    payment_method: order.payment_status,
+    shipping_address: null,
+    created_at: order.created_at,
+    updated_at: order.updated_at,
+  }));
+
+  return {
+    success: true,
+    data: salesRecords,
+    metadata: {
+      total: count || 0,
+      limit,
+      offset,
+      count: salesRecords.length,
+    },
+  };
+}
+
+// ============================================
+// PUBLIC API - Unified interface
+// ============================================
+
+export const api = {
+  // Health check
+  healthCheck: async (): Promise<HealthResponse> => {
+    const connectedPlatforms = await fetchConnectedPlatforms();
+    
+    // Check if we have synced data
+    const { count } = await supabase
+      .from('synced_orders')
+      .select('*', { count: 'exact', head: true })
+      .in('platform', connectedPlatforms.length > 0 ? connectedPlatforms : ['none']);
+
+    return {
+      status: connectedPlatforms.length > 0 ? 'healthy' : 'disconnected',
+      timestamp: new Date().toISOString(),
+      bigquery_connected: connectedPlatforms.length > 0,
+      total_records: count || 0,
+    };
   },
 
-  // Sales summary by different dimensions - aggregates all connected stores
-  getSalesSummary: async (groupBy: 'source' | 'day' | 'month' | 'status' = 'source', startDate?: string, endDate?: string): Promise<SalesSummaryResponse> => {
-    if (isDemoMode()) {
-      const connectedStores = await fetchConnectedPlatforms();
-      if (connectedStores.length > 0) {
-        if (groupBy === 'source') {
-          // Return platform summaries for all connected stores
-          const allPlatformData = connectedStores.flatMap(store => 
-            demoData[store]?.platformSummary.data || []
-          );
-          return {
-            success: true,
-            group_by: 'source',
-            data: allPlatformData,
-          };
-        } else if (groupBy === 'day') {
-          // Aggregate daily data from all connected stores
-          const dailyMap = new Map<string, any>();
-          connectedStores.forEach(store => {
-            const storeDaily = demoData[store]?.dailySummary.data || [];
-            storeDaily.forEach((day: any) => {
-              if (dailyMap.has(day.dimension)) {
-                const existing = dailyMap.get(day.dimension);
-                existing.total_orders += day.total_orders;
-                existing.total_units += day.total_units;
-                existing.total_sales += day.total_sales;
-              } else {
-                dailyMap.set(day.dimension, { ...day });
-              }
-            });
-          });
-          const aggregatedDaily = Array.from(dailyMap.values()).map(d => ({
-            ...d,
-            avg_order_value: d.total_orders > 0 ? d.total_sales / d.total_orders : 0,
-          }));
-          return {
-            success: true,
-            group_by: 'day',
-            data: aggregatedDaily,
-          };
-        }
+  // Overall stats - from synced PostgreSQL tables
+  getStats: async (): Promise<StatsResponse> => {
+    // Use external FastAPI if configured, otherwise use local DB
+    if (API_BASE_URL) {
+      try {
+        return await fetchAPI<StatsResponse>('/api/v1/stats');
+      } catch (error) {
+        console.warn('FastAPI unavailable, falling back to local DB:', error);
       }
-      return { success: true, group_by: groupBy, data: [] };
     }
-    const params = new URLSearchParams({ group_by: groupBy });
-    if (startDate) params.append('start_date', startDate);
-    if (endDate) params.append('end_date', endDate);
-    return fetchAPI<SalesSummaryResponse>(`/api/v1/sales/summary?${params}`);
+    return getStatsFromDB();
+  },
+
+  // Sales summary by different dimensions
+  getSalesSummary: async (
+    groupBy: 'source' | 'day' | 'month' | 'status' = 'source',
+    startDate?: string,
+    endDate?: string
+  ): Promise<SalesSummaryResponse> => {
+    if (API_BASE_URL) {
+      try {
+        const params = new URLSearchParams({ group_by: groupBy });
+        if (startDate) params.append('start_date', startDate);
+        if (endDate) params.append('end_date', endDate);
+        return await fetchAPI<SalesSummaryResponse>(`/api/v1/sales/summary?${params}`);
+      } catch (error) {
+        console.warn('FastAPI unavailable, falling back to local DB:', error);
+      }
+    }
+    return getSalesSummaryFromDB(groupBy, startDate, endDate);
   },
 
   // Get sales records with filters
@@ -530,67 +566,31 @@ export const api = {
     limit?: number;
     offset?: number;
   }): Promise<SalesResponse> => {
-    if (isDemoMode()) {
-      const connectedStores = await fetchConnectedPlatforms();
-      if (connectedStores.length > 0) {
-        // Get sales records from all connected stores or filter by source
-        let allSales: SalesRecord[] = [];
-        
-        if (options?.source) {
-          // Filter to specific source if requested
-          allSales = demoData[options.source]?.salesRecords || [];
-        } else {
-          // Get all sales from connected stores
-          connectedStores.forEach(store => {
-            allSales = allSales.concat(demoData[store]?.salesRecords || []);
-          });
-        }
-
-        // Apply limit and offset
-        const limit = options?.limit || 100;
-        const offset = options?.offset || 0;
-        const paginatedSales = allSales.slice(offset, offset + limit);
-
-        return {
-          success: true,
-          data: paginatedSales,
-          metadata: {
-            total: allSales.length,
-            limit,
-            offset,
-            count: paginatedSales.length,
-          },
-        };
+    if (API_BASE_URL) {
+      try {
+        const params = new URLSearchParams();
+        if (options?.source) params.append('source', options.source);
+        if (options?.startDate) params.append('start_date', options.startDate);
+        if (options?.endDate) params.append('end_date', options.endDate);
+        if (options?.orderStatus) params.append('order_status', options.orderStatus);
+        if (options?.limit) params.append('limit', options.limit.toString());
+        if (options?.offset) params.append('offset', options.offset.toString());
+        return await fetchAPI<SalesResponse>(`/api/v1/sales?${params}`);
+      } catch (error) {
+        console.warn('FastAPI unavailable, falling back to local DB:', error);
       }
-      return {
-        success: true,
-        data: [],
-        metadata: { total: 0, limit: options?.limit || 100, offset: options?.offset || 0, count: 0 },
-      };
     }
-    const params = new URLSearchParams();
-    if (options?.source) params.append('source', options.source);
-    if (options?.startDate) params.append('start_date', options.startDate);
-    if (options?.endDate) params.append('end_date', options.endDate);
-    if (options?.orderStatus) params.append('order_status', options.orderStatus);
-    if (options?.limit) params.append('limit', options.limit.toString());
-    if (options?.offset) params.append('offset', options.offset.toString());
-    return fetchAPI<SalesResponse>(`/api/v1/sales?${params}`);
+    return getSalesFromDB(options);
   },
 
   // Get sales by specific source/platform
-  getSalesBySource: (source: string, options?: {
+  getSalesBySource: async (source: string, options?: {
     startDate?: string;
     endDate?: string;
     limit?: number;
     offset?: number;
-  }) => {
-    const params = new URLSearchParams();
-    if (options?.startDate) params.append('start_date', options.startDate);
-    if (options?.endDate) params.append('end_date', options.endDate);
-    if (options?.limit) params.append('limit', options.limit.toString());
-    if (options?.offset) params.append('offset', options.offset.toString());
-    return fetchAPI<SalesResponse>(`/api/v1/sales/${source}?${params}`);
+  }): Promise<SalesResponse> => {
+    return api.getSales({ ...options, source });
   },
 
   // Composite endpoint: Get full dashboard data
@@ -624,6 +624,62 @@ export const api = {
         }))
         .sort((a, b) => a.date.localeCompare(b.date)),
     };
+  },
+
+  // Trigger manual sync for a store
+  triggerSync: async (options?: {
+    userId?: string;
+    storeConnectionId?: string;
+    platform?: string;
+  }): Promise<{ success: boolean; message: string }> => {
+    const { data, error } = await supabase.functions.invoke('sync-store-data', {
+      body: {
+        user_id: options?.userId,
+        store_connection_id: options?.storeConnectionId,
+        platform: options?.platform,
+      },
+    });
+
+    if (error) {
+      console.error('Sync failed:', error);
+      return { success: false, message: error.message };
+    }
+
+    return data;
+  },
+
+  // Get sync history
+  getSyncLogs: async (storeConnectionId?: string): Promise<{
+    success: boolean;
+    data: Array<{
+      id: string;
+      platform: string;
+      sync_type: string;
+      status: string;
+      records_synced: number;
+      error_message: string | null;
+      started_at: string;
+      completed_at: string | null;
+    }>;
+  }> => {
+    let query = supabase
+      .from('sync_logs')
+      .select('*')
+      .order('started_at', { ascending: false })
+      .limit(50);
+
+    if (storeConnectionId) {
+      query = query.eq('store_connection_id', storeConnectionId);
+    }
+
+    const { data, error } = await query;
+
+    if (error) {
+      console.error('Failed to fetch sync logs:', error);
+      return { success: false, data: [] };
+    }
+
+    return { success: true, data: data || [] };
   },
 };
 
