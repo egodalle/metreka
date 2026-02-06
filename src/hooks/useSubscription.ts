@@ -6,21 +6,21 @@ import { useToast } from '@/hooks/use-toast';
 // Subscription tiers - Update these with your Paddle product/price IDs
 export const SUBSCRIPTION_TIERS = {
   starter: {
-    priceId: 'pri_starter_monthly', // Replace with actual Paddle price ID
-    productId: 'pro_starter', // Replace with actual Paddle product ID
+    priceId: 'pri_01kgsn8a67q8807nv12a33acrx',
+    productId: 'pro_01kgsmzp7jn13hvky6qd6g5a8g',
     name: 'Starter',
     storeLimit: 1,
     price: 29,
   },
   growth: {
-    priceId: 'pri_growth_monthly',
+    priceId: 'pri_01kgsnc7c20hfc1ekgav6j0bss',
     productId: 'pro_growth',
     name: 'Growth',
     storeLimit: 3,
     price: 59,
   },
   scale: {
-    priceId: 'pri_scale_monthly',
+    priceId: 'pri_01kgsng6sr909mx5xkm0ccdvh5',
     productId: 'pro_scale',
     name: 'Scale',
     storeLimit: 5,
