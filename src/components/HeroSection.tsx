@@ -71,7 +71,7 @@ const HeroSection = () => {
               Start Free Trial
               <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
             </Button>
-            <Button variant="hero-outline" size="xl" className="group" onClick={() => navigate("/demo")}>
+            <Button variant="hero-outline" size="xl" className="group" onClick={() => document.getElementById("dashboard")?.scrollIntoView({ behavior: "smooth" })}>
               <Play className="w-5 h-5" />
               Watch Demo
             </Button>
