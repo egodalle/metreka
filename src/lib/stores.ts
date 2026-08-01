@@ -29,16 +29,16 @@ export const platformConfigs: PlatformConfig[] = [
   {
     id: 'shopify',
     name: 'Shopify',
-    description: 'Connect via OAuth (recommended)',
+    description: 'Connect with an Admin API access token',
     icon: '🛒',
-    connectionMethod: 'oauth',
+    connectionMethod: 'api_key',
   },
   {
     id: 'lazada',
     name: 'Lazada',
-    description: 'Connect via OAuth',
+    description: 'Connect with your Open Platform credentials',
     icon: '🛍️',
-    connectionMethod: 'oauth',
+    connectionMethod: 'api_key',
   },
   {
     id: 'shopee',
@@ -50,12 +50,26 @@ export const platformConfigs: PlatformConfig[] = [
 ];
 
 export const apiKeyFields: Record<string, { key: string; label: string; placeholder: string; type: string }[]> = {
+  shopify: [
+    { key: 'storeUrl', label: 'Store domain', placeholder: 'my-store.myshopify.com', type: 'text' },
+    { key: 'accessToken', label: 'Admin API access token', placeholder: 'shpat_...', type: 'password' },
+  ],
+  lazada: [
+    { key: 'appKey', label: 'App Key', placeholder: 'Enter your App Key', type: 'text' },
+    { key: 'appSecret', label: 'App Secret', placeholder: 'Enter your App Secret', type: 'password' },
+    { key: 'accessToken', label: 'Access Token', placeholder: 'Enter your Access Token', type: 'password' },
+  ],
   shopee: [
-    { key: 'partner_id', label: 'Partner ID', placeholder: 'Enter your Partner ID', type: 'text' },
-    { key: 'partner_key', label: 'Partner Key', placeholder: 'Enter your Partner Key', type: 'password' },
-    { key: 'shop_id', label: 'Shop ID', placeholder: 'Enter your Shop ID', type: 'text' },
+    { key: 'partnerId', label: 'Partner ID', placeholder: 'Enter your Partner ID', type: 'text' },
+    { key: 'partnerKey', label: 'Partner Key', placeholder: 'Enter your Partner Key', type: 'password' },
+    { key: 'shopId', label: 'Shop ID', placeholder: 'Enter your Shop ID', type: 'text' },
+    { key: 'accessToken', label: 'Access Token', placeholder: 'Enter your Access Token', type: 'password' },
   ],
 };
+
+// Platforms where a hosted OAuth flow is available (needs provider app keys configured)
+export const oauthCapablePlatforms: StorePlatform[] = ['shopify', 'lazada'];
+
 
 // Fetch all store connections for the current user
 export async function getStoreConnections(): Promise<StoreConnection[]> {
