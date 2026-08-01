@@ -109,84 +109,6 @@ export interface SyncStatus {
 // Platform configurations (single source of truth lives in src/lib/stores.ts)
 export { platformConfigs, apiKeyFields, oauthCapablePlatforms } from './stores';
 
-export async function startIntegration(platform: StorePlatform): Promise<IntegrationStartResponse> {
-  if (demoMode) {
-    await new Promise((r) => setTimeout(r, 800)); // Simulate network delay
-    const config = platformConfigs.find((p) => p.id === platform);
-    return {
-      integration_id: `demo_${platform}_${Date.now()}`,
-      requires_credentials: config?.connectionMethod === 'api_key',
-      // OAuth platforms would redirect, but in demo we simulate success
-      redirect_url: config?.connectionMethod === 'oauth' ? undefined : undefined,
-    };
-  }
-
-  const response = await authFetch(`${API_BASE_URL}/api/v1/integrations/start`, {
-    method: 'POST',
-    body: JSON.stringify({ platform }),
-  });
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.detail || 'Failed to start integration');
-  }
-
-  return response.json();
-}
-
-/**
- * Step 3b: Submit API credentials (for non-OAuth platforms)
- * Credentials are sent ONCE to backend, encrypted, and never returned
- */
-export async function submitCredentials(
-  integrationId: string,
-  platform: StorePlatform,
-  credentials: Record<string, string>
-): Promise<StoreConnection> {
-  if (demoMode) {
-    await new Promise((r) => setTimeout(r, 1000)); // Simulate network delay
-    const storeId = `store_${platform}_${Date.now()}`;
-    // Store in session for demo sync status polling
-    sessionStorage.setItem(`demo_store_${storeId}`, JSON.stringify({ startTime: Date.now(), platform }));
-    return {
-      id: storeId,
-      platform,
-      store_name: `Demo ${platform.charAt(0).toUpperCase() + platform.slice(1)} Store`,
-      connected: true,
-      sync_status: 'syncing',
-    };
-  }
-
-  const response = await authFetch(`${API_BASE_URL}/api/v1/integrations/${integrationId}/credentials`, {
-    method: 'POST',
-    body: JSON.stringify({ platform, credentials }),
-  });
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.detail || 'Failed to submit credentials');
-  }
-
-  return response.json();
-}
-
-/**
- * Step 4: Handle OAuth callback (called after redirect back from platform)
- */
-export async function completeOAuthCallback(code: string, state: string): Promise<StoreConnection> {
-  const response = await authFetch(`${API_BASE_URL}/api/v1/integrations/oauth/callback`, {
-    method: 'POST',
-    body: JSON.stringify({ code, state }),
-  });
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.detail || 'Failed to complete OAuth');
-  }
-
-  return response.json();
-}
-
 /**
  * Step 5: Poll sync status
  */
@@ -261,28 +183,5 @@ export async function getSyncStatus(storeId: string): Promise<SyncStatus> {
   return { status: 'pending', message: 'Waiting for the first sync to start...' };
 }
 
-export async function getConnectedStores(): Promise<StoreConnection[]> {
-  const response = await authFetch(`${API_BASE_URL}/api/v1/stores`);
-
-  if (!response.ok) {
-    if (response.status === 404) return [];
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.detail || 'Failed to get stores');
-  }
-
-  return response.json();
-}
-
-/**
- * Disconnect a store
- */
-export async function disconnectStore(storeId: string): Promise<void> {
-  const response = await authFetch(`${API_BASE_URL}/api/v1/stores/${storeId}`, {
-    method: 'DELETE',
-  });
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.detail || 'Failed to disconnect store');
-  }
-}
+// Store listing/disconnect live in src/lib/stores.ts (Supabase-backed)
+export { getStoreConnections, deleteStoreConnection, startOAuthConnection, completeOAuthConnection, triggerStoreSync } from './stores';
