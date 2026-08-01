@@ -72,29 +72,85 @@ export async function getStoreConnections(): Promise<StoreConnection[]> {
   })) as StoreConnection[];
 }
 
-// Create a new store connection
-export async function createStoreConnection(platform: StorePlatform, storeName?: string): Promise<StoreConnection> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Not authenticated');
-
-  const { data, error } = await supabase
-    .from('store_connections')
-    .insert({
-      user_id: user.id,
+// Create/update a store connection with credentials.
+// Credentials are sent to the `store-connect` edge function, which validates
+// them, encrypts them at rest, and kicks off the first sync.
+export async function createStoreConnection(
+  platform: StorePlatform,
+  options: { storeName?: string; storeUrl?: string; credentials?: Record<string, string> } = {},
+): Promise<StoreConnection> {
+  const { data, error } = await supabase.functions.invoke('store-connect', {
+    body: {
+      action: 'save_credentials',
       platform,
-      store_name: storeName || `My ${platform.charAt(0).toUpperCase() + platform.slice(1)} Store`,
-      sync_status: 'pending',
-    })
-    .select()
-    .single();
+      storeName: options.storeName,
+      storeUrl: options.storeUrl,
+      credentials: options.credentials ?? {},
+    },
+  });
 
-  if (error) throw error;
+  if (error) throw new Error(data?.error || error.message);
+  if (data?.error) throw new Error(data.error);
+
   return {
-    ...data,
-    platform: data.platform as StorePlatform,
-    sync_status: (data.sync_status || 'pending') as SyncStatus,
+    ...data.connection,
+    platform: data.connection.platform as StorePlatform,
+    sync_status: (data.connection.sync_status || 'pending') as SyncStatus,
   } as StoreConnection;
 }
+
+// Begin an OAuth authorization flow; returns the provider URL to redirect to.
+export async function startOAuthConnection(
+  platform: StorePlatform,
+  storeUrl?: string,
+): Promise<string> {
+  const { data, error } = await supabase.functions.invoke('store-connect', {
+    body: {
+      action: 'oauth_start',
+      platform,
+      storeUrl,
+      redirectUri: `${window.location.origin}/oauth/callback`,
+    },
+  });
+
+  if (error) throw new Error(data?.error || error.message);
+  if (data?.error) throw new Error(data.error);
+  return data.authorizeUrl as string;
+}
+
+// Exchange an OAuth authorization code for an access token and store it.
+export async function completeOAuthConnection(
+  code: string,
+  state: string,
+): Promise<StoreConnection> {
+  const { data, error } = await supabase.functions.invoke('store-connect', {
+    body: {
+      action: 'oauth_callback',
+      code,
+      state,
+      redirectUri: `${window.location.origin}/oauth/callback`,
+    },
+  });
+
+  if (error) throw new Error(data?.error || error.message);
+  if (data?.error) throw new Error(data.error);
+
+  return {
+    ...data.connection,
+    platform: data.connection.platform as StorePlatform,
+    sync_status: (data.connection.sync_status || 'pending') as SyncStatus,
+  } as StoreConnection;
+}
+
+// Trigger a fresh sync for an existing connection
+export async function triggerStoreSync(storeId: string): Promise<void> {
+  const { data, error } = await supabase.functions.invoke('store-connect', {
+    body: { action: 'sync_now', storeConnectionId: storeId },
+  });
+  if (error) throw new Error(data?.error || error.message);
+  if (data?.error) throw new Error(data.error);
+}
+
 
 // Update store connection sync status
 export async function updateStoreSync(
