@@ -1,11 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { 
-  getStoreConnections, 
-  createStoreConnection, 
+import {
+  getStoreConnections,
+  createStoreConnection,
   deleteStoreConnection,
-  simulateSync,
+  triggerStoreSync,
   type StoreConnection,
-  type StorePlatform 
+  type StorePlatform,
 } from '@/lib/stores';
 import { useToast } from '@/hooks/use-toast';
 
@@ -22,12 +22,17 @@ export function useConnectStore() {
   const { toast } = useToast();
 
   return useMutation({
-    mutationFn: async ({ platform, storeName }: { platform: StorePlatform; storeName?: string }) => {
-      const connection = await createStoreConnection(platform, storeName);
-      // Start sync in background
-      simulateSync(connection.id).catch(console.error);
-      return connection;
-    },
+    mutationFn: async ({
+      platform,
+      storeName,
+      storeUrl,
+      credentials,
+    }: {
+      platform: StorePlatform;
+      storeName?: string;
+      storeUrl?: string;
+      credentials?: Record<string, string>;
+    }) => createStoreConnection(platform, { storeName, storeUrl, credentials }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['storeConnections'] });
       toast({
@@ -39,6 +44,26 @@ export function useConnectStore() {
       toast({
         title: 'Connection failed',
         description: error instanceof Error ? error.message : 'Failed to connect store',
+        variant: 'destructive',
+      });
+    },
+  });
+}
+
+export function useSyncStore() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  return useMutation({
+    mutationFn: triggerStoreSync,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['storeConnections'] });
+      toast({ title: 'Sync started', description: 'We are refreshing your store data.' });
+    },
+    onError: (error) => {
+      toast({
+        title: 'Sync failed',
+        description: error instanceof Error ? error.message : 'Failed to start sync',
         variant: 'destructive',
       });
     },

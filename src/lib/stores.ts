@@ -29,16 +29,16 @@ export const platformConfigs: PlatformConfig[] = [
   {
     id: 'shopify',
     name: 'Shopify',
-    description: 'Connect via OAuth (recommended)',
+    description: 'Connect with an Admin API access token',
     icon: '🛒',
-    connectionMethod: 'oauth',
+    connectionMethod: 'api_key',
   },
   {
     id: 'lazada',
     name: 'Lazada',
-    description: 'Connect via OAuth',
+    description: 'Connect with your Open Platform credentials',
     icon: '🛍️',
-    connectionMethod: 'oauth',
+    connectionMethod: 'api_key',
   },
   {
     id: 'shopee',
@@ -50,12 +50,26 @@ export const platformConfigs: PlatformConfig[] = [
 ];
 
 export const apiKeyFields: Record<string, { key: string; label: string; placeholder: string; type: string }[]> = {
+  shopify: [
+    { key: 'storeUrl', label: 'Store domain', placeholder: 'my-store.myshopify.com', type: 'text' },
+    { key: 'accessToken', label: 'Admin API access token', placeholder: 'shpat_...', type: 'password' },
+  ],
+  lazada: [
+    { key: 'appKey', label: 'App Key', placeholder: 'Enter your App Key', type: 'text' },
+    { key: 'appSecret', label: 'App Secret', placeholder: 'Enter your App Secret', type: 'password' },
+    { key: 'accessToken', label: 'Access Token', placeholder: 'Enter your Access Token', type: 'password' },
+  ],
   shopee: [
-    { key: 'partner_id', label: 'Partner ID', placeholder: 'Enter your Partner ID', type: 'text' },
-    { key: 'partner_key', label: 'Partner Key', placeholder: 'Enter your Partner Key', type: 'password' },
-    { key: 'shop_id', label: 'Shop ID', placeholder: 'Enter your Shop ID', type: 'text' },
+    { key: 'partnerId', label: 'Partner ID', placeholder: 'Enter your Partner ID', type: 'text' },
+    { key: 'partnerKey', label: 'Partner Key', placeholder: 'Enter your Partner Key', type: 'password' },
+    { key: 'shopId', label: 'Shop ID', placeholder: 'Enter your Shop ID', type: 'text' },
+    { key: 'accessToken', label: 'Access Token', placeholder: 'Enter your Access Token', type: 'password' },
   ],
 };
+
+// Platforms where a hosted OAuth flow is available (needs provider app keys configured)
+export const oauthCapablePlatforms: StorePlatform[] = ['shopify', 'lazada'];
+
 
 // Fetch all store connections for the current user
 export async function getStoreConnections(): Promise<StoreConnection[]> {
@@ -72,29 +86,85 @@ export async function getStoreConnections(): Promise<StoreConnection[]> {
   })) as StoreConnection[];
 }
 
-// Create a new store connection
-export async function createStoreConnection(platform: StorePlatform, storeName?: string): Promise<StoreConnection> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) throw new Error('Not authenticated');
-
-  const { data, error } = await supabase
-    .from('store_connections')
-    .insert({
-      user_id: user.id,
+// Create/update a store connection with credentials.
+// Credentials are sent to the `store-connect` edge function, which validates
+// them, encrypts them at rest, and kicks off the first sync.
+export async function createStoreConnection(
+  platform: StorePlatform,
+  options: { storeName?: string; storeUrl?: string; credentials?: Record<string, string> } = {},
+): Promise<StoreConnection> {
+  const { data, error } = await supabase.functions.invoke('store-connect', {
+    body: {
+      action: 'save_credentials',
       platform,
-      store_name: storeName || `My ${platform.charAt(0).toUpperCase() + platform.slice(1)} Store`,
-      sync_status: 'pending',
-    })
-    .select()
-    .single();
+      storeName: options.storeName,
+      storeUrl: options.storeUrl,
+      credentials: options.credentials ?? {},
+    },
+  });
 
-  if (error) throw error;
+  if (error) throw new Error(data?.error || error.message);
+  if (data?.error) throw new Error(data.error);
+
   return {
-    ...data,
-    platform: data.platform as StorePlatform,
-    sync_status: (data.sync_status || 'pending') as SyncStatus,
+    ...data.connection,
+    platform: data.connection.platform as StorePlatform,
+    sync_status: (data.connection.sync_status || 'pending') as SyncStatus,
   } as StoreConnection;
 }
+
+// Begin an OAuth authorization flow; returns the provider URL to redirect to.
+export async function startOAuthConnection(
+  platform: StorePlatform,
+  storeUrl?: string,
+): Promise<string> {
+  const { data, error } = await supabase.functions.invoke('store-connect', {
+    body: {
+      action: 'oauth_start',
+      platform,
+      storeUrl,
+      redirectUri: `${window.location.origin}/oauth/callback`,
+    },
+  });
+
+  if (error) throw new Error(data?.error || error.message);
+  if (data?.error) throw new Error(data.error);
+  return data.authorizeUrl as string;
+}
+
+// Exchange an OAuth authorization code for an access token and store it.
+export async function completeOAuthConnection(
+  code: string,
+  state: string,
+): Promise<StoreConnection> {
+  const { data, error } = await supabase.functions.invoke('store-connect', {
+    body: {
+      action: 'oauth_callback',
+      code,
+      state,
+      redirectUri: `${window.location.origin}/oauth/callback`,
+    },
+  });
+
+  if (error) throw new Error(data?.error || error.message);
+  if (data?.error) throw new Error(data.error);
+
+  return {
+    ...data.connection,
+    platform: data.connection.platform as StorePlatform,
+    sync_status: (data.connection.sync_status || 'pending') as SyncStatus,
+  } as StoreConnection;
+}
+
+// Trigger a fresh sync for an existing connection
+export async function triggerStoreSync(storeId: string): Promise<void> {
+  const { data, error } = await supabase.functions.invoke('store-connect', {
+    body: { action: 'sync_now', storeConnectionId: storeId },
+  });
+  if (error) throw new Error(data?.error || error.message);
+  if (data?.error) throw new Error(data.error);
+}
+
 
 // Update store connection sync status
 export async function updateStoreSync(

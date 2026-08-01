@@ -1,7 +1,6 @@
 // Store Integration API client
 import { supabase } from '@/integrations/supabase/client';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://datapulse-fkcq.onrender.com';
 
 // Demo mode for displaying realistic data when real API sync is not implemented
 // Since the actual data pipeline to sync from Shopify/Lazada/Shopee to the backend
@@ -106,136 +105,8 @@ export interface SyncStatus {
   completed_at?: string;
 }
 
-// Platform configurations
-export const platformConfigs: PlatformConfig[] = [
-  {
-    id: 'shopify',
-    name: 'Shopify',
-    description: 'Connect via OAuth (recommended)',
-    icon: '🛒',
-    connectionMethod: 'oauth',
-  },
-  {
-    id: 'lazada',
-    name: 'Lazada',
-    description: 'Connect via OAuth',
-    icon: '🛍️',
-    connectionMethod: 'oauth',
-  },
-  {
-    id: 'shopee',
-    name: 'Shopee',
-    description: 'Connect with API credentials',
-    icon: '🏪',
-    connectionMethod: 'api_key',
-  },
-];
-
-// API key fields for platforms that require manual credential entry
-export const apiKeyFields: Record<string, { key: string; label: string; placeholder: string; type: string }[]> = {
-  shopee: [
-    { key: 'partner_id', label: 'Partner ID', placeholder: 'Enter your Partner ID', type: 'text' },
-    { key: 'partner_key', label: 'Partner Key', placeholder: 'Enter your Partner Key', type: 'password' },
-    { key: 'shop_id', label: 'Shop ID', placeholder: 'Enter your Shop ID', type: 'text' },
-  ],
-};
-
-async function authFetch(url: string, options: RequestInit = {}): Promise<Response> {
-  const { data: { session } } = await supabase.auth.getSession();
-  if (!session?.access_token) {
-    throw new Error('Not authenticated');
-  }
-
-  return fetch(url, {
-    ...options,
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${session.access_token}`,
-      ...options.headers,
-    },
-  });
-}
-
-/**
- * Step 2: Initiate integration - backend decides OAuth or API key flow
- */
-export async function startIntegration(platform: StorePlatform): Promise<IntegrationStartResponse> {
-  if (demoMode) {
-    await new Promise((r) => setTimeout(r, 800)); // Simulate network delay
-    const config = platformConfigs.find((p) => p.id === platform);
-    return {
-      integration_id: `demo_${platform}_${Date.now()}`,
-      requires_credentials: config?.connectionMethod === 'api_key',
-      // OAuth platforms would redirect, but in demo we simulate success
-      redirect_url: config?.connectionMethod === 'oauth' ? undefined : undefined,
-    };
-  }
-
-  const response = await authFetch(`${API_BASE_URL}/api/v1/integrations/start`, {
-    method: 'POST',
-    body: JSON.stringify({ platform }),
-  });
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.detail || 'Failed to start integration');
-  }
-
-  return response.json();
-}
-
-/**
- * Step 3b: Submit API credentials (for non-OAuth platforms)
- * Credentials are sent ONCE to backend, encrypted, and never returned
- */
-export async function submitCredentials(
-  integrationId: string,
-  platform: StorePlatform,
-  credentials: Record<string, string>
-): Promise<StoreConnection> {
-  if (demoMode) {
-    await new Promise((r) => setTimeout(r, 1000)); // Simulate network delay
-    const storeId = `store_${platform}_${Date.now()}`;
-    // Store in session for demo sync status polling
-    sessionStorage.setItem(`demo_store_${storeId}`, JSON.stringify({ startTime: Date.now(), platform }));
-    return {
-      id: storeId,
-      platform,
-      store_name: `Demo ${platform.charAt(0).toUpperCase() + platform.slice(1)} Store`,
-      connected: true,
-      sync_status: 'syncing',
-    };
-  }
-
-  const response = await authFetch(`${API_BASE_URL}/api/v1/integrations/${integrationId}/credentials`, {
-    method: 'POST',
-    body: JSON.stringify({ platform, credentials }),
-  });
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.detail || 'Failed to submit credentials');
-  }
-
-  return response.json();
-}
-
-/**
- * Step 4: Handle OAuth callback (called after redirect back from platform)
- */
-export async function completeOAuthCallback(code: string, state: string): Promise<StoreConnection> {
-  const response = await authFetch(`${API_BASE_URL}/api/v1/integrations/oauth/callback`, {
-    method: 'POST',
-    body: JSON.stringify({ code, state }),
-  });
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.detail || 'Failed to complete OAuth');
-  }
-
-  return response.json();
-}
+// Platform configurations (single source of truth lives in src/lib/stores.ts)
+export { platformConfigs, apiKeyFields, oauthCapablePlatforms } from './stores';
 
 /**
  * Step 5: Poll sync status
@@ -246,12 +117,12 @@ export async function getSyncStatus(storeId: string): Promise<SyncStatus> {
     if (storedData) {
       const { startTime } = JSON.parse(storedData);
       const elapsed = Date.now() - startTime;
-      const progress = Math.min(100, Math.floor(elapsed / 100)); // ~10 seconds to complete
-      
+      const progress = Math.min(100, Math.floor(elapsed / 100));
+
       if (progress >= 100) {
         return { status: 'completed', progress: 100, message: 'Sync complete!' };
       }
-      
+
       const messages = [
         'Connecting to store...',
         'Fetching products...',
@@ -260,47 +131,56 @@ export async function getSyncStatus(storeId: string): Promise<SyncStatus> {
         'Finalizing...',
       ];
       const messageIndex = Math.min(Math.floor(progress / 20), messages.length - 1);
-      
+
       return { status: 'syncing', progress, message: messages[messageIndex] };
     }
     return { status: 'pending', progress: 0 };
   }
 
-  const response = await authFetch(`${API_BASE_URL}/api/v1/stores/${storeId}/sync-status`);
+  // Real mode: read the sync state written by the sync-store-data edge function
+  const { data: connection, error } = await supabase
+    .from('store_connections')
+    .select('sync_status, last_sync_at')
+    .eq('id', storeId)
+    .maybeSingle();
 
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.detail || 'Failed to get sync status');
+  if (error) throw error;
+  if (!connection) return { status: 'pending' };
+
+  const { data: log } = await supabase
+    .from('sync_logs')
+    .select('status, error_message, records_synced, completed_at')
+    .eq('store_connection_id', storeId)
+    .order('started_at', { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  const status = connection.sync_status;
+
+  if (status === 'synced' || status === 'completed') {
+    return {
+      status: 'completed',
+      progress: 100,
+      message: log?.records_synced
+        ? `Imported ${log.records_synced} records`
+        : 'Sync complete!',
+      completed_at: log?.completed_at ?? connection.last_sync_at ?? undefined,
+    };
   }
 
-  return response.json();
-}
-
-/**
- * Get all connected stores for the user
- */
-export async function getConnectedStores(): Promise<StoreConnection[]> {
-  const response = await authFetch(`${API_BASE_URL}/api/v1/stores`);
-
-  if (!response.ok) {
-    if (response.status === 404) return [];
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.detail || 'Failed to get stores');
+  if (status === 'error' || status === 'failed') {
+    return {
+      status: 'failed',
+      error: log?.error_message ?? 'Sync failed. Check your store credentials.',
+    };
   }
 
-  return response.json();
-}
-
-/**
- * Disconnect a store
- */
-export async function disconnectStore(storeId: string): Promise<void> {
-  const response = await authFetch(`${API_BASE_URL}/api/v1/stores/${storeId}`, {
-    method: 'DELETE',
-  });
-
-  if (!response.ok) {
-    const error = await response.json().catch(() => ({}));
-    throw new Error(error.detail || 'Failed to disconnect store');
+  if (status === 'syncing') {
+    return { status: 'syncing', message: 'Importing your store data...' };
   }
+
+  return { status: 'pending', message: 'Waiting for the first sync to start...' };
 }
+
+// Store listing/disconnect live in src/lib/stores.ts (Supabase-backed)
+export { getStoreConnections, deleteStoreConnection, startOAuthConnection, completeOAuthConnection, triggerStoreSync } from './stores';

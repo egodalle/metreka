@@ -19,10 +19,13 @@ import {
   StorePlatform,
   platformConfigs,
   apiKeyFields,
+  oauthCapablePlatforms,
   getSyncStatus,
   SyncStatus,
   isDemoMode,
 } from '@/lib/integrations';
+import { startOAuthConnection } from '@/lib/stores';
+
 import { Badge } from '@/components/ui/badge';
 import { useStoreConnections, useConnectStore, useDisconnectStore } from '@/hooks/useStoreConnections';
 
@@ -105,27 +108,27 @@ export default function Onboarding() {
   };
 
   const initiateConnection = async (platform: StorePlatform) => {
-    const config = platformConfigs.find(p => p.id === platform);
-    
-    if (config?.connectionMethod === 'api_key') {
-      // API key flow - show credentials form
+    // All platforms collect credentials in-app; OAuth is offered as an
+    // alternative on the credentials step when the provider app is configured.
+    setStep('credentials');
+  };
+
+  const handleOAuthConnect = async () => {
+    if (!selectedPlatform) return;
+    setStep('connecting');
+    try {
+      const authorizeUrl = await startOAuthConnection(
+        selectedPlatform,
+        credentials.storeUrl,
+      );
+      window.location.href = authorizeUrl;
+    } catch (error) {
+      toast({
+        title: 'OAuth unavailable',
+        description: error instanceof Error ? error.message : 'Could not start OAuth',
+        variant: 'destructive',
+      });
       setStep('credentials');
-    } else {
-      // OAuth flow - connect directly (simulated in demo mode)
-      setStep('connecting');
-      try {
-        const connection = await connectStore.mutateAsync({ platform });
-        setStoreId(connection.id);
-        setStep('syncing');
-        setSyncStatus({ status: 'syncing', progress: 0 });
-      } catch (error) {
-        toast({
-          title: 'Connection failed',
-          description: error instanceof Error ? error.message : 'Failed to connect store',
-          variant: 'destructive',
-        });
-        setStep('select');
-      }
     }
   };
 
@@ -144,8 +147,12 @@ export default function Onboarding() {
     if (!selectedPlatform) return;
 
     try {
-      const connection = await connectStore.mutateAsync({ platform: selectedPlatform });
-      
+      const connection = await connectStore.mutateAsync({
+        platform: selectedPlatform,
+        storeUrl: credentials.storeUrl,
+        credentials,
+      });
+
       // Clear credentials from state immediately (security)
       setCredentials({});
       setStoreId(connection.id);
@@ -158,6 +165,7 @@ export default function Onboarding() {
         title: 'Credentials saved',
         description: 'Starting data sync...',
       });
+
     } catch (error) {
       toast({
         title: 'Connection failed',
@@ -388,6 +396,19 @@ export default function Onboarding() {
       case 'credentials':
         return (
           <form onSubmit={handleCredentialsSubmit} className="space-y-4">
+            {selectedPlatform && oauthCapablePlatforms.includes(selectedPlatform) && (
+              <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-2">
+                <p className="text-sm font-medium">Prefer one-click authorization?</p>
+                <p className="text-xs text-muted-foreground">
+                  Sign in on {selectedPlatformConfig?.name} and we'll receive the access token automatically.
+                </p>
+                <Button type="button" variant="outline" size="sm" onClick={handleOAuthConnect}>
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  Connect with {selectedPlatformConfig?.name}
+                </Button>
+              </div>
+            )}
+
             <div className="bg-muted/50 rounded-lg p-4 mb-4">
               <p className="text-sm text-muted-foreground">
                 Your credentials are encrypted and stored securely. They are never exposed to the frontend after submission.
