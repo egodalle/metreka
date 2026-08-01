@@ -105,27 +105,27 @@ export default function Onboarding() {
   };
 
   const initiateConnection = async (platform: StorePlatform) => {
-    const config = platformConfigs.find(p => p.id === platform);
-    
-    if (config?.connectionMethod === 'api_key') {
-      // API key flow - show credentials form
+    // All platforms collect credentials in-app; OAuth is offered as an
+    // alternative on the credentials step when the provider app is configured.
+    setStep('credentials');
+  };
+
+  const handleOAuthConnect = async () => {
+    if (!selectedPlatform) return;
+    setStep('connecting');
+    try {
+      const authorizeUrl = await startOAuthConnection(
+        selectedPlatform,
+        credentials.storeUrl,
+      );
+      window.location.href = authorizeUrl;
+    } catch (error) {
+      toast({
+        title: 'OAuth unavailable',
+        description: error instanceof Error ? error.message : 'Could not start OAuth',
+        variant: 'destructive',
+      });
       setStep('credentials');
-    } else {
-      // OAuth flow - connect directly (simulated in demo mode)
-      setStep('connecting');
-      try {
-        const connection = await connectStore.mutateAsync({ platform });
-        setStoreId(connection.id);
-        setStep('syncing');
-        setSyncStatus({ status: 'syncing', progress: 0 });
-      } catch (error) {
-        toast({
-          title: 'Connection failed',
-          description: error instanceof Error ? error.message : 'Failed to connect store',
-          variant: 'destructive',
-        });
-        setStep('select');
-      }
     }
   };
 
@@ -144,8 +144,12 @@ export default function Onboarding() {
     if (!selectedPlatform) return;
 
     try {
-      const connection = await connectStore.mutateAsync({ platform: selectedPlatform });
-      
+      const connection = await connectStore.mutateAsync({
+        platform: selectedPlatform,
+        storeUrl: credentials.storeUrl,
+        credentials,
+      });
+
       // Clear credentials from state immediately (security)
       setCredentials({});
       setStoreId(connection.id);
@@ -158,6 +162,7 @@ export default function Onboarding() {
         title: 'Credentials saved',
         description: 'Starting data sync...',
       });
+
     } catch (error) {
       toast({
         title: 'Connection failed',
