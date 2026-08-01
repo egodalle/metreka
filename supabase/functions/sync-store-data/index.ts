@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { decryptCredentials } from "../_shared/crypto.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -32,9 +33,7 @@ async function syncShopifyData(
   
   try {
     // Decrypt credentials (in production, use proper encryption)
-    const credentials = connection.credentials_encrypted 
-      ? JSON.parse(connection.credentials_encrypted)
-      : null;
+    const credentials = await decryptCredentials(connection.credentials_encrypted);
     
     if (!credentials?.accessToken || !connection.store_url) {
       result.errors.push('Missing Shopify credentials or store URL');
@@ -207,9 +206,7 @@ async function syncLazadaData(
   const result: SyncResult = { orders: 0, products: 0, customers: 0, errors: [] };
   
   try {
-    const credentials = connection.credentials_encrypted
-      ? JSON.parse(connection.credentials_encrypted)
-      : null;
+    const credentials = await decryptCredentials(connection.credentials_encrypted);
 
     if (!credentials?.accessToken || !credentials?.appKey) {
       result.errors.push('Missing Lazada credentials');
@@ -321,9 +318,7 @@ async function syncShopeeData(
   const result: SyncResult = { orders: 0, products: 0, customers: 0, errors: [] };
   
   try {
-    const credentials = connection.credentials_encrypted
-      ? JSON.parse(connection.credentials_encrypted)
-      : null;
+    const credentials = await decryptCredentials(connection.credentials_encrypted);
 
     if (!credentials?.accessToken || !credentials?.shopId) {
       result.errors.push('Missing Shopee credentials');
