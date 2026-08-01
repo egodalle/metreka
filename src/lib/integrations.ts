@@ -1,7 +1,6 @@
 // Store Integration API client
 import { supabase } from '@/integrations/supabase/client';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://datapulse-fkcq.onrender.com';
 
 // Demo mode for displaying realistic data when real API sync is not implemented
 // Since the actual data pipeline to sync from Shopify/Lazada/Shopee to the backend
