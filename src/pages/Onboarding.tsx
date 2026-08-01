@@ -396,6 +396,19 @@ export default function Onboarding() {
       case 'credentials':
         return (
           <form onSubmit={handleCredentialsSubmit} className="space-y-4">
+            {selectedPlatform && oauthCapablePlatforms.includes(selectedPlatform) && (
+              <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-2">
+                <p className="text-sm font-medium">Prefer one-click authorization?</p>
+                <p className="text-xs text-muted-foreground">
+                  Sign in on {selectedPlatformConfig?.name} and we'll receive the access token automatically.
+                </p>
+                <Button type="button" variant="outline" size="sm" onClick={handleOAuthConnect}>
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  Connect with {selectedPlatformConfig?.name}
+                </Button>
+              </div>
+            )}
+
             <div className="bg-muted/50 rounded-lg p-4 mb-4">
               <p className="text-sm text-muted-foreground">
                 Your credentials are encrypted and stored securely. They are never exposed to the frontend after submission.
