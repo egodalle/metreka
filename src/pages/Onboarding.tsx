@@ -19,10 +19,13 @@ import {
   StorePlatform,
   platformConfigs,
   apiKeyFields,
+  oauthCapablePlatforms,
   getSyncStatus,
   SyncStatus,
   isDemoMode,
 } from '@/lib/integrations';
+import { startOAuthConnection } from '@/lib/stores';
+
 import { Badge } from '@/components/ui/badge';
 import { useStoreConnections, useConnectStore, useDisconnectStore } from '@/hooks/useStoreConnections';
 
