@@ -70,7 +70,7 @@ serve(async (req) => {
       throw new Error("PADDLE_API_KEY is not configured");
     }
 
-    const origin = req.headers.get("origin") || "https://metreka.lovable.app";
+    const origin = req.headers.get("origin") || Deno.env.get("APP_URL") || "http://localhost:8080";
 
     // Create Paddle checkout session using Transaction API
     const response = await fetch("https://api.paddle.com/transactions", {

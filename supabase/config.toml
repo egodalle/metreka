@@ -1,7 +1,6 @@
 project_id = "wwxhmxrsrqlirjfbmnsk"
 
-# Google OAuth — for local `supabase start` only.
-# Hosted project (Loveable/production): enable in Dashboard → Authentication → Providers → Google
+# Google OAuth — enable in Dashboard → Authentication → Providers → Google
 [auth.external.google]
 enabled = false
 client_id = "env(GOOGLE_CLIENT_ID)"
@@ -9,12 +8,12 @@ secret = "env(GOOGLE_CLIENT_SECRET)"
 skip_nonce_check = true
 
 [auth]
-site_url = "https://metreka.lovable.app"
+site_url = "https://metreka.vercel.app"
 additional_redirect_urls = [
   "http://localhost:8080/auth/callback",
-  "https://metreka.lovable.app/auth/callback",
+  "https://metreka.vercel.app/auth/callback",
   "http://localhost:8080/oauth/callback",
-  "https://metreka.lovable.app/oauth/callback",
+  "https://metreka.vercel.app/oauth/callback",
 ]
 
 [functions.create-checkout]

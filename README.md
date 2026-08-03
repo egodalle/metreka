@@ -1034,17 +1034,37 @@ Created: December 2024
 
 Last Updated: December 2024
 
-This project was built with [Lovable](https://lovable.dev).
+## Deployment (Vercel — no Lovable)
 
-**Live app**: https://metreka.lovable.app
+Metreka is a standard Vite + React app. Host on [Vercel](https://vercel.com) (or any static host).
 
-## Build with Lovable
+**Production URL**: https://metreka.vercel.app (change `vercel.json` / env if you use a custom domain)
 
-Continue developing this project in the [Lovable editor](https://lovable.dev/projects/464e3c4b-811a-42e6-8736-e9c7807c88e1).
+### One-time setup
 
-- **Ship faster**: describe what you want to build and Lovable handles the code.
-- **Stay in sync**: every change made in Lovable is committed straight to this repository.
-- **Full ownership**: this code is yours. Push to `main` on GitHub and your changes sync back into Lovable, ready for your next prompt.
+1. Import `egodalle/metreka` in Vercel → Framework: **Vite** → Build: `npm run build` → Output: `dist`
+2. Set environment variables:
+   - `VITE_SUPABASE_URL` = `https://wwxhmxrsrqlirjfbmnsk.supabase.co`
+   - `VITE_SUPABASE_PUBLISHABLE_KEY` = your Supabase anon/publishable key
+   - `VITE_APP_URL` = `https://metreka.vercel.app` (or your domain)
+3. Supabase Dashboard → **Authentication → URL Configuration**:
+   - Site URL: your production URL
+   - Redirect URLs: `{production}/auth/callback`, `{production}/oauth/callback`, plus `http://localhost:8080/...` for local dev
+4. `npx supabase secrets set APP_URL=https://metreka.vercel.app` (for Paddle checkout redirects)
+
+### Deploy
+
+Every push to `main` deploys automatically if Vercel is connected to GitHub. Or manually:
+
+```bash
+npx vercel --prod
+```
+
+Backend (Supabase edge functions) deploy separately:
+
+```bash
+npx supabase functions deploy store-connect sync-store-data
+```
 
 ## Development
 
