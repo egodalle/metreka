@@ -1,14 +1,8 @@
-// Store Integration API client
+// Store integration client — sync status, demo mode, platform configs
 import { supabase } from '@/integrations/supabase/client';
 
-
-// Demo mode for displaying realistic data when real API sync is not implemented
-// Since the actual data pipeline to sync from Shopify/Lazada/Shopee to the backend
-// is not yet implemented, we use demo mode to show realistic sample data based on
-// which stores the user has connected. This prevents showing zeroes/blanks.
-//
-// When real sync is implemented, set VITE_DEMO_MODE=false to use actual API data.
-let demoMode: boolean = import.meta.env.VITE_DEMO_MODE !== 'false';
+// Demo mode shows simulated dashboard data on /demo only (set VITE_DEMO_MODE=true)
+let demoMode: boolean = import.meta.env.VITE_DEMO_MODE === 'true';
 
 export function setDemoMode(enabled: boolean): void {
   demoMode = enabled;
@@ -175,11 +169,22 @@ export async function getSyncStatus(storeId: string): Promise<SyncStatus> {
     };
   }
 
-  if (status === 'syncing') {
+  if (status === 'syncing' || status === 'pending') {
+    // Stuck pending usually means the background sync never started
+    if (status === 'pending' && connection.last_sync_at) {
+      return { status: 'syncing', message: 'Importing your store data...' };
+    }
+    if (status === 'pending' && log?.status === 'running') {
+      return { status: 'syncing', message: 'Importing your store data...' };
+    }
+    if (status === 'pending') {
+      return {
+        status: 'pending',
+        message: 'Waiting for sync to start... You can continue to the dashboard and refresh in a minute.',
+      };
+    }
     return { status: 'syncing', message: 'Importing your store data...' };
   }
-
-  return { status: 'pending', message: 'Waiting for the first sync to start...' };
 }
 
 // Store listing/disconnect live in src/lib/stores.ts (Supabase-backed)

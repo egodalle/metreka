@@ -75,7 +75,7 @@ export function PaywallModal({ open, onOpenChange, trialExpired = true }: Paywal
           <DialogDescription className="text-muted-foreground">
             {trialExpired 
               ? "Choose a plan to continue accessing your analytics dashboard and grow your business."
-              : "Unlock full access to GrowthPulse analytics."}
+              : "Unlock full access to Metreka analytics."}
           </DialogDescription>
         </DialogHeader>
 

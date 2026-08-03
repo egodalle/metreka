@@ -27,6 +27,18 @@ const formatCurrency = (value: number) =>
 const formatNumber = (value: number) => 
   new Intl.NumberFormat('en-US').format(value);
 
+function displayCustomerName(sale: {
+  customer_name?: string | null;
+  customer_email?: string | null;
+  customer_id?: string | null;
+}): string {
+  const name = sale.customer_name?.trim();
+  if (name) return name;
+  if (sale.customer_email?.trim()) return sale.customer_email.trim();
+  if (sale.customer_id) return `Customer #${sale.customer_id.slice(-6)}`;
+  return 'Guest checkout';
+}
+
 export function CustomerAnalyticsSection({ isLoading: externalLoading, selectedStore = "all", connectedPlatforms = [] }: CustomerAnalyticsSectionProps) {
   const { data, isLoading: queryLoading } = useSales({ 
     source: selectedStore !== "all" ? selectedStore : undefined,
@@ -73,9 +85,10 @@ export function CustomerAnalyticsSection({ isLoading: externalLoading, selectedS
   }>();
 
   filteredSales.forEach(sale => {
-    const customerId = sale.customer_id || sale.customer_name || 'Unknown';
+    const customerId = sale.customer_id || sale.customer_email || sale.customer_name || 'guest';
+    const displayName = displayCustomerName(sale);
     const existing = customerMap.get(customerId) || { 
-      name: sale.customer_name || 'Unknown Customer', 
+      name: displayName, 
       email: sale.customer_email,
       orders: 0, 
       totalSpent: 0,

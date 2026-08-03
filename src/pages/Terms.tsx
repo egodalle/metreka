@@ -2,6 +2,45 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import { Helmet } from "react-helmet";
 
+const sections = [
+  {
+    title: "Acceptance of terms",
+    body: "By accessing or using Metreka, you agree to these Terms of Service. If you do not agree, do not use the service.",
+  },
+  {
+    title: "Service description",
+    body: "Metreka provides software that connects to third-party e-commerce platforms, syncs store data, and presents analytics dashboards. We strive for high availability but do not guarantee uninterrupted or error-free operation.",
+  },
+  {
+    title: "Accounts and eligibility",
+    body: "You must provide accurate registration information and keep your credentials secure. You are responsible for all activity under your account. You must be at least 18 years old and authorized to connect any store you link to Metreka.",
+  },
+  {
+    title: "Store connections",
+    body: "You grant Metreka permission to access store data via credentials or OAuth tokens you provide, solely to deliver the service. You must comply with each platform's terms (Shopify, Lazada, Shopee, etc.) when connecting stores.",
+  },
+  {
+    title: "Subscriptions and billing",
+    body: "Paid plans are billed monthly through Paddle. Fees are charged in advance. Trials convert to paid plans unless canceled before the trial ends. Refunds are handled according to our refund policy and applicable law. You may cancel anytime via the customer portal or by contacting support.",
+  },
+  {
+    title: "Acceptable use",
+    body: "You may not misuse the service, attempt unauthorized access, reverse engineer the platform, resell access without permission, or use Metreka for unlawful purposes.",
+  },
+  {
+    title: "Intellectual property",
+    body: "Metreka retains all rights to the platform, branding, and software. You retain ownership of your store data. We receive a limited license to process your data to provide the service.",
+  },
+  {
+    title: "Disclaimer and limitation of liability",
+    body: "The service is provided \"as is\" without warranties of any kind. To the maximum extent permitted by law, Metreka is not liable for indirect, incidental, or consequential damages, or for decisions you make based on dashboard data.",
+  },
+  {
+    title: "Changes and contact",
+    body: "We may update these terms from time to time. Continued use after changes constitutes acceptance. Contact: hello@metreka.com.",
+  },
+];
+
 const Terms = () => {
   return (
     <>
@@ -9,7 +48,7 @@ const Terms = () => {
         <title>Terms of Service - Metreka</title>
         <meta name="description" content="Metreka's terms of service govern your use of our e-commerce analytics platform." />
       </Helmet>
-      
+
       <div className="min-h-screen bg-background">
         <Navbar />
         <main className="pt-24 pb-16">
@@ -22,12 +61,12 @@ const Terms = () => {
                 Last updated: February 2026
               </p>
               <div className="glass rounded-2xl p-8 text-left space-y-6">
-                <p className="text-muted-foreground">
-                  By using Metreka, you agree to these terms of service.
-                </p>
-                <p className="text-muted-foreground">
-                  Full terms of service content coming soon.
-                </p>
+                {sections.map((section) => (
+                  <section key={section.title}>
+                    <h2 className="text-xl font-semibold text-foreground mb-2">{section.title}</h2>
+                    <p className="text-muted-foreground">{section.body}</p>
+                  </section>
+                ))}
               </div>
             </div>
           </div>

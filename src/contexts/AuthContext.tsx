@@ -10,12 +10,34 @@ interface AuthContextType {
   isAuthenticated: boolean;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, name?: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
 AuthContext.displayName = 'AuthContext';
+
+function formatGoogleAuthError(error: unknown): string {
+  const message =
+    error instanceof Error
+      ? error.message
+      : typeof error === 'object' && error !== null && 'message' in error
+        ? String((error as { message: unknown }).message)
+        : String(error);
+
+  const lower = message.toLowerCase();
+  if (
+    lower.includes('provider is not enabled') ||
+    lower.includes('unsupported provider') ||
+    lower.includes('validation_failed')
+  ) {
+    return (
+      'Google sign-in is not enabled in Supabase yet. Open Supabase Dashboard → Authentication → Providers → Google, turn it on, and add your Google OAuth Client ID and Secret.'
+    );
+  }
+  return message || 'Google sign-in failed';
+}
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
@@ -59,6 +81,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
   }, []);
 
+  const signInWithGoogle = useCallback(async () => {
+    const redirectTo = `${window.location.origin}/auth/callback`;
+
+    const { data, error } = await supabase.auth.signInWithOAuth({
+      provider: 'google',
+      options: {
+        redirectTo,
+        queryParams: {
+          prompt: 'select_account',
+        },
+        skipBrowserRedirect: false,
+      },
+    });
+
+    if (error) throw new Error(formatGoogleAuthError(error));
+
+    if (!data?.url) {
+      throw new Error(
+        'Google sign-in is not configured. Enable the Google provider in Supabase Auth settings.',
+      );
+    }
+
+    // Fallback if auto-redirect does not fire (some embedded browsers)
+    window.location.assign(data.url);
+  }, []);
+
   const signOut = useCallback(async () => {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
@@ -78,9 +126,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isAuthenticated: !!session,
     signIn,
     signUp,
+    signInWithGoogle,
     signOut,
     resetPassword,
-  }), [user, session, isLoading, signIn, signUp, signOut, resetPassword]);
+  }), [user, session, isLoading, signIn, signUp, signInWithGoogle, signOut, resetPassword]);
 
   return (
     <AuthContext.Provider value={value}>

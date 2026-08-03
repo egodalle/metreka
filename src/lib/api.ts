@@ -1,9 +1,9 @@
-// API client for GrowthPulse - pulls data from synced PostgreSQL tables
+// Metreka API client — reads from synced Supabase tables (optional external API fallback)
 import { StorePlatform } from './integrations';
 import { supabase } from '@/integrations/supabase/client';
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '';
-const API_KEY = import.meta.env.VITE_GROWTHPULSE_API_KEY || '';
+const API_BASE_URL = import.meta.env.VITE_API_URL?.trim() || '';
+const API_KEY = import.meta.env.VITE_METREKA_API_KEY || import.meta.env.VITE_GROWTHPULSE_API_KEY || '';
 
 // Cache for connected platforms (refreshed on each API call)
 let cachedConnectedPlatforms: StorePlatform[] = [];
@@ -168,6 +168,55 @@ export interface DailyData {
 // DATA ACCESS LAYER - Fetches from synced PostgreSQL tables
 // ============================================
 
+type OrderRow = {
+  platform: string;
+  external_order_id: string;
+  total_amount: number | string | null;
+  order_date: string | null;
+  quantity: number | null;
+  order_status?: string | null;
+};
+
+function orderKey(row: Pick<OrderRow, 'platform' | 'external_order_id'>): string {
+  return `${row.platform}:${row.external_order_id}`;
+}
+
+function countUniqueOrders(rows: Pick<OrderRow, 'platform' | 'external_order_id'>[]): number {
+  return new Set(rows.map(orderKey)).size;
+}
+
+type SummaryBucket = {
+  orderKeys: Set<string>;
+  units: number;
+  sales: number;
+  dates: string[];
+};
+
+function createSummaryBucket(): SummaryBucket {
+  return { orderKeys: new Set(), units: 0, sales: 0, dates: [] };
+}
+
+function addToSummaryBucket(bucket: SummaryBucket, order: OrderRow): void {
+  bucket.orderKeys.add(orderKey(order));
+  bucket.units += order.quantity || 0;
+  bucket.sales += Number(order.total_amount) || 0;
+  if (order.order_date) bucket.dates.push(order.order_date);
+}
+
+function summaryBucketToItem(dimension: string, stats: SummaryBucket): SalesSummaryItem {
+  const orderCount = stats.orderKeys.size;
+  const sortedDates = [...stats.dates].sort();
+  return {
+    dimension,
+    total_orders: orderCount,
+    total_units: stats.units,
+    total_sales: stats.sales,
+    avg_order_value: orderCount > 0 ? stats.sales / orderCount : 0,
+    earliest_order: sortedDates[0] || '',
+    latest_order: sortedDates[sortedDates.length - 1] || '',
+  };
+}
+
 async function getStatsFromDB(): Promise<StatsResponse> {
   const connectedPlatforms = await fetchConnectedPlatforms();
   
@@ -191,10 +240,10 @@ async function getStatsFromDB(): Promise<StatsResponse> {
     };
   }
 
-  // Fetch aggregated order stats
+  // Fetch aggregated order stats (one row per line item)
   const { data: orders, error: ordersError } = await supabase
     .from('synced_orders')
-    .select('platform, total_amount, order_date, quantity')
+    .select('platform, external_order_id, total_amount, order_date, quantity')
     .in('platform', connectedPlatforms);
 
   if (ordersError) {
@@ -214,13 +263,9 @@ async function getStatsFromDB(): Promise<StatsResponse> {
     .select('id, platform')
     .in('platform', connectedPlatforms);
 
-  const orderData = orders || [];
+  const orderData = (orders || []) as OrderRow[];
   const totalRevenue = orderData.reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0);
-  const totalOrders = orderData.length;
-  const totalUnits = orderData.reduce((sum, o) => sum + (o.quantity || 0), 0);
-  
-  // Get unique orders by grouping
-  const uniqueOrderIds = new Set(orderData.map(o => `${o.platform}-${o.order_date}`));
+  const totalOrders = countUniqueOrders(orderData);
   
   const dates = orderData
     .filter(o => o.order_date)
@@ -232,7 +277,7 @@ async function getStatsFromDB(): Promise<StatsResponse> {
     const platformOrders = orderData.filter(o => o.platform === platform);
     return {
       source: platform,
-      orders: platformOrders.length,
+      orders: countUniqueOrders(platformOrders),
       revenue: platformOrders.reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0),
     };
   });
@@ -269,7 +314,7 @@ async function getSalesSummaryFromDB(
 
   let query = supabase
     .from('synced_orders')
-    .select('platform, order_date, total_amount, quantity, order_status')
+    .select('platform, external_order_id, order_date, total_amount, quantity, order_status')
     .in('platform', connectedPlatforms);
 
   if (startDate) {
@@ -286,129 +331,75 @@ async function getSalesSummaryFromDB(
     throw new Error('Failed to fetch sales summary');
   }
 
-  const orderData = orders || [];
+  const orderData = (orders || []) as OrderRow[];
 
   if (groupBy === 'source') {
-    const grouped = new Map<string, {
-      orders: number;
-      units: number;
-      sales: number;
-      dates: string[];
-    }>();
+    const grouped = new Map<string, SummaryBucket>();
 
     orderData.forEach(order => {
       const key = order.platform;
-      const existing = grouped.get(key) || { orders: 0, units: 0, sales: 0, dates: [] };
-      existing.orders += 1;
-      existing.units += order.quantity || 0;
-      existing.sales += Number(order.total_amount) || 0;
-      if (order.order_date) existing.dates.push(order.order_date);
+      const existing = grouped.get(key) || createSummaryBucket();
+      addToSummaryBucket(existing, order);
       grouped.set(key, existing);
     });
 
-    const data: SalesSummaryItem[] = Array.from(grouped.entries()).map(([dimension, stats]) => ({
-      dimension,
-      total_orders: stats.orders,
-      total_units: stats.units,
-      total_sales: stats.sales,
-      avg_order_value: stats.orders > 0 ? stats.sales / stats.orders : 0,
-      earliest_order: stats.dates.sort()[0] || '',
-      latest_order: stats.dates.sort()[stats.dates.length - 1] || '',
-    }));
+    const data: SalesSummaryItem[] = Array.from(grouped.entries()).map(([dimension, stats]) =>
+      summaryBucketToItem(dimension, stats),
+    );
 
     return { success: true, group_by: 'source', data };
   }
 
   if (groupBy === 'day') {
-    const grouped = new Map<string, {
-      orders: number;
-      units: number;
-      sales: number;
-    }>();
+    const grouped = new Map<string, SummaryBucket>();
 
     orderData.forEach(order => {
       const key = order.order_date?.split('T')[0] || 'unknown';
-      const existing = grouped.get(key) || { orders: 0, units: 0, sales: 0 };
-      existing.orders += 1;
-      existing.units += order.quantity || 0;
-      existing.sales += Number(order.total_amount) || 0;
+      const existing = grouped.get(key) || createSummaryBucket();
+      addToSummaryBucket(existing, order);
       grouped.set(key, existing);
     });
 
     const data: SalesSummaryItem[] = Array.from(grouped.entries())
       .filter(([dim]) => dim !== 'unknown')
-      .map(([dimension, stats]) => ({
-        dimension,
-        total_orders: stats.orders,
-        total_units: stats.units,
-        total_sales: stats.sales,
-        avg_order_value: stats.orders > 0 ? stats.sales / stats.orders : 0,
-        earliest_order: dimension,
-        latest_order: dimension,
-      }))
+      .map(([dimension, stats]) => summaryBucketToItem(dimension, stats))
       .sort((a, b) => a.dimension.localeCompare(b.dimension));
 
     return { success: true, group_by: 'day', data };
   }
 
   if (groupBy === 'month') {
-    const grouped = new Map<string, {
-      orders: number;
-      units: number;
-      sales: number;
-    }>();
+    const grouped = new Map<string, SummaryBucket>();
 
     orderData.forEach(order => {
       const date = order.order_date?.split('T')[0];
-      const key = date ? date.substring(0, 7) : 'unknown'; // YYYY-MM
-      const existing = grouped.get(key) || { orders: 0, units: 0, sales: 0 };
-      existing.orders += 1;
-      existing.units += order.quantity || 0;
-      existing.sales += Number(order.total_amount) || 0;
+      const key = date ? date.substring(0, 7) : 'unknown';
+      const existing = grouped.get(key) || createSummaryBucket();
+      addToSummaryBucket(existing, order);
       grouped.set(key, existing);
     });
 
     const data: SalesSummaryItem[] = Array.from(grouped.entries())
       .filter(([dim]) => dim !== 'unknown')
-      .map(([dimension, stats]) => ({
-        dimension,
-        total_orders: stats.orders,
-        total_units: stats.units,
-        total_sales: stats.sales,
-        avg_order_value: stats.orders > 0 ? stats.sales / stats.orders : 0,
-        earliest_order: dimension,
-        latest_order: dimension,
-      }))
+      .map(([dimension, stats]) => summaryBucketToItem(dimension, stats))
       .sort((a, b) => a.dimension.localeCompare(b.dimension));
 
     return { success: true, group_by: 'month', data };
   }
 
   if (groupBy === 'status') {
-    const grouped = new Map<string, {
-      orders: number;
-      units: number;
-      sales: number;
-    }>();
+    const grouped = new Map<string, SummaryBucket>();
 
     orderData.forEach(order => {
       const key = order.order_status || 'unknown';
-      const existing = grouped.get(key) || { orders: 0, units: 0, sales: 0 };
-      existing.orders += 1;
-      existing.units += order.quantity || 0;
-      existing.sales += Number(order.total_amount) || 0;
+      const existing = grouped.get(key) || createSummaryBucket();
+      addToSummaryBucket(existing, order);
       grouped.set(key, existing);
     });
 
-    const data: SalesSummaryItem[] = Array.from(grouped.entries()).map(([dimension, stats]) => ({
-      dimension,
-      total_orders: stats.orders,
-      total_units: stats.units,
-      total_sales: stats.sales,
-      avg_order_value: stats.orders > 0 ? stats.sales / stats.orders : 0,
-      earliest_order: '',
-      latest_order: '',
-    }));
+    const data: SalesSummaryItem[] = Array.from(grouped.entries()).map(([dimension, stats]) =>
+      summaryBucketToItem(dimension, stats),
+    );
 
     return { success: true, group_by: 'status', data };
   }

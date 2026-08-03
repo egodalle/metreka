@@ -36,7 +36,7 @@ export const platformConfigs: PlatformConfig[] = [
   {
     id: 'lazada',
     name: 'Lazada',
-    description: 'Connect with your Open Platform credentials',
+    description: 'Connect via OAuth or Open Platform API credentials',
     icon: '🛍️',
     connectionMethod: 'api_key',
   },

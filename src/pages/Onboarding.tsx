@@ -28,6 +28,7 @@ import { startOAuthConnection } from '@/lib/stores';
 
 import { Badge } from '@/components/ui/badge';
 import { useStoreConnections, useConnectStore, useDisconnectStore } from '@/hooks/useStoreConnections';
+import { useHasAccess } from '@/hooks/useSubscription';
 
 type OnboardingStep = 'select' | 'permission' | 'connecting' | 'credentials' | 'syncing' | 'complete';
 
@@ -45,6 +46,8 @@ export default function Onboarding() {
   const { data: storeConnections = [], refetch: refetchConnections } = useStoreConnections();
   const connectStore = useConnectStore();
   const disconnectStore = useDisconnectStore();
+  const { hasAccess, subscription } = useHasAccess();
+  const storeLimit = subscription?.storeLimit ?? 0;
 
   // Disconnect dialog state
   const [disconnectDialog, setDisconnectDialog] = useState<{
@@ -103,6 +106,22 @@ export default function Onboarding() {
   }, [step, storeId, toast, refetchConnections]);
 
   const handlePlatformSelect = (platform: StorePlatform) => {
+    if (!hasAccess) {
+      toast({
+        title: 'Subscription required',
+        description: 'Start your free trial or subscribe to connect a store.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    if (connectedPlatforms.length >= storeLimit) {
+      toast({
+        title: 'Store limit reached',
+        description: `Your plan allows ${storeLimit} store(s). Upgrade to add more.`,
+        variant: 'destructive',
+      });
+      return;
+    }
     setSelectedPlatform(platform);
     setStep('permission');
   };
@@ -317,7 +336,7 @@ export default function Onboarding() {
             </div>
 
             <div className="space-y-3">
-              <p className="text-sm font-medium text-foreground">GrowthPulse will access:</p>
+              <p className="text-sm font-medium text-foreground">Metreka will access:</p>
               <div className="space-y-2">
                 <div className="flex items-center gap-3 p-3 rounded-lg bg-muted/50">
                   <Package className="h-5 w-5 text-primary" />

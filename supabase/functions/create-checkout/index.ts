@@ -6,7 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-// GrowthPulse Subscription Tiers - Paddle Price IDs
+// Metreka subscription tiers — Paddle Price IDs
 // You'll need to create these products in Paddle dashboard and update these IDs
 const SUBSCRIPTION_TIERS = {
   starter: {

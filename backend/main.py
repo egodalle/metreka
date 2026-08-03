@@ -22,7 +22,7 @@ from supabase import create_client, Client
 # Configuration
 # ============================================
 
-SUPABASE_URL = os.getenv("SUPABASE_URL", "https://kqymzqqqkzuezgkbhexc.supabase.co")
+SUPABASE_URL = os.getenv("SUPABASE_URL", "https://wwxhmxrsrqlirjfbmnsk.supabase.co")
 SUPABASE_SERVICE_ROLE_KEY = os.getenv("SUPABASE_SERVICE_ROLE_KEY", "")
 
 # Store platform API configurations
@@ -493,7 +493,12 @@ async def get_stats(user=Depends(get_current_user)):
     
     order_data = orders.data or []
     total_revenue = sum(float(o.get("total_amount", 0) or 0) for o in order_data)
-    total_orders = len(order_data)
+    unique_order_keys = {
+        f"{o.get('platform')}:{o.get('external_order_id')}"
+        for o in order_data
+        if o.get("external_order_id")
+    }
+    total_orders = len(unique_order_keys)
     
     # Get date range
     dates = [o["order_date"] for o in order_data if o.get("order_date")]
@@ -503,9 +508,14 @@ async def get_stats(user=Depends(get_current_user)):
     by_source = []
     for platform in platforms:
         platform_orders = [o for o in order_data if o.get("platform") == platform]
+        platform_order_keys = {
+            f"{o.get('platform')}:{o.get('external_order_id')}"
+            for o in platform_orders
+            if o.get("external_order_id")
+        }
         by_source.append({
             "source": platform,
-            "orders": len(platform_orders),
+            "orders": len(platform_order_keys),
             "revenue": sum(float(o.get("total_amount", 0) or 0) for o in platform_orders),
         })
     
@@ -565,7 +575,7 @@ async def get_sales_summary(
     order_data = orders.data or []
     
     # Group by dimension
-    grouped = {}
+    grouped: dict[str, dict] = {}
     for order in order_data:
         if group_by == "source":
             key = order.get("platform", "unknown")
@@ -577,11 +587,13 @@ async def get_sales_summary(
             key = order.get("order_status", "unknown")
         else:
             key = "unknown"
-        
+
         if key not in grouped:
-            grouped[key] = {"orders": 0, "units": 0, "sales": 0, "dates": []}
-        
-        grouped[key]["orders"] += 1
+            grouped[key] = {"order_keys": set(), "units": 0, "sales": 0, "dates": []}
+
+        order_key = f"{order.get('platform')}:{order.get('external_order_id')}"
+        if order.get("external_order_id"):
+            grouped[key]["order_keys"].add(order_key)
         grouped[key]["units"] += order.get("quantity", 0) or 0
         grouped[key]["sales"] += float(order.get("total_amount", 0) or 0)
         if order.get("order_date"):
@@ -592,12 +604,13 @@ async def get_sales_summary(
     for dimension, stats in grouped.items():
         if dimension and dimension != "unknown":
             stats["dates"].sort()
+            order_count = len(stats["order_keys"])
             data.append({
                 "dimension": dimension,
-                "total_orders": stats["orders"],
+                "total_orders": order_count,
                 "total_units": stats["units"],
                 "total_sales": stats["sales"],
-                "avg_order_value": stats["sales"] / stats["orders"] if stats["orders"] > 0 else 0,
+                "avg_order_value": stats["sales"] / order_count if order_count > 0 else 0,
                 "earliest_order": stats["dates"][0] if stats["dates"] else "",
                 "latest_order": stats["dates"][-1] if stats["dates"] else "",
             })

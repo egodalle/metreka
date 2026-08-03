@@ -3,7 +3,8 @@ import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 const logStep = (step: string, details?: unknown) => {
@@ -21,12 +22,11 @@ serve(async (req) => {
 
     const paddleApiKey = Deno.env.get("PADDLE_API_KEY");
     if (!paddleApiKey) throw new Error("PADDLE_API_KEY is not set");
-    logStep("Paddle key verified");
 
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
-      { auth: { persistSession: false } }
+      { auth: { persistSession: false } },
     );
 
     const authHeader = req.headers.get("Authorization");
@@ -40,107 +40,94 @@ serve(async (req) => {
     if (!user?.email) throw new Error("User not authenticated or email not available");
     logStep("User authenticated", { userId: user.id, email: user.email });
 
-    // Find Paddle customer by email
-    const customersResponse = await fetch(
-      `https://api.paddle.com/customers?email=${encodeURIComponent(user.email)}`,
-      {
-        headers: {
-          "Authorization": `Bearer ${paddleApiKey}`,
-          "Content-Type": "application/json",
+    // Resolve Paddle customer from local subscription first
+    const { data: localSub } = await supabaseClient
+      .from("subscriptions")
+      .select("paddle_customer_id, paddle_subscription_id")
+      .eq("user_id", user.id)
+      .maybeSingle();
+
+    let customerId = localSub?.paddle_customer_id;
+    let subscriptionId = localSub?.paddle_subscription_id;
+
+    if (!customerId) {
+      const customersResponse = await fetch(
+        `https://api.paddle.com/customers?email=${encodeURIComponent(user.email)}`,
+        {
+          headers: {
+            Authorization: `Bearer ${paddleApiKey}`,
+            "Content-Type": "application/json",
+          },
         },
+      );
+
+      if (!customersResponse.ok) {
+        throw new Error("Failed to fetch customer from Paddle");
       }
-    );
 
-    if (!customersResponse.ok) {
-      const errorData = await customersResponse.json();
-      logStep("Paddle customers error", errorData);
-      throw new Error("Failed to fetch customer from Paddle");
+      const customersData = await customersResponse.json();
+      const customers = customersData.data || [];
+      if (customers.length === 0) {
+        throw new Error("No Paddle customer found. Subscribe to a plan first.");
+      }
+      customerId = customers[0].id;
     }
 
-    const customersData = await customersResponse.json();
-    const customers = customersData.data || [];
-
-    if (customers.length === 0) {
-      throw new Error("No Paddle customer found for this user");
-    }
-
-    const customerId = customers[0].id;
-    logStep("Found Paddle customer", { customerId });
-
-    // Get active subscriptions to find subscription ID
-    const subscriptionsResponse = await fetch(
-      `https://api.paddle.com/subscriptions?customer_id=${customerId}&status=active`,
-      {
-        headers: {
-          "Authorization": `Bearer ${paddleApiKey}`,
-          "Content-Type": "application/json",
+    if (!subscriptionId) {
+      const subscriptionsResponse = await fetch(
+        `https://api.paddle.com/subscriptions?customer_id=${customerId}&status=active`,
+        {
+          headers: {
+            Authorization: `Bearer ${paddleApiKey}`,
+            "Content-Type": "application/json",
+          },
         },
+      );
+
+      if (subscriptionsResponse.ok) {
+        const subscriptionsData = await subscriptionsResponse.json();
+        subscriptionId = subscriptionsData.data?.[0]?.id;
       }
-    );
-
-    if (!subscriptionsResponse.ok) {
-      throw new Error("Failed to fetch subscriptions from Paddle");
     }
 
-    const subscriptionsData = await subscriptionsResponse.json();
-    const subscriptions = subscriptionsData.data || [];
+    logStep("Creating portal session", { customerId, subscriptionId });
 
-    if (subscriptions.length === 0) {
-      throw new Error("No active subscription found. Please subscribe first.");
-    }
+    const portalBody = subscriptionId
+      ? { subscription_ids: [subscriptionId] }
+      : {};
 
-    const subscriptionId = subscriptions[0].id;
-    logStep("Found subscription", { subscriptionId });
-
-    // Create a portal session for the subscription
-    // Paddle uses "update payment method" transaction for portal-like functionality
-    const origin = req.headers.get("origin") || "https://metreka.lovable.app";
-    
-    // Get the update payment method URL from subscription
-    const updateResponse = await fetch(
-      `https://api.paddle.com/subscriptions/${subscriptionId}/update-payment-method-transaction`,
+    const portalResponse = await fetch(
+      `https://api.paddle.com/customers/${customerId}/portal-sessions`,
       {
         method: "POST",
         headers: {
-          "Authorization": `Bearer ${paddleApiKey}`,
+          Authorization: `Bearer ${paddleApiKey}`,
           "Content-Type": "application/json",
         },
-      }
+        body: JSON.stringify(portalBody),
+      },
     );
 
-    if (!updateResponse.ok) {
-      // Fallback: Return subscription management info
-      logStep("Update payment method not available, returning subscription info");
-      return new Response(JSON.stringify({ 
-        subscriptionId,
-        customerId,
-        // Paddle doesn't have a direct portal URL like Stripe
-        // Users can manage via Paddle's hosted pages or the app
-        message: "Subscription management available in app",
-        manageInApp: true
-      }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
-      });
+    if (!portalResponse.ok) {
+      const errorData = await portalResponse.json().catch(() => ({}));
+      logStep("Portal session error", errorData);
+      throw new Error(errorData?.error?.detail ?? "Failed to create customer portal session");
     }
 
-    const updateData = await updateResponse.json();
-    const portalUrl = updateData.data?.checkout?.url;
+    const portalData = await portalResponse.json();
+    const urls = portalData.data?.urls;
 
-    if (portalUrl) {
-      logStep("Portal URL generated", { url: portalUrl });
-      return new Response(JSON.stringify({ url: portalUrl }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
-      });
+    const portalUrl =
+      urls?.subscriptions?.[0]?.cancel_subscription ??
+      urls?.subscriptions?.[0]?.update_subscription_payment_method ??
+      urls?.general?.overview;
+
+    if (!portalUrl) {
+      throw new Error("Paddle did not return a portal URL");
     }
 
-    // If no URL, return subscription info for in-app management
-    return new Response(JSON.stringify({ 
-      subscriptionId,
-      customerId,
-      manageInApp: true
-    }), {
+    logStep("Portal URL generated");
+    return new Response(JSON.stringify({ url: portalUrl }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 200,
     });

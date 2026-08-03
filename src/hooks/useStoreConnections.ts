@@ -58,7 +58,11 @@ export function useSyncStore() {
     mutationFn: triggerStoreSync,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['storeConnections'] });
-      toast({ title: 'Sync started', description: 'We are refreshing your store data.' });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['stats'] });
+      queryClient.invalidateQueries({ queryKey: ['sales'] });
+      queryClient.invalidateQueries({ queryKey: ['salesSummary'] });
+      toast({ title: 'Sync started', description: 'Pulling latest data from your store…' });
     },
     onError: (error) => {
       toast({

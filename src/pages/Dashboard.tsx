@@ -5,6 +5,14 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { ShopifyLogo, ShopeeLogo, LazadaLogo, StoreLogo } from "@/components/StoreLogos";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
@@ -19,10 +27,10 @@ import { ProductAnalyticsSection } from "@/components/dashboard/ProductAnalytics
 import { CustomerAnalyticsSection } from "@/components/dashboard/CustomerAnalyticsSection";
 import { ProfitabilitySection } from "@/components/dashboard/ProfitabilitySection";
 import { isDemoMode } from "@/lib/integrations";
-import { useStoreConnections } from "@/hooks/useStoreConnections";
+import { useStoreConnections, useSyncStore } from "@/hooks/useStoreConnections";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { useHasAccess } from "@/hooks/useSubscription";
+import { useHasAccess, useCustomerPortal } from "@/hooks/useSubscription";
 import { TrialBanner } from "@/components/TrialBanner";
 import { PaywallModal } from "@/components/PaywallModal";
 
@@ -156,6 +164,7 @@ const Dashboard = () => {
   
   // Check subscription/trial access
   const { hasAccess, isTrialing, isLoading: accessLoading } = useHasAccess();
+  const customerPortal = useCustomerPortal();
   const [showPaywall, setShowPaywall] = useState(false);
   
   // Show paywall if access check is done and user has no access
@@ -167,6 +176,7 @@ const Dashboard = () => {
   
   // Get actual store connections from the database
   const { data: storeConnections = [], isLoading: storeConnectionsLoading } = useStoreConnections();
+  const syncStore = useSyncStore();
   const connectedPlatforms = storeConnections
     .filter(c => c.is_active)
     .map(c => c.platform);
@@ -197,6 +207,34 @@ const Dashboard = () => {
   const isLoading = storeConnectionsLoading || dashboardLoading;
   
   const isConnected = healthData?.status === "healthy";
+
+  const handleSyncFromShopify = async () => {
+    const activeStores = storeConnections.filter((c) => c.is_active);
+    if (activeStores.length === 0) {
+      toast({
+        title: "No store connected",
+        description: "Connect a store first to sync data.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      for (const store of activeStores) {
+        await syncStore.mutateAsync(store.id);
+      }
+      toast({
+        title: "Syncing from Shopify",
+        description: "Pulling your latest orders. This may take 10–20 seconds…",
+      });
+      // Edge function runs in background; allow time before refetching DB
+      await new Promise((resolve) => setTimeout(resolve, 12000));
+      await refetch();
+      toast({ title: "Dashboard updated", description: "Latest store data loaded." });
+    } catch {
+      // useSyncStore already toasts errors
+    }
+  };
 
   const handleSignOut = async () => {
     try {
@@ -267,7 +305,8 @@ const Dashboard = () => {
 
     // For individual platform, get stats from the per-platform demo data
     // The platform data has orders, revenue, units - we need customers/products from stats
-    const platformStats = getPlatformStats(selectedStore);
+    // Per-platform customer/product counts from synced tables
+    const platformStats = getPlatformStats(selectedStore, dashboardData);
 
     return {
       totalRevenue: platform.total_revenue,
@@ -282,14 +321,24 @@ const Dashboard = () => {
 
   // Helper to get per-platform customer/product counts
   // In production this would come from the API; in demo mode we use predefined values
-  const getPlatformStats = (platform: string): { customers: number; products: number } => {
-    // These values match the demo data in api.ts for each platform
-    const platformStatsMap: Record<string, { customers: number; products: number }> = {
-      shopify: { customers: 523, products: 156 },
-      shopee: { customers: 1456, products: 234 },
-      lazada: { customers: 987, products: 189 },
-    };
-    return platformStatsMap[platform] || { customers: 0, products: 0 };
+  const getPlatformStats = (
+    platform: string,
+    data: typeof dashboardData,
+  ): { customers: number; products: number } => {
+    if (!data || isDemoMode()) {
+      const platformStatsMap: Record<string, { customers: number; products: number }> = {
+        shopify: { customers: 523, products: 156 },
+        shopee: { customers: 1456, products: 234 },
+        lazada: { customers: 987, products: 189 },
+      };
+      return platformStatsMap[platform] || { customers: 0, products: 0 };
+    }
+    // When only one store platform is connected, overview totals match that platform
+    const connectedCount = data.platforms?.length ?? 0;
+    if (connectedCount <= 1) {
+      return { customers: data.total_customers, products: data.total_products };
+    }
+    return { customers: 0, products: 0 };
   };
 
   const filteredData = getFilteredData();
@@ -297,7 +346,7 @@ const Dashboard = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Paywall Modal for expired trials */}
-      <PaywallModal open={showPaywall} trialExpired={true} />
+      <PaywallModal open={showPaywall} trialExpired={!isTrialing} onOpenChange={setShowPaywall} />
       
       {/* Trial Banner */}
       <TrialBanner />
@@ -341,9 +390,40 @@ const Dashboard = () => {
                 <Bell className="w-5 h-5" />
               </Button>
               <ThemeToggle />
-              <Button variant="ghost" size="icon">
-                <Settings className="w-5 h-5" />
-              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" title="Settings">
+                    <Settings className="w-5 h-5" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-56">
+                  <DropdownMenuLabel>Account</DropdownMenuLabel>
+                  <DropdownMenuItem onClick={() => navigate("/onboarding")}>
+                    <Plus className="mr-2 h-4 w-4" />
+                    Manage stores
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => customerPortal.mutate()}
+                    disabled={customerPortal.isPending}
+                  >
+                    {customerPortal.isPending ? (
+                      <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Settings className="mr-2 h-4 w-4" />
+                    )}
+                    Manage subscription
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowPaywall(true)}>
+                    <TrendingUp className="mr-2 h-4 w-4" />
+                    Upgrade plan
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleSignOut}>
+                    <LogOut className="mr-2 h-4 w-4" />
+                    Sign out
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
               <Button variant="ghost" size="icon" onClick={handleSignOut} title="Sign Out">
                 <LogOut className="w-5 h-5" />
               </Button>
@@ -378,13 +458,21 @@ const Dashboard = () => {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
             <h2 className="text-3xl font-bold">Dashboard</h2>
-            <p className="text-muted-foreground mt-1">Real-time data from your connected stores.</p>
+            <p className="text-muted-foreground mt-1">Data from your connected stores. Sync to pull new Shopify orders.</p>
           </div>
           
           <div className="flex items-center gap-3">
-            <Button variant="outline" onClick={() => refetch()} className="gap-2">
-              <RefreshCw className="w-4 h-4" />
-              Refresh
+            <Button
+              variant="outline"
+              onClick={handleSyncFromShopify}
+              disabled={syncStore.isPending || !hasConnectedStores}
+              className="gap-2"
+            >
+              <RefreshCw className={`w-4 h-4 ${syncStore.isPending ? "animate-spin" : ""}`} />
+              {syncStore.isPending ? "Syncing…" : "Sync from Shopify"}
+            </Button>
+            <Button variant="ghost" onClick={() => refetch()} className="gap-2" title="Reload dashboard from database">
+              Refresh view
             </Button>
             <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
               <SelectTrigger className="w-32">

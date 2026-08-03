@@ -139,25 +139,16 @@ export function useCustomerPortal() {
         throw new Error(error.message || 'Failed to open customer portal');
       }
       
-      if (data?.manageInApp) {
-        // Paddle doesn't have a direct portal like Stripe
-        return { type: 'inApp' as const, subscriptionId: data.subscriptionId };
+      if (data?.url) {
+        window.open(data.url, '_blank');
+        return { type: 'redirect' as const, url: data.url as string };
       }
-      
-      if (!data?.url) {
-        throw new Error('No portal URL returned');
-      }
-      
-      return { type: 'redirect' as const, url: data.url as string };
+
+      throw new Error(data?.error || 'No portal URL returned');
     },
     onSuccess: (result) => {
       if (result.type === 'redirect') {
         window.open(result.url, '_blank');
-      } else {
-        toast({
-          title: 'Manage Subscription',
-          description: 'You can cancel or modify your subscription from the dashboard settings.',
-        });
       }
     },
     onError: (error) => {

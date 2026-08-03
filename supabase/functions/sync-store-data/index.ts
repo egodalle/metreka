@@ -1,10 +1,78 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { decryptCredentials } from "../_shared/crypto.ts";
+import {
+  detectLazadaRegion,
+  lazadaCustomerName,
+  lazadaRequest,
+  refreshLazadaToken,
+  resolveLazadaCredentials,
+  type LazadaCredentials,
+} from "../_shared/lazada.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Headers':
+    'authorization, x-client-info, apikey, content-type, x-metreka-sync-secret',
 };
+
+type AuthResult =
+  | { authorized: true; userId: string | null; isPrivileged: true }
+  | { authorized: true; userId: string; isPrivileged: false }
+  | { authorized: false };
+
+/** Allow service-role, cron secret, or authenticated user JWT. */
+async function authorizeRequest(req: Request): Promise<AuthResult> {
+  const serviceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
+  const cronSecret = Deno.env.get('SYNC_CRON_SECRET');
+  const headerSecret = req.headers.get('X-Metreka-Sync-Secret');
+
+  if (cronSecret && headerSecret && headerSecret === cronSecret) {
+    return { authorized: true, userId: null, isPrivileged: true };
+  }
+
+  const authHeader = req.headers.get('Authorization');
+  if (!authHeader?.startsWith('Bearer ')) {
+    return { authorized: false };
+  }
+
+  const token = authHeader.slice(7).trim();
+  if (serviceKey && token === serviceKey.trim()) {
+    return { authorized: true, userId: null, isPrivileged: true };
+  }
+
+  // Legacy JWT service_role key (function-to-function calls)
+  if (token.startsWith('eyJ') && isServiceRoleJwt(token)) {
+    return { authorized: true, userId: null, isPrivileged: true };
+  }
+
+  const supabaseUrl = Deno.env.get('SUPABASE_URL');
+  const anonKey = Deno.env.get('SUPABASE_ANON_KEY');
+  if (!supabaseUrl || !anonKey) {
+    return { authorized: false };
+  }
+
+  const userClient = createClient(supabaseUrl, anonKey, {
+    global: { headers: { Authorization: authHeader } },
+  });
+  const { data: { user }, error } = await userClient.auth.getUser();
+  if (error || !user) {
+    return { authorized: false };
+  }
+
+  return { authorized: true, userId: user.id, isPrivileged: false };
+}
+
+function isServiceRoleJwt(token: string): boolean {
+  try {
+    const payloadPart = token.split('.')[1];
+    if (!payloadPart) return false;
+    const padded = payloadPart.replace(/-/g, '+').replace(/_/g, '/');
+    const payload = JSON.parse(atob(padded));
+    return payload.role === 'service_role';
+  } catch {
+    return false;
+  }
+}
 
 interface StoreConnection {
   id: string;
@@ -24,6 +92,76 @@ interface SyncResult {
   errors: string[];
 }
 
+/** Normalize store_url to https://{shop}.myshopify.com for Admin API calls */
+function shopifyBaseUrl(storeUrl: string): string {
+  const host = storeUrl.trim().replace(/^https?:\/\//i, "").replace(/\/.*$/, "");
+  return `https://${host}`;
+}
+
+/** Shopify often omits customer names on order.customer — use billing/shipping/email fallbacks */
+function shopifyAddressName(addr: {
+  name?: string;
+  first_name?: string;
+  last_name?: string;
+} | null | undefined): string {
+  if (!addr) return "";
+  if (addr.name?.trim()) return addr.name.trim();
+  return `${addr.first_name || ""} ${addr.last_name || ""}`.trim();
+}
+
+function shopifyOrderCustomer(order: {
+  customer?: { id?: number; first_name?: string; last_name?: string; email?: string };
+  billing_address?: { name?: string; first_name?: string; last_name?: string };
+  shipping_address?: { name?: string; first_name?: string; last_name?: string };
+  email?: string;
+  contact_email?: string;
+}): { id: string | null; name: string | null; email: string | null } {
+  const id = order.customer?.id != null ? String(order.customer.id) : null;
+  const email =
+    order.email?.trim() ||
+    order.contact_email?.trim() ||
+    order.customer?.email?.trim() ||
+    null;
+
+  const name =
+    shopifyAddressName(order.customer as { first_name?: string; last_name?: string }) ||
+    shopifyAddressName(order.billing_address) ||
+    shopifyAddressName(order.shipping_address) ||
+    (email ? email.split("@")[0] : null) ||
+    (id ? `Customer #${id.slice(-6)}` : null);
+
+  return { id, name, email };
+}
+
+function shopifyCustomerRecordName(customer: {
+  id: number;
+  first_name?: string;
+  last_name?: string;
+  email?: string;
+  default_address?: { name?: string; first_name?: string; last_name?: string };
+}): string {
+  const fullName = `${customer.first_name || ""} ${customer.last_name || ""}`.trim();
+  if (fullName) return fullName;
+  const fromAddress = shopifyAddressName(customer.default_address);
+  if (fromAddress) return fromAddress;
+  if (customer.email?.trim()) return customer.email.split("@")[0];
+  return `Customer #${String(customer.id).slice(-6)}`;
+}
+
+/** Delete sync logs older than 30 days to prevent unbounded growth */
+async function pruneSyncLogs(
+  supabase: ReturnType<typeof createClient>,
+): Promise<void> {
+  const cutoff = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+  const { error } = await supabase
+    .from("sync_logs")
+    .delete()
+    .lt("started_at", cutoff);
+  if (error) {
+    console.warn("sync_logs prune failed:", error.message);
+  }
+}
+
 // Platform-specific sync handlers
 async function syncShopifyData(
   supabase: ReturnType<typeof createClient>,
@@ -40,7 +178,7 @@ async function syncShopifyData(
       return result;
     }
 
-    const shopifyUrl = connection.store_url.replace(/\/$/, '');
+    const shopifyUrl = shopifyBaseUrl(connection.store_url);
     const headers = {
       'X-Shopify-Access-Token': credentials.accessToken,
       'Content-Type': 'application/json',
@@ -58,6 +196,7 @@ async function syncShopifyData(
       const orders = ordersData.orders || [];
       
       for (const order of orders) {
+        const customer = shopifyOrderCustomer(order);
         for (const lineItem of order.line_items || []) {
           const orderRecord = {
             user_id: connection.user_id,
@@ -66,9 +205,9 @@ async function syncShopifyData(
             external_order_id: String(order.id),
             order_number: order.name || order.order_number,
             order_date: order.created_at,
-            customer_id: order.customer?.id ? String(order.customer.id) : null,
-            customer_name: order.customer ? `${order.customer.first_name || ''} ${order.customer.last_name || ''}`.trim() : null,
-            customer_email: order.customer?.email || null,
+            customer_id: customer.id,
+            customer_name: customer.name,
+            customer_email: customer.email,
             product_id: String(lineItem.product_id),
             product_name: lineItem.title,
             sku: lineItem.sku,
@@ -166,7 +305,7 @@ async function syncShopifyData(
           platform: 'shopify',
           external_customer_id: String(customer.id),
           email: customer.email,
-          name: `${customer.first_name || ''} ${customer.last_name || ''}`.trim(),
+          name: shopifyCustomerRecordName(customer),
           phone: customer.phone,
           total_orders: customer.orders_count || 0,
           total_spent: parseFloat(customer.total_spent) || 0,
@@ -204,53 +343,134 @@ async function syncLazadaData(
   connection: StoreConnection
 ): Promise<SyncResult> {
   const result: SyncResult = { orders: 0, products: 0, customers: 0, errors: [] };
-  
-  try {
-    const credentials = await decryptCredentials(connection.credentials_encrypted);
 
-    if (!credentials?.accessToken || !credentials?.appKey) {
-      result.errors.push('Missing Lazada credentials');
+  try {
+    const stored = await decryptCredentials(connection.credentials_encrypted);
+    let creds = resolveLazadaCredentials(stored);
+    if (!creds) {
+      result.errors.push('Missing Lazada credentials (App Key, App Secret, Access Token)');
       return result;
     }
 
-    // Lazada API requires signed requests
-    // This is a simplified example - production would need proper signature generation
-    const baseUrl = 'https://api.lazada.com/rest';
-    const timestamp = Date.now();
+    if (creds.refreshToken && creds.expiresAt && new Date(creds.expiresAt) <= new Date()) {
+      const refreshed = await refreshLazadaToken(creds);
+      if (refreshed) {
+        creds = { ...creds, accessToken: refreshed.accessToken, refreshToken: refreshed.refreshToken ?? creds.refreshToken, expiresAt: refreshed.expiresAt };
+        const encrypted = await encryptCredentialsForUpdate(creds);
+        await supabase.from('store_connections').update({
+          credentials_encrypted: encrypted,
+          access_token_encrypted: encrypted,
+          updated_at: new Date().toISOString(),
+        }).eq('id', connection.id);
+      }
+    }
 
-    // Fetch orders
+    if (!creds.country) {
+      const detected = await detectLazadaRegion(creds);
+      if (!detected) {
+        result.errors.push('Could not reach Lazada API. Check credentials and regional access.');
+        return result;
+      }
+      creds = { ...creds, country: detected.country };
+    }
+
+    const createdAfter = new Date();
+    createdAfter.setDate(createdAfter.getDate() - 90);
+    const createdAfterIso = createdAfter.toISOString().replace(/\.\d{3}Z$/, '+00:00');
+
+    // --- Orders ---
     console.log(`Fetching orders from Lazada store: ${connection.store_name}`);
-    const ordersUrl = `${baseUrl}/orders/get?app_key=${credentials.appKey}&access_token=${credentials.accessToken}&timestamp=${timestamp}`;
-    
-    const ordersResponse = await fetch(ordersUrl);
-    if (ordersResponse.ok) {
-      const ordersData = await ordersResponse.json();
-      const orders = ordersData.data?.orders || [];
+    const orderSummaries: Array<Record<string, unknown>> = [];
+    let offset = 0;
+    const orderLimit = 100;
 
-      for (const order of orders) {
-        const orderItems = order.order_items || [order];
-        for (const item of orderItems) {
+    while (true) {
+      const ordersResult = await lazadaRequest<{ orders?: Array<Record<string, unknown>>; count?: number }>(
+        creds,
+        '/orders/get',
+        {
+          sort_by: 'created_at',
+          sort_direction: 'DESC',
+          created_after: createdAfterIso,
+          offset: String(offset),
+          limit: String(orderLimit),
+        },
+      );
+
+      if (ordersResult.code !== '0') {
+        result.errors.push(`Lazada orders/get: ${ordersResult.message ?? ordersResult.code}`);
+        break;
+      }
+
+      const batch = ordersResult.data?.orders ?? [];
+      orderSummaries.push(...batch);
+      if (batch.length < orderLimit) break;
+      offset += orderLimit;
+      if (offset >= 500) break; // safety cap per sync
+    }
+
+    const orderMap = new Map<string, Record<string, unknown>>();
+    for (const order of orderSummaries) {
+      orderMap.set(String(order.order_id), order);
+    }
+
+    const orderIds = [...orderMap.keys()];
+    const customerAgg = new Map<string, {
+      name: string | null;
+      email: string | null;
+      totalOrders: number;
+      totalSpent: number;
+      firstOrderDate: string | null;
+      lastOrderDate: string | null;
+    }>();
+
+    for (let i = 0; i < orderIds.length; i += 50) {
+      const chunk = orderIds.slice(i, i + 50);
+      const itemsResult = await lazadaRequest<Array<{ order_items?: Array<Record<string, unknown>> }>>(
+        creds,
+        '/orders/items/get',
+        { order_ids: `[${chunk.join(',')}]` },
+      );
+
+      if (itemsResult.code !== '0') {
+        result.errors.push(`Lazada orders/items/get: ${itemsResult.message ?? itemsResult.code}`);
+        continue;
+      }
+
+      const orderGroups = Array.isArray(itemsResult.data) ? itemsResult.data : [];
+      for (const group of orderGroups) {
+        const items = group.order_items ?? [];
+        for (const item of items) {
+          const orderId = String(item.order_id ?? '');
+          const order = orderMap.get(orderId);
+          const customerName = order ? lazadaCustomerName(order as Parameters<typeof lazadaCustomerName>[0]) : null;
+          const customerId = order?.buyer_id ? String(order.buyer_id) : orderId;
+          const orderDate = String(order?.created_at ?? item.created_at ?? new Date().toISOString());
+          const lineTotal = parseFloat(String(item.paid_price ?? item.item_price ?? 0)) || 0;
+          const qty = parseInt(String(item.quantity ?? 1), 10) || 1;
+          const unitPrice = parseFloat(String(item.item_price ?? 0)) || (qty > 0 ? lineTotal / qty : lineTotal);
+
           const orderRecord = {
             user_id: connection.user_id,
             store_connection_id: connection.id,
             platform: 'lazada',
-            external_order_id: String(order.order_id || order.id),
-            order_number: order.order_number,
-            order_date: order.created_at,
-            customer_id: order.customer_id ? String(order.customer_id) : null,
-            customer_name: order.address_shipping?.first_name || order.customer_name,
-            customer_email: order.customer_email,
-            product_id: String(item.product_id || item.sku),
-            product_name: item.name || item.product_name,
-            sku: item.sku,
-            quantity: item.quantity || 1,
-            unit_price: parseFloat(item.item_price) || 0,
-            total_amount: parseFloat(item.paid_price) || 0,
-            currency: order.currency || 'USD',
-            order_status: order.status || 'pending',
-            payment_status: order.payment_status || 'pending',
-            shipping_cost: parseFloat(order.shipping_fee) || 0,
-            raw_data: { order_id: order.order_id },
+            external_order_id: orderId,
+            order_number: String(order?.order_number ?? orderId),
+            order_date: orderDate,
+            customer_id: customerId,
+            customer_name: customerName,
+            customer_email: null,
+            product_id: String(item.product_id ?? item.shop_sku ?? item.sku ?? item.order_item_id),
+            product_name: String(item.name ?? item.product_name ?? 'Unknown item'),
+            sku: item.sku ? String(item.sku) : null,
+            quantity: qty,
+            unit_price: unitPrice,
+            total_amount: lineTotal,
+            currency: String(order?.currency ?? 'USD'),
+            order_status: String(item.status ?? order?.statuses ?? 'pending'),
+            payment_status: String(order?.payment_method ?? 'pending'),
+            shipping_cost: parseFloat(String(item.shipping_amount ?? 0)) || 0,
+            raw_data: { order_id: orderId, order_item_id: item.order_item_id },
             synced_at: new Date().toISOString(),
           };
 
@@ -258,36 +478,72 @@ async function syncLazadaData(
             .from('synced_orders')
             .upsert(orderRecord, {
               onConflict: 'user_id,platform,external_order_id,product_id',
-              ignoreDuplicates: false
+              ignoreDuplicates: false,
             });
 
-          if (!error) result.orders++;
+          if (error) {
+            result.errors.push(`Order ${orderId}: ${error.message}`);
+          } else {
+            result.orders++;
+          }
+
+          if (customerId) {
+            const existing = customerAgg.get(customerId) ?? {
+              name: customerName,
+              email: null,
+              totalOrders: 0,
+              totalSpent: 0,
+              firstOrderDate: orderDate,
+              lastOrderDate: orderDate,
+            };
+            existing.totalOrders += 1;
+            existing.totalSpent += lineTotal;
+            if (!existing.name && customerName) existing.name = customerName;
+            if (orderDate < (existing.firstOrderDate ?? orderDate)) existing.firstOrderDate = orderDate;
+            if (orderDate > (existing.lastOrderDate ?? orderDate)) existing.lastOrderDate = orderDate;
+            customerAgg.set(customerId, existing);
+          }
         }
       }
     }
 
-    // Fetch products
+    // --- Products ---
     console.log(`Fetching products from Lazada store: ${connection.store_name}`);
-    const productsUrl = `${baseUrl}/products/get?app_key=${credentials.appKey}&access_token=${credentials.accessToken}&timestamp=${timestamp}`;
-    
-    const productsResponse = await fetch(productsUrl);
-    if (productsResponse.ok) {
-      const productsData = await productsResponse.json();
-      const products = productsData.data?.products || [];
+    let productOffset = 0;
+    const productLimit = 50;
 
+    while (true) {
+      const productsResult = await lazadaRequest<{ products?: Array<Record<string, unknown>> }>(
+        creds,
+        '/products/get',
+        {
+          filter: 'all',
+          offset: String(productOffset),
+          limit: String(productLimit),
+        },
+      );
+
+      if (productsResult.code !== '0') {
+        result.errors.push(`Lazada products/get: ${productsResult.message ?? productsResult.code}`);
+        break;
+      }
+
+      const products = productsResult.data?.products ?? [];
       for (const product of products) {
-        const sku = product.skus?.[0] || {};
+        const sku = (product.skus as Array<Record<string, unknown>> | undefined)?.[0] ?? {};
+        const attributes = product.attributes as Record<string, unknown> | undefined;
+        const images = sku.Images as string[] | undefined;
         const productRecord = {
           user_id: connection.user_id,
           store_connection_id: connection.id,
           platform: 'lazada',
-          external_product_id: String(product.item_id || product.id),
-          name: product.attributes?.name || product.name,
-          sku: sku.SellerSku || sku.sku,
-          price: parseFloat(sku.price) || 0,
-          inventory_quantity: sku.quantity || 0,
-          image_url: product.images?.[0] || null,
-          status: product.status || 'active',
+          external_product_id: String(product.item_id ?? product.id),
+          name: String(attributes?.name ?? product.name ?? 'Unnamed product'),
+          sku: sku.SellerSku ? String(sku.SellerSku) : (sku.sku ? String(sku.sku) : null),
+          price: parseFloat(String(sku.price ?? 0)) || 0,
+          inventory_quantity: parseInt(String(sku.quantity ?? 0), 10) || 0,
+          image_url: images?.[0] ?? null,
+          status: String(product.status ?? 'active'),
           raw_data: { item_id: product.item_id },
           synced_at: new Date().toISOString(),
         };
@@ -296,10 +552,50 @@ async function syncLazadaData(
           .from('synced_products')
           .upsert(productRecord, {
             onConflict: 'user_id,platform,external_product_id',
-            ignoreDuplicates: false
+            ignoreDuplicates: false,
           });
 
-        if (!error) result.products++;
+        if (error) {
+          result.errors.push(`Product ${product.item_id}: ${error.message}`);
+        } else {
+          result.products++;
+        }
+      }
+
+      if (products.length < productLimit) break;
+      productOffset += productLimit;
+      if (productOffset >= 500) break;
+    }
+
+    // --- Customers (derived from orders) ---
+    for (const [customerId, customer] of customerAgg) {
+      const customerRecord = {
+        user_id: connection.user_id,
+        store_connection_id: connection.id,
+        platform: 'lazada',
+        external_customer_id: customerId,
+        email: customer.email,
+        name: customer.name ?? `Buyer #${customerId.slice(-6)}`,
+        phone: null,
+        total_orders: customer.totalOrders,
+        total_spent: customer.totalSpent,
+        first_order_date: customer.firstOrderDate,
+        last_order_date: customer.lastOrderDate,
+        raw_data: { customer_id: customerId },
+        synced_at: new Date().toISOString(),
+      };
+
+      const { error } = await supabase
+        .from('synced_customers')
+        .upsert(customerRecord, {
+          onConflict: 'user_id,platform,external_customer_id',
+          ignoreDuplicates: false,
+        });
+
+      if (error) {
+        result.errors.push(`Customer ${customerId}: ${error.message}`);
+      } else {
+        result.customers++;
       }
     }
 
@@ -309,6 +605,18 @@ async function syncLazadaData(
   }
 
   return result;
+}
+
+async function encryptCredentialsForUpdate(creds: LazadaCredentials): Promise<string> {
+  const { encryptCredentials } = await import("../_shared/crypto.ts");
+  return encryptCredentials({
+    appKey: creds.appKey,
+    appSecret: creds.appSecret,
+    accessToken: creds.accessToken,
+    refreshToken: creds.refreshToken ?? '',
+    expiresAt: creds.expiresAt ?? '',
+    country: creds.country ?? '',
+  });
 }
 
 async function syncShopeeData(
@@ -433,6 +741,14 @@ Deno.serve(async (req) => {
     return new Response('ok', { headers: corsHeaders });
   }
 
+  const auth = await authorizeRequest(req);
+  if (!auth.authorized) {
+    return new Response(
+      JSON.stringify({ success: false, error: 'Unauthorized' }),
+      { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+    );
+  }
+
   try {
     const supabaseUrl = Deno.env.get('SUPABASE_URL');
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
@@ -444,20 +760,46 @@ Deno.serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
     // Parse request body for optional filters
-    let userId: string | null = null;
+    let userId: string | null = auth.isPrivileged ? null : auth.userId;
     let storeConnectionId: string | null = null;
     let platform: string | null = null;
 
     if (req.method === 'POST') {
       try {
         const body = await req.json();
-        userId = body.user_id || null;
-        storeConnectionId = body.store_connection_id || null;
+        if (auth.isPrivileged) {
+          userId = body.user_id || body.userId || null;
+        }
+        storeConnectionId =
+          body.store_connection_id || body.storeConnectionId || null;
         platform = body.platform || null;
       } catch {
-        // No body or invalid JSON, sync all stores
+        // No body or invalid JSON
       }
     }
+
+    // Non-privileged callers may only sync their own stores
+    if (!auth.isPrivileged) {
+      userId = auth.userId;
+    }
+
+    // Verify store ownership when a specific connection is requested
+    if (storeConnectionId && userId) {
+      const { data: owned } = await supabase
+        .from('store_connections')
+        .select('id')
+        .eq('id', storeConnectionId)
+        .eq('user_id', userId)
+        .maybeSingle();
+      if (!owned) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Store connection not found' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+        );
+      }
+    }
+
+    await pruneSyncLogs(supabase);
 
     // Build query for active store connections
     let query = supabase
@@ -467,6 +809,11 @@ Deno.serve(async (req) => {
 
     if (userId) {
       query = query.eq('user_id', userId);
+    } else if (!auth.isPrivileged) {
+      return new Response(
+        JSON.stringify({ success: false, error: 'Unauthorized' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
+      );
     }
     if (storeConnectionId) {
       query = query.eq('id', storeConnectionId);
@@ -524,7 +871,7 @@ Deno.serve(async (req) => {
         await supabase
           .from('sync_logs')
           .update({
-            status: syncResult.errors.length > 0 ? 'completed_with_errors' : 'completed',
+            status: syncResult.errors.length > 0 ? 'failed' : 'completed',
             records_synced: syncResult.orders + syncResult.products + syncResult.customers,
             error_message: syncResult.errors.length > 0 ? syncResult.errors.join('; ') : null,
             completed_at: new Date().toISOString(),

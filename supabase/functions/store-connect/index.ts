@@ -1,5 +1,10 @@
 import { createClient } from "npm:@supabase/supabase-js@2.57.2";
 import { encryptCredentials } from "../_shared/crypto.ts";
+import {
+  detectLazadaRegion,
+  lazadaSign,
+  resolveLazadaCredentials,
+} from "../_shared/lazada.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -20,6 +25,16 @@ type Platform = "shopify" | "lazada" | "shopee";
 const PLATFORMS: Platform[] = ["shopify", "lazada", "shopee"];
 
 const SHOPIFY_SCOPES = "read_orders,read_products,read_customers";
+
+const PLAN_STORE_LIMITS: Record<string, number> = {
+  starter: 1,
+  growth: 3,
+  scale: 5,
+  trial: 3,
+  free: 0,
+};
+
+const ACTIVE_SUB_STATUSES = new Set(["active", "trialing", "past_due"]);
 
 // ---------- helpers ----------
 
@@ -83,15 +98,25 @@ async function verifyState(state: string): Promise<Record<string, string> | null
 }
 
 // Lazada signs requests with HMAC-SHA256 over the sorted concatenated params.
-async function lazadaSign(
-  apiPath: string,
-  params: Record<string, string>,
-  appSecret: string,
-): Promise<string> {
-  const sorted = Object.keys(params).sort();
-  const base = apiPath + sorted.map((k) => `${k}${params[k]}`).join("");
-  const bytes = await hmac(appSecret, base);
-  return Array.from(bytes).map((b) => b.toString(16).padStart(2, "0")).join("").toUpperCase();
+// Re-exported from _shared/lazada.ts for OAuth token exchange in this file.
+
+async function validateLazadaCredentials(
+  credentials: Record<string, string>,
+): Promise<{ ok: boolean; error?: string; sellerName?: string; country?: string }> {
+  const creds = resolveLazadaCredentials(credentials);
+  if (!creds) {
+    return { ok: false, error: "App Key, App Secret, and Access Token are required" };
+  }
+
+  const detected = await detectLazadaRegion(creds);
+  if (!detected) {
+    return {
+      ok: false,
+      error: "Lazada rejected these credentials. Check your App Key, App Secret, Access Token, and seller authorization.",
+    };
+  }
+
+  return { ok: true, sellerName: detected.sellerName, country: detected.country };
 }
 
 // ---------- credential validation ----------
@@ -116,6 +141,61 @@ async function validateShopifyCredentials(
     return { ok: true, shopName: data?.shop?.name };
   } catch (error) {
     return { ok: false, error: `Could not reach ${storeUrl}: ${(error as Error).message}` };
+  }
+}
+
+async function resolveStoreLimit(
+  admin: ReturnType<typeof createClient>,
+  userId: string,
+): Promise<{ limit: number; tier: string }> {
+  const { data: sub } = await admin
+    .from("subscriptions")
+    .select("plan_name, status")
+    .eq("user_id", userId)
+    .maybeSingle();
+
+  if (sub && ACTIVE_SUB_STATUSES.has(sub.status)) {
+    const tier = sub.plan_name ?? "starter";
+    return { limit: PLAN_STORE_LIMITS[tier] ?? 1, tier };
+  }
+
+  const { data: profile } = await admin
+    .from("profiles")
+    .select("trial_ends_at")
+    .eq("id", userId)
+    .maybeSingle();
+
+  const trialEndsAt = profile?.trial_ends_at;
+  if (trialEndsAt && new Date(trialEndsAt) > new Date()) {
+    return { limit: PLAN_STORE_LIMITS.trial, tier: "trial" };
+  }
+
+  return { limit: PLAN_STORE_LIMITS.free, tier: "free" };
+}
+
+async function assertCanAddStore(
+  admin: ReturnType<typeof createClient>,
+  userId: string,
+  isUpdate: boolean,
+): Promise<void> {
+  if (isUpdate) return;
+
+  const { limit, tier } = await resolveStoreLimit(admin, userId);
+  const { count, error } = await admin
+    .from("store_connections")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", userId)
+    .eq("is_active", true);
+
+  if (error) throw new Error(error.message);
+
+  if ((count ?? 0) >= limit) {
+    const upgradeHint = tier === "free"
+      ? "Start a trial or subscribe to connect a store."
+      : "Upgrade your plan to add more stores.";
+    throw new Error(
+      `Store limit reached. Your ${tier} plan allows ${limit} store(s). ${upgradeHint}`,
+    );
   }
 }
 
@@ -152,6 +232,8 @@ async function upsertConnection(
     updated_at: new Date().toISOString(),
   };
 
+  await assertCanAddStore(admin, params.userId, Boolean(existing?.id));
+
   if (existing?.id) {
     const { data, error } = await admin
       .from("store_connections")
@@ -174,16 +256,26 @@ async function upsertConnection(
 
 async function triggerSync(storeConnectionId: string) {
   const url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/sync-store-data`;
+  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  const cronSecret = Deno.env.get("SYNC_CRON_SECRET");
+  const headers: Record<string, string> = {
+    "Content-Type": "application/json",
+    apikey: Deno.env.get("SUPABASE_ANON_KEY") ?? "",
+    Authorization: `Bearer ${serviceKey}`,
+  };
+  if (cronSecret) {
+    headers["X-Metreka-Sync-Secret"] = cronSecret;
+  }
   try {
-    await fetch(url, {
+    const response = await fetch(url, {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        apikey: Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-        Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-      },
-      body: JSON.stringify({ storeConnectionId }),
+      headers,
+      body: JSON.stringify({ store_connection_id: storeConnectionId }),
     });
+    if (!response.ok) {
+      const text = await response.text();
+      console.error("[STORE-CONNECT] sync-store-data failed", response.status, text);
+    }
   } catch (error) {
     console.error("Failed to trigger sync:", error);
   }
@@ -250,10 +342,13 @@ Deno.serve(async (req) => {
       }
 
       if (platform === "lazada") {
-        if (!credentials.appKey || !credentials.accessToken) {
-          return json({ error: "App Key and Access Token are required" }, 400);
+        if (!credentials.appKey || !credentials.appSecret || !credentials.accessToken) {
+          return json({ error: "App Key, App Secret, and Access Token are required" }, 400);
         }
-        storeName = storeName ?? "Lazada Store";
+        const check = await validateLazadaCredentials(credentials);
+        if (!check.ok) return json({ error: check.error }, 400);
+        if (check.country) credentials.country = check.country;
+        storeName = storeName ?? (check.sellerName ? `Lazada ${check.sellerName}` : `Lazada ${check.country?.toUpperCase()}`);
       }
 
       if (platform === "shopee") {
@@ -271,8 +366,13 @@ Deno.serve(async (req) => {
         credentials,
       });
 
+      await admin
+        .from("store_connections")
+        .update({ sync_status: "syncing" })
+        .eq("id", connection.id);
+
       await triggerSync(connection.id as string);
-      return json({ connection });
+      return json({ connection: { ...connection, sync_status: "syncing" } });
     }
 
     // --- 2. Start OAuth ---
@@ -392,6 +492,8 @@ Deno.serve(async (req) => {
         }
 
         const shopName = tokenData.country_user_info?.[0]?.short_code ?? "Lazada Store";
+        const country = tokenData.country_user_info?.[0]?.country ?? "";
+        const expiresIn = Number(tokenData.expires_in ?? 0);
         const connection = await upsertConnection(admin, {
           userId: user.id,
           platform: "lazada",
@@ -401,7 +503,11 @@ Deno.serve(async (req) => {
             accessToken,
             refreshToken: tokenData.refresh_token ?? "",
             appKey,
-            expiresIn: String(tokenData.expires_in ?? ""),
+            appSecret,
+            country,
+            expiresAt: expiresIn > 0
+              ? new Date(Date.now() + expiresIn * 1000).toISOString()
+              : "",
           },
         });
         await triggerSync(connection.id as string);
