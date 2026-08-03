@@ -141,7 +141,7 @@ const Footer = () => {
             © {currentYear} Metreka. All rights reserved.
           </p>
           <p className="text-sm text-muted-foreground">
-            Built with ❤️ for e-commerce entrepreneurs
+            Built with ❤️ for e-commerce entrepreneurs · Deploy sync active
           </p>
         </div>
       </div>
