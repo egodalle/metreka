@@ -8,12 +8,12 @@ secret = "env(GOOGLE_CLIENT_SECRET)"
 skip_nonce_check = true
 
 [auth]
-site_url = "https://metreka.vercel.app"
+site_url = "https://metreka-zvhr.vercel.app"
 additional_redirect_urls = [
   "http://localhost:8080/auth/callback",
-  "https://metreka.vercel.app/auth/callback",
+  "https://metreka-zvhr.vercel.app/auth/callback",
   "http://localhost:8080/oauth/callback",
-  "https://metreka.vercel.app/oauth/callback",
+  "https://metreka-zvhr.vercel.app/oauth/callback",
 ]
 
 [functions.create-checkout]
