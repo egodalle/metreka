@@ -309,6 +309,14 @@ Deno.serve(async (req) => {
     const action = String(body.action ?? "");
     log("request", { action, userId: user.id });
 
+    // --- 0. OAuth availability (which platforms have server-side OAuth configured) ---
+    if (action === "oauth_status") {
+      return json({
+        shopify: Boolean(Deno.env.get("SHOPIFY_CLIENT_ID") && Deno.env.get("SHOPIFY_CLIENT_SECRET")),
+        lazada: Boolean(Deno.env.get("LAZADA_APP_KEY") && Deno.env.get("LAZADA_APP_SECRET")),
+      });
+    }
+
     // --- 1. Save API-key credentials ---
     if (action === "save_credentials") {
       const platform = String(body.platform ?? "") as Platform;

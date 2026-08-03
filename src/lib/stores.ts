@@ -70,6 +70,20 @@ export const apiKeyFields: Record<string, { key: string; label: string; placehol
 // Platforms where a hosted OAuth flow is available (needs provider app keys configured)
 export const oauthCapablePlatforms: StorePlatform[] = ['shopify', 'lazada'];
 
+export type OAuthStatus = Record<StorePlatform, boolean>;
+
+export async function getOAuthStatus(): Promise<OAuthStatus> {
+  const { data, error } = await supabase.functions.invoke('store-connect', {
+    body: { action: 'oauth_status' },
+  });
+  if (error) throw new Error(data?.error || error.message);
+  return {
+    shopify: Boolean(data?.shopify),
+    lazada: Boolean(data?.lazada),
+    shopee: false,
+  };
+}
+
 
 // Fetch all store connections for the current user
 export async function getStoreConnections(): Promise<StoreConnection[]> {
@@ -128,7 +142,15 @@ export async function startOAuthConnection(
   });
 
   if (error) throw new Error(data?.error || error.message);
-  if (data?.error) throw new Error(data.error);
+  if (data?.error) {
+    if (data.code === 'oauth_not_configured') {
+      throw new Error(
+        `${platform === 'shopify' ? 'Shopify' : 'Lazada'} one-click connect is not set up on the server yet. ` +
+        'Use the API token fields below, or add OAuth app credentials to Supabase edge function secrets.',
+      );
+    }
+    throw new Error(data.error);
+  }
   return data.authorizeUrl as string;
 }
 

@@ -24,7 +24,7 @@ import {
   SyncStatus,
   isDemoMode,
 } from '@/lib/integrations';
-import { startOAuthConnection } from '@/lib/stores';
+import { startOAuthConnection, getOAuthStatus } from '@/lib/stores';
 
 import { Badge } from '@/components/ui/badge';
 import { useStoreConnections, useConnectStore, useDisconnectStore } from '@/hooks/useStoreConnections';
@@ -38,6 +38,7 @@ export default function Onboarding() {
   const [storeId, setStoreId] = useState<string | null>(null);
   const [credentials, setCredentials] = useState<Record<string, string>>({});
   const [syncStatus, setSyncStatus] = useState<SyncStatus | null>(null);
+  const [oauthReady, setOauthReady] = useState<{ shopify: boolean; lazada: boolean } | null>(null);
   const navigate = useNavigate();
   const { toast } = useToast();
   const [searchParams] = useSearchParams();
@@ -72,6 +73,13 @@ export default function Onboarding() {
   );
 
   // Poll sync status when in syncing step
+  useEffect(() => {
+    if (step !== 'credentials') return;
+    getOAuthStatus()
+      .then((status) => setOauthReady({ shopify: status.shopify, lazada: status.lazada }))
+      .catch(() => setOauthReady({ shopify: false, lazada: false }));
+  }, [step, selectedPlatform]);
+
   useEffect(() => {
     if (step !== 'syncing' || !storeId) return;
 
@@ -134,6 +142,19 @@ export default function Onboarding() {
 
   const handleOAuthConnect = async () => {
     if (!selectedPlatform) return;
+
+    if (selectedPlatform === 'shopify') {
+      const raw = credentials.storeUrl?.trim() ?? '';
+      if (!raw) {
+        toast({
+          title: 'Store domain required',
+          description: 'Enter your Shopify store domain first (e.g. my-store.myshopify.com), then click Connect with Shopify.',
+          variant: 'destructive',
+        });
+        return;
+      }
+    }
+
     setStep('connecting');
     try {
       const authorizeUrl = await startOAuthConnection(
@@ -415,25 +436,12 @@ export default function Onboarding() {
       case 'credentials':
         return (
           <form onSubmit={handleCredentialsSubmit} className="space-y-4">
-            {selectedPlatform && oauthCapablePlatforms.includes(selectedPlatform) && (
-              <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-2">
-                <p className="text-sm font-medium">Prefer one-click authorization?</p>
-                <p className="text-xs text-muted-foreground">
-                  Sign in on {selectedPlatformConfig?.name} and we'll receive the access token automatically.
-                </p>
-                <Button type="button" variant="outline" size="sm" onClick={handleOAuthConnect}>
-                  <ExternalLink className="mr-2 h-4 w-4" />
-                  Connect with {selectedPlatformConfig?.name}
-                </Button>
-              </div>
-            )}
-
             <div className="bg-muted/50 rounded-lg p-4 mb-4">
               <p className="text-sm text-muted-foreground">
                 Your credentials are encrypted and stored securely. They are never exposed to the frontend after submission.
               </p>
             </div>
-            
+
             {fields.map((field) => (
               <div key={field.key} className="space-y-2">
                 <Label htmlFor={field.key}>{field.label}</Label>
@@ -448,7 +456,28 @@ export default function Onboarding() {
                 />
               </div>
             ))}
-            
+
+            {selectedPlatform && oauthCapablePlatforms.includes(selectedPlatform) && oauthReady?.[selectedPlatform] && (
+              <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-2">
+                <p className="text-sm font-medium">Prefer one-click authorization?</p>
+                <p className="text-xs text-muted-foreground">
+                  {selectedPlatform === 'shopify'
+                    ? 'Enter your store domain below, then sign in on Shopify — we receive the access token automatically.'
+                    : `Sign in on ${selectedPlatformConfig?.name} and we'll receive the access token automatically.`}
+                </p>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleOAuthConnect}
+                  disabled={selectedPlatform === 'shopify' && !credentials.storeUrl?.trim()}
+                >
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  Connect with {selectedPlatformConfig?.name}
+                </Button>
+              </div>
+            )}
+
             <div className="flex gap-3 pt-4">
               <Button
                 type="button"
