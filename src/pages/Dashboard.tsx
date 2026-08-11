@@ -20,7 +20,7 @@ import {
   Users, ShoppingCart, Package, Activity, Bell, Settings, Search, Plus, LogOut,
    ArrowUpRight, ArrowDownRight, BarChart3, AlertCircle, RefreshCw, PieChart
 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useDashboard, useHealthCheck } from "@/hooks/useDashboardData";
 import { PlatformData, DailyData } from "@/lib/api";
 import { ProductAnalyticsSection } from "@/components/dashboard/ProductAnalyticsSection";
@@ -33,6 +33,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useHasAccess, useCustomerPortal } from "@/hooks/useSubscription";
 import { TrialBanner } from "@/components/TrialBanner";
 import { PaywallModal } from "@/components/PaywallModal";
+import { useQueryClient } from "@tanstack/react-query";
 
 const allStores = [
   { id: "shopify", name: "Shopify", logo: ShopifyLogo, bgColor: "bg-[#96bf48]" },
@@ -157,22 +158,57 @@ const ConnectionStatus = ({ isConnected, isLoading }: { isConnected: boolean; is
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { signOut } = useAuth();
+  const { signOut, session } = useAuth();
   const { toast } = useToast();
   const [selectedPeriod, setSelectedPeriod] = useState("7d");
   const [activeTab, setActiveTab] = useState("overview");
   
   // Check subscription/trial access
-  const { hasAccess, isTrialing, isLoading: accessLoading } = useHasAccess();
+  const { hasAccess, isTrialing, isLoading: accessLoading, subscription } = useHasAccess();
   const customerPortal = useCustomerPortal();
   const [showPaywall, setShowPaywall] = useState(false);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const queryClient = useQueryClient();
   
+  // After checkout success, refresh subscription and clear the query flag
+  useEffect(() => {
+    if (searchParams.get("subscription") !== "success") return;
+
+    toast({
+      title: "Payment received",
+      description: "We're activating your subscription…",
+    });
+
+    void queryClient.invalidateQueries({ queryKey: ["subscription", session?.user?.id] });
+    setShowPaywall(false);
+
+    const next = new URLSearchParams(searchParams);
+    next.delete("subscription");
+    setSearchParams(next, { replace: true });
+  }, [searchParams, setSearchParams, queryClient, session?.user?.id, toast]);
+
+  // Overlay checkout completed (Paddle.js) — refresh without waiting for poll
+  useEffect(() => {
+    const onCompleted = () => {
+      void queryClient.invalidateQueries({ queryKey: ["subscription", session?.user?.id] });
+      setShowPaywall(false);
+      toast({
+        title: "Payment received",
+        description: "Your subscription is being activated.",
+      });
+    };
+    window.addEventListener("metreka:checkout-completed", onCompleted);
+    return () => window.removeEventListener("metreka:checkout-completed", onCompleted);
+  }, [queryClient, session?.user?.id, toast]);
+
   // Show paywall if access check is done and user has no access
   useEffect(() => {
     if (!accessLoading && !hasAccess) {
       setShowPaywall(true);
+    } else if (subscription?.subscribed) {
+      setShowPaywall(false);
     }
-  }, [accessLoading, hasAccess]);
+  }, [accessLoading, hasAccess, subscription?.subscribed]);
   
   // Get actual store connections from the database
   const { data: storeConnections = [], isLoading: storeConnectionsLoading } = useStoreConnections();

@@ -12,6 +12,13 @@ const logStep = (step: string, details?: unknown) => {
   console.log(`[CUSTOMER-PORTAL] ${step}${detailsStr}`);
 };
 
+function paddleBaseUrl(apiKey: string): string {
+  if (apiKey.includes("_sdbx_")) {
+    return "https://sandbox-api.paddle.com";
+  }
+  return "https://api.paddle.com";
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -22,6 +29,8 @@ serve(async (req) => {
 
     const paddleApiKey = Deno.env.get("PADDLE_API_KEY");
     if (!paddleApiKey) throw new Error("PADDLE_API_KEY is not set");
+
+    const apiBase = paddleBaseUrl(paddleApiKey);
 
     const supabaseClient = createClient(
       Deno.env.get("SUPABASE_URL") ?? "",
@@ -52,7 +61,7 @@ serve(async (req) => {
 
     if (!customerId) {
       const customersResponse = await fetch(
-        `https://api.paddle.com/customers?email=${encodeURIComponent(user.email)}`,
+        `${apiBase}/customers?email=${encodeURIComponent(user.email)}`,
         {
           headers: {
             Authorization: `Bearer ${paddleApiKey}`,
@@ -75,7 +84,7 @@ serve(async (req) => {
 
     if (!subscriptionId) {
       const subscriptionsResponse = await fetch(
-        `https://api.paddle.com/subscriptions?customer_id=${customerId}&status=active`,
+        `${apiBase}/subscriptions?customer_id=${customerId}&status=active`,
         {
           headers: {
             Authorization: `Bearer ${paddleApiKey}`,
@@ -97,7 +106,7 @@ serve(async (req) => {
       : {};
 
     const portalResponse = await fetch(
-      `https://api.paddle.com/customers/${customerId}/portal-sessions`,
+      `${apiBase}/customers/${customerId}/portal-sessions`,
       {
         method: "POST",
         headers: {

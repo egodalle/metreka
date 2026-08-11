@@ -8,9 +8,9 @@ const corsHeaders = {
 };
 
 const PRICE_TO_TIER: Record<string, { name: string; storeLimit: number }> = {
-  pri_01kgsn8a67q8807nv12a33acrx: { name: "starter", storeLimit: 1 },
-  pri_01kgsnc7c20hfc1ekgav6j0bss: { name: "growth", storeLimit: 3 },
-  pri_01kgsng6sr909mx5xkm0ccdvh5: { name: "scale", storeLimit: 5 },
+  pri_01kzrcvc58m81n9wr27620ze40: { name: "starter", storeLimit: 1 },
+  pri_01kzrcvcs04gr8d4h1as7wmr73: { name: "growth", storeLimit: 3 },
+  pri_01kzrcvdbqketje8fbs3rzwv18: { name: "scale", storeLimit: 5 },
 };
 
 const PLAN_STORE_LIMITS: Record<string, number> = {
@@ -24,6 +24,13 @@ const PLAN_STORE_LIMITS: Record<string, number> = {
 const TRIAL_CONFIG = { name: "trial", storeLimit: 3 };
 
 const ACTIVE_STATUSES = new Set(["active", "trialing", "past_due"]);
+
+function paddleBaseUrl(apiKey: string): string {
+  if (apiKey.includes("_sdbx_")) {
+    return "https://sandbox-api.paddle.com";
+  }
+  return "https://api.paddle.com";
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -117,8 +124,10 @@ serve(async (req) => {
     const paddleApiKey = Deno.env.get("PADDLE_API_KEY");
     if (!paddleApiKey) return emptyResponse({ trialEndsAt });
 
+    const apiBase = paddleBaseUrl(paddleApiKey);
+
     const customersResponse = await fetch(
-      `https://api.paddle.com/customers?email=${encodeURIComponent(user.email)}`,
+      `${apiBase}/customers?email=${encodeURIComponent(user.email)}`,
       {
         headers: {
           Authorization: `Bearer ${paddleApiKey}`,
@@ -136,7 +145,7 @@ serve(async (req) => {
     const customerId = customers[0].id;
 
     const subscriptionsResponse = await fetch(
-      `https://api.paddle.com/subscriptions?customer_id=${customerId}&status=active`,
+      `${apiBase}/subscriptions?customer_id=${customerId}&status=active`,
       {
         headers: {
           Authorization: `Bearer ${paddleApiKey}`,

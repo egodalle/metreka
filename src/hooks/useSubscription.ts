@@ -2,26 +2,27 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
 import { useToast } from '@/hooks/use-toast';
+import { hasPaddleClientToken, openPaddleCheckout } from '@/lib/paddle';
 
-// Subscription tiers - Update these with your Paddle product/price IDs
+// Subscription tiers — keep price IDs in sync with edge functions
 export const SUBSCRIPTION_TIERS = {
   starter: {
-    priceId: 'pri_01kgsn8a67q8807nv12a33acrx',
-    productId: 'pro_01kgsmzp7jn13hvky6qd6g5a8g',
+    priceId: 'pri_01kzrcvc58m81n9wr27620ze40',
+    productId: 'pro_01kzrcvbvyfm7r3a06s45h8r7v',
     name: 'Starter',
     storeLimit: 1,
     price: 29,
   },
   growth: {
-    priceId: 'pri_01kgsnc7c20hfc1ekgav6j0bss',
-    productId: 'pro_growth',
+    priceId: 'pri_01kzrcvcs04gr8d4h1as7wmr73',
+    productId: 'pro_01kzrcvcg5x68hdvye22hdwdmh',
     name: 'Growth',
     storeLimit: 3,
     price: 59,
   },
   scale: {
-    priceId: 'pri_01kgsng6sr909mx5xkm0ccdvh5',
-    productId: 'pro_scale',
+    priceId: 'pri_01kzrcvdbqketje8fbs3rzwv18',
+    productId: 'pro_01kzrcvd374yj8cdytq3yjeqvc',
     name: 'Scale',
     storeLimit: 5,
     price: 79,
@@ -51,6 +52,10 @@ export function useSubscription() {
       if (error) {
         console.error('Error checking subscription:', error);
         throw error;
+      }
+
+      if (data?.error) {
+        throw new Error(data.error);
       }
       
       return data as SubscriptionStatus;
@@ -82,6 +87,13 @@ export function useHasAccess() {
   };
 }
 
+function extractFunctionError(data: unknown, fallback: string): string {
+  if (data && typeof data === 'object' && 'error' in data && typeof (data as { error: unknown }).error === 'string') {
+    return (data as { error: string }).error;
+  }
+  return fallback;
+}
+
 export function useCreateCheckout() {
   const { toast } = useToast();
   
@@ -92,29 +104,41 @@ export function useCreateCheckout() {
       });
       
       if (error) {
-        throw new Error(error.message || 'Failed to create checkout session');
+        throw new Error(extractFunctionError(data, error.message || 'Failed to create checkout session'));
+      }
+
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+
+      const transactionId = data?.transactionId as string | undefined;
+      const url = data?.url as string | null | undefined;
+
+      // Prefer Paddle.js overlay when client token is configured
+      if (transactionId && hasPaddleClientToken()) {
+        await openPaddleCheckout(transactionId);
+        return { type: 'overlay' as const, transactionId };
+      }
+
+      // Fall back to hosted checkout payment link
+      if (url) {
+        window.location.assign(url);
+        return { type: 'redirect' as const, url };
+      }
+
+      if (transactionId) {
+        throw new Error(
+          'Checkout created but Paddle.js is not configured. Set VITE_PADDLE_CLIENT_TOKEN, or configure a default payment link in Paddle.',
+        );
       }
       
-      if (data?.useOverlay && data?.transactionId) {
-        // For Paddle overlay checkout
-        return { type: 'overlay' as const, transactionId: data.transactionId };
-      }
-      
-      if (!data?.url) {
-        throw new Error('No checkout URL returned');
-      }
-      
-      return { type: 'redirect' as const, url: data.url as string };
+      throw new Error('No checkout URL or transaction returned');
     },
     onSuccess: (result) => {
-      if (result.type === 'redirect') {
-        // Open Paddle checkout in a new tab
-        window.open(result.url, '_blank');
-      } else {
-        // For overlay, the component will handle it
+      if (result.type === 'overlay') {
         toast({
           title: 'Checkout ready',
-          description: 'Opening payment form...',
+          description: 'Complete payment in the Paddle window.',
         });
       }
     },
@@ -136,20 +160,21 @@ export function useCustomerPortal() {
       const { data, error } = await supabase.functions.invoke('customer-portal');
       
       if (error) {
-        throw new Error(error.message || 'Failed to open customer portal');
-      }
-      
-      if (data?.url) {
-        window.open(data.url, '_blank');
-        return { type: 'redirect' as const, url: data.url as string };
+        throw new Error(extractFunctionError(data, error.message || 'Failed to open customer portal'));
       }
 
-      throw new Error(data?.error || 'No portal URL returned');
+      if (data?.error) {
+        throw new Error(data.error);
+      }
+      
+      if (!data?.url) {
+        throw new Error('No portal URL returned');
+      }
+
+      return { url: data.url as string };
     },
     onSuccess: (result) => {
-      if (result.type === 'redirect') {
-        window.open(result.url, '_blank');
-      }
+      window.open(result.url, '_blank', 'noopener,noreferrer');
     },
     onError: (error) => {
       toast({

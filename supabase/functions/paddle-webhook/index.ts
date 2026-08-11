@@ -8,9 +8,9 @@ const corsHeaders = {
 };
 
 const PRICE_TO_PLAN: Record<string, { plan: string; storeLimit: number }> = {
-  pri_01kgsn8a67q8807nv12a33acrx: { plan: "starter", storeLimit: 1 },
-  pri_01kgsnc7c20hfc1ekgav6j0bss: { plan: "growth", storeLimit: 3 },
-  pri_01kgsng6sr909mx5xkm0ccdvh5: { plan: "scale", storeLimit: 5 },
+  pri_01kzrcvc58m81n9wr27620ze40: { plan: "starter", storeLimit: 1 },
+  pri_01kzrcvcs04gr8d4h1as7wmr73: { plan: "growth", storeLimit: 3 },
+  pri_01kzrcvdbqketje8fbs3rzwv18: { plan: "scale", storeLimit: 5 },
 };
 
 const log = (step: string, details?: unknown) =>
@@ -139,7 +139,10 @@ serve(async (req) => {
   if (!userId && customerId) {
     const paddleApiKey = Deno.env.get("PADDLE_API_KEY");
     if (paddleApiKey) {
-      const customerRes = await fetch(`https://api.paddle.com/customers/${customerId}`, {
+      const apiBase = paddleApiKey.includes("_sdbx_")
+        ? "https://sandbox-api.paddle.com"
+        : "https://api.paddle.com";
+      const customerRes = await fetch(`${apiBase}/customers/${customerId}`, {
         headers: {
           Authorization: `Bearer ${paddleApiKey}`,
           "Content-Type": "application/json",
