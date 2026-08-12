@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, afterEach } from 'vitest';
-import { periodToDateRange, type DashboardPeriod } from './dashboardPeriod';
+import { periodToDateRange, periodToDays, type DashboardPeriod } from './dashboardPeriod';
 
 describe('periodToDateRange', () => {
   afterEach(() => {
@@ -18,6 +18,8 @@ describe('periodToDateRange', () => {
   ] as const)('maps %s to ~%i days', (period: DashboardPeriod, days: number) => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date('2026-08-12T12:00:00.000Z'));
+
+    expect(periodToDays(period)).toBe(days);
 
     const { startDate, endDate } = periodToDateRange(period);
     expect(startDate).toBeTruthy();

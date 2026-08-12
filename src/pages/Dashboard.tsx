@@ -23,6 +23,7 @@ import {
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useDashboard, useHealthCheck } from "@/hooks/useDashboardData";
 import { PlatformData, DailyData } from "@/lib/api";
+import { periodToDateRange } from "@/lib/dashboardPeriod";
 import { ProductAnalyticsSection } from "@/components/dashboard/ProductAnalyticsSection";
 import { CustomerAnalyticsSection } from "@/components/dashboard/CustomerAnalyticsSection";
 import { ProfitabilitySection } from "@/components/dashboard/ProfitabilitySection";
@@ -242,6 +243,7 @@ const Dashboard = () => {
   
   const { data: healthData, isLoading: healthLoading } = useHealthCheck();
   const { data: dashboardData, isLoading: dashboardLoading, isError, error, refetch } = useDashboard(selectedPeriod);
+  const { startDate: periodStart, endDate: periodEnd } = periodToDateRange(selectedPeriod);
   
   // Combined loading state: still loading if either connections or dashboard data loading
   const isLoading = storeConnectionsLoading || dashboardLoading;
@@ -661,6 +663,8 @@ const Dashboard = () => {
                 selectedStore={selectedStore}
                 connectedPlatforms={connectedPlatforms}
                 onStoreChange={setSelectedStore}
+                startDate={periodStart}
+                endDate={periodEnd}
               />
             ) : null}
           </TabsContent>
@@ -674,6 +678,8 @@ const Dashboard = () => {
                 selectedStore={selectedStore}
                 connectedPlatforms={connectedPlatforms}
                 onStoreChange={setSelectedStore}
+                startDate={periodStart}
+                endDate={periodEnd}
               />
             ) : null}
           </TabsContent>
@@ -686,6 +692,8 @@ const Dashboard = () => {
                 selectedStore={selectedStore}
                 connectedPlatforms={connectedPlatforms}
                 onStoreChange={setSelectedStore}
+                startDate={periodStart}
+                endDate={periodEnd}
               />
             ) : null}
           </TabsContent>

@@ -19,6 +19,8 @@ interface CustomerAnalyticsSectionProps {
   selectedStore?: string;
   connectedPlatforms?: string[];
   onStoreChange?: (store: string) => void;
+  startDate?: string;
+  endDate?: string;
 }
 
 const formatCurrency = (value: number) => 
@@ -39,9 +41,11 @@ function displayCustomerName(sale: {
   return 'Guest checkout';
 }
 
-export function CustomerAnalyticsSection({ isLoading: externalLoading, selectedStore = "all", connectedPlatforms = [] }: CustomerAnalyticsSectionProps) {
+export function CustomerAnalyticsSection({ isLoading: externalLoading, selectedStore = "all", connectedPlatforms = [], startDate, endDate }: CustomerAnalyticsSectionProps) {
   const { data, isLoading: queryLoading } = useSales({ 
     source: selectedStore !== "all" ? selectedStore : undefined,
+    startDate,
+    endDate,
     limit: 500
   });
   

@@ -19,6 +19,8 @@ interface ProductAnalyticsSectionProps {
   selectedStore?: string;
   connectedPlatforms?: string[];
   onStoreChange?: (store: string) => void;
+  startDate?: string;
+  endDate?: string;
 }
 
 const formatCurrency = (value: number) => 
@@ -27,10 +29,12 @@ const formatCurrency = (value: number) =>
 const formatNumber = (value: number) => 
   new Intl.NumberFormat('en-US').format(value);
 
-export function ProductAnalyticsSection({ isLoading: externalLoading, selectedStore = "all", connectedPlatforms = [] }: ProductAnalyticsSectionProps) {
+export function ProductAnalyticsSection({ isLoading: externalLoading, selectedStore = "all", connectedPlatforms = [], startDate, endDate }: ProductAnalyticsSectionProps) {
   const { data, isLoading: queryLoading } = useSales({ 
     source: selectedStore !== "all" ? selectedStore : undefined,
-    limit: 100
+    startDate,
+    endDate,
+    limit: 500
   });
   
   const isLoading = externalLoading || queryLoading;

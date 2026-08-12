@@ -5,6 +5,7 @@ import type {
   SalesSummaryResponse,
 } from '@/lib/api';
 import type { StoreConnection } from '@/lib/stores';
+import { periodToDays, type DashboardPeriod } from '@/lib/dashboardPeriod';
 
 /** Synthetic store rows used when browsing /demo without auth. */
 export function getDemoStoreConnections(): StoreConnection[] {
@@ -129,39 +130,59 @@ const DEMO_CUSTOMERS = [
   { id: 'cus_jordan', name: 'Jordan Lee', email: 'jordan.lee@example.com', platform: 'shopify' },
 ] as const;
 
-/** Sample multi-platform dashboard payload for /demo. */
-export function getDemoDashboardData(): DashboardData {
-  const total_orders = DEMO_PLATFORMS.reduce((s, p) => s + p.total_orders, 0);
-  const total_revenue = DEMO_PLATFORMS.reduce((s, p) => s + p.total_revenue, 0);
+const BASE_ORDERS = DEMO_PLATFORMS.reduce((s, p) => s + p.total_orders, 0);
+const BASE_REVENUE = DEMO_PLATFORMS.reduce((s, p) => s + p.total_revenue, 0);
+const BASE_UNITS = DEMO_PLATFORMS.reduce((s, p) => s + p.total_units, 0);
+
+/** Sample multi-platform dashboard payload for /demo (period-aware). */
+export function getDemoDashboardData(period: DashboardPeriod = '30d'): DashboardData {
+  const days = periodToDays(period);
+  const scale = days / 30;
+  const daily_data = buildDailySeries(days);
+
+  // Prefer summing the visible series so KPI cards match the trend chart
+  const total_orders = daily_data.reduce((s, d) => s + d.total_orders, 0);
+  const total_revenue = daily_data.reduce((s, d) => s + d.total_revenue, 0);
+  const total_units = daily_data.reduce((s, d) => s + d.total_units, 0);
+
+  const platforms = DEMO_PLATFORMS.map((p) => {
+    const orders = Math.max(1, Math.round(total_orders * (p.total_orders / BASE_ORDERS)));
+    const revenue = Math.round(total_revenue * (p.total_revenue / BASE_REVENUE));
+    const units = Math.max(1, Math.round(total_units * (p.total_units / BASE_UNITS)));
+    return {
+      platform: p.platform,
+      total_orders: orders,
+      total_revenue: revenue,
+      total_units: units,
+      avg_order_value: orders > 0 ? Math.round((revenue / orders) * 100) / 100 : p.avg_order_value,
+      total_customers: Math.max(1, Math.round(p.total_customers * Math.min(1, 0.35 + 0.65 * scale))),
+      total_products: p.total_products,
+    };
+  });
 
   return {
     total_revenue,
     total_orders,
-    avg_order_value: Math.round((total_revenue / total_orders) * 100) / 100,
-    total_customers: 2966,
-    total_products: 579,
-    platforms: DEMO_PLATFORMS.map((p) => ({ ...p })),
-    daily_data: buildDailySeries(30),
+    avg_order_value: total_orders > 0 ? Math.round((total_revenue / total_orders) * 100) / 100 : 0,
+    total_customers: platforms.reduce((s, p) => s + (p.total_customers ?? 0), 0),
+    total_products: platforms.reduce((s, p) => s + (p.total_products ?? 0), 0),
+    platforms,
+    daily_data,
   };
 }
 
-/** Line-item sales used by Products + Customers tabs. */
-export function getDemoSales(options?: {
-  source?: string;
-  limit?: number;
-  offset?: number;
-}): SalesResponse {
+function buildAllDemoSales(): SalesRecord[] {
   const now = new Date();
   const records: SalesRecord[] = [];
 
   DEMO_PRODUCTS.forEach((product, productIdx) => {
     const customers = DEMO_CUSTOMERS.filter((c) => c.platform === product.platform);
-    const orderCount = Math.max(4, Math.min(12, Math.round(product.units / 25)));
+    const orderCount = Math.max(8, Math.min(24, Math.round(product.units / 12)));
 
     for (let i = 0; i < orderCount; i++) {
       const customer = customers[i % customers.length];
       const qty = Math.max(1, Math.round(product.units / orderCount));
-      const dayOffset = (productIdx * 3 + i * 2) % 28;
+      const dayOffset = (productIdx * 7 + i * 11) % 360;
       const orderDate = new Date(now);
       orderDate.setUTCDate(now.getUTCDate() - dayOffset);
 
@@ -187,9 +208,30 @@ export function getDemoSales(options?: {
     }
   });
 
-  const filtered = options?.source
-    ? records.filter((r) => r.source === options.source)
-    : records;
+  return records;
+}
+
+/** Line-item sales used by Products + Customers tabs. */
+export function getDemoSales(options?: {
+  source?: string;
+  startDate?: string;
+  endDate?: string;
+  limit?: number;
+  offset?: number;
+}): SalesResponse {
+  let filtered = buildAllDemoSales();
+
+  if (options?.source) {
+    filtered = filtered.filter((r) => r.source === options.source);
+  }
+  if (options?.startDate) {
+    const start = new Date(options.startDate).getTime();
+    filtered = filtered.filter((r) => r.order_date && new Date(r.order_date).getTime() >= start);
+  }
+  if (options?.endDate) {
+    const end = new Date(options.endDate).getTime();
+    filtered = filtered.filter((r) => r.order_date && new Date(r.order_date).getTime() <= end);
+  }
 
   const offset = options?.offset ?? 0;
   const limit = options?.limit ?? filtered.length;
@@ -207,29 +249,38 @@ export function getDemoSales(options?: {
   };
 }
 
-/** Platform summary used by Profitability tab. */
+/** Platform / day summary used by Profitability (+ helpers). */
 export function getDemoSalesSummary(
   groupBy: 'source' | 'day' | 'month' | 'status' = 'source',
+  startDate?: string,
+  endDate?: string,
 ): SalesSummaryResponse {
-  const earliest = new Date();
-  earliest.setUTCDate(earliest.getUTCDate() - 29);
-  const latest = new Date();
+  let days = 30;
+  if (startDate && endDate) {
+    days = Math.max(
+      1,
+      Math.round((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24)),
+    );
+  }
+
+  const period: DashboardPeriod =
+    days <= 7 ? '7d' : days <= 30 ? '30d' : days <= 90 ? '90d' : '1y';
+  const demo = getDemoDashboardData(period);
+  const earliest = demo.daily_data[0]?.date ?? new Date().toISOString();
+  const latest = demo.daily_data.at(-1)?.date ?? new Date().toISOString();
 
   if (groupBy === 'status') {
-    const total_orders = DEMO_PLATFORMS.reduce((s, p) => s + p.total_orders, 0);
-    const total_units = DEMO_PLATFORMS.reduce((s, p) => s + p.total_units, 0);
-    const total_sales = DEMO_PLATFORMS.reduce((s, p) => s + p.total_revenue, 0);
     return {
       success: true,
       group_by: groupBy,
       data: [{
         dimension: 'completed',
-        total_orders,
-        total_units,
-        total_sales,
-        avg_order_value: total_orders > 0 ? total_sales / total_orders : 0,
-        earliest_order: earliest.toISOString(),
-        latest_order: latest.toISOString(),
+        total_orders: demo.total_orders,
+        total_units: demo.platforms.reduce((s, p) => s + p.total_units, 0),
+        total_sales: demo.total_revenue,
+        avg_order_value: demo.avg_order_value,
+        earliest_order: earliest,
+        latest_order: latest,
       }],
     };
   }
@@ -238,47 +289,65 @@ export function getDemoSalesSummary(
     return {
       success: true,
       group_by: groupBy,
-      data: DEMO_PLATFORMS.map((p) => ({
+      data: demo.platforms.map((p) => ({
         dimension: p.platform,
         total_orders: p.total_orders,
         total_units: p.total_units,
         total_sales: p.total_revenue,
         avg_order_value: p.avg_order_value,
-        earliest_order: earliest.toISOString(),
-        latest_order: latest.toISOString(),
+        earliest_order: earliest,
+        latest_order: latest,
       })),
     };
   }
 
-  const daily = buildDailySeries(groupBy === 'month' ? 90 : 30);
-  const rows = daily.map((d) => ({
-    dimension: groupBy === 'month' ? d.date.slice(0, 7) : d.date,
-    total_orders: d.total_orders,
-    total_units: d.total_units,
-    total_sales: d.total_revenue,
-    avg_order_value: d.avg_order_value,
-    earliest_order: d.date,
-    latest_order: d.date,
-  }));
-
   if (groupBy === 'month') {
-    const byMonth = new Map<string, (typeof rows)[number]>();
-    for (const row of rows) {
-      const existing = byMonth.get(row.dimension);
+    const byMonth = new Map<string, {
+      dimension: string;
+      total_orders: number;
+      total_units: number;
+      total_sales: number;
+      avg_order_value: number;
+      earliest_order: string;
+      latest_order: string;
+    }>();
+    for (const d of demo.daily_data) {
+      const key = d.date.slice(0, 7);
+      const existing = byMonth.get(key);
       if (!existing) {
-        byMonth.set(row.dimension, { ...row });
+        byMonth.set(key, {
+          dimension: key,
+          total_orders: d.total_orders,
+          total_units: d.total_units,
+          total_sales: d.total_revenue,
+          avg_order_value: d.avg_order_value,
+          earliest_order: d.date,
+          latest_order: d.date,
+        });
         continue;
       }
-      existing.total_orders += row.total_orders;
-      existing.total_units += row.total_units;
-      existing.total_sales += row.total_sales;
+      existing.total_orders += d.total_orders;
+      existing.total_units += d.total_units;
+      existing.total_sales += d.total_revenue;
       existing.avg_order_value = existing.total_orders > 0
         ? existing.total_sales / existing.total_orders
         : 0;
-      existing.latest_order = row.latest_order;
+      existing.latest_order = d.date;
     }
     return { success: true, group_by: groupBy, data: Array.from(byMonth.values()) };
   }
 
-  return { success: true, group_by: groupBy, data: rows };
+  return {
+    success: true,
+    group_by: groupBy,
+    data: demo.daily_data.map((d) => ({
+      dimension: d.date,
+      total_orders: d.total_orders,
+      total_units: d.total_units,
+      total_sales: d.total_revenue,
+      avg_order_value: d.avg_order_value,
+      earliest_order: d.date,
+      latest_order: d.date,
+    })),
+  };
 }

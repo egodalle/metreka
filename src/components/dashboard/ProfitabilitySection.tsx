@@ -19,6 +19,8 @@ interface ProfitabilitySectionProps {
   selectedStore?: string;
   connectedPlatforms?: string[];
   onStoreChange?: (store: string) => void;
+  startDate?: string;
+  endDate?: string;
 }
 
 const formatCurrency = (value: number) => 
@@ -27,8 +29,8 @@ const formatCurrency = (value: number) =>
 const formatNumber = (value: number) => 
   new Intl.NumberFormat('en-US').format(value);
 
-export function ProfitabilitySection({ isLoading: externalLoading, selectedStore = "all", connectedPlatforms = [] }: ProfitabilitySectionProps) {
-  const { data, isLoading: queryLoading } = useSalesSummary('source');
+export function ProfitabilitySection({ isLoading: externalLoading, selectedStore = "all", connectedPlatforms = [], startDate, endDate }: ProfitabilitySectionProps) {
+  const { data, isLoading: queryLoading } = useSalesSummary('source', startDate, endDate);
   
   const isLoading = externalLoading || queryLoading;
 

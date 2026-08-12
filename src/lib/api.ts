@@ -544,7 +544,7 @@ export const api = {
   // Overall stats - from synced PostgreSQL tables
   getStats: async (startDate?: string, endDate?: string): Promise<StatsResponse> => {
     if (isDemoMode()) {
-      const demo = getDemoDashboardData();
+      const demo = getDemoDashboardData('30d');
       return {
         success: true,
         data: {
@@ -586,7 +586,7 @@ export const api = {
     endDate?: string
   ): Promise<SalesSummaryResponse> => {
     if (isDemoMode()) {
-      return getDemoSalesSummary(groupBy);
+      return getDemoSalesSummary(groupBy, startDate, endDate);
     }
 
     if (API_BASE_URL) {
@@ -645,7 +645,7 @@ export const api = {
   // Composite endpoint: Get full dashboard data
   getDashboard: async (period: DashboardPeriod = '30d'): Promise<DashboardData> => {
     if (isDemoMode()) {
-      return getDemoDashboardData();
+      return getDemoDashboardData(period);
     }
 
     const { startDate, endDate } = periodToDateRange(period);
