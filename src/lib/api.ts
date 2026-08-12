@@ -1,6 +1,10 @@
 // Metreka API client — reads from synced Supabase tables (optional external API fallback)
 import { StorePlatform } from './integrations';
 import { supabase } from '@/integrations/supabase/client';
+import { periodToDateRange, type DashboardPeriod } from '@/lib/dashboardPeriod';
+
+export type { DashboardPeriod } from '@/lib/dashboardPeriod';
+export { periodToDateRange } from '@/lib/dashboardPeriod';
 
 const API_BASE_URL = import.meta.env.VITE_API_URL?.trim() || '';
 const API_KEY = import.meta.env.VITE_METREKA_API_KEY || import.meta.env.VITE_GROWTHPULSE_API_KEY || '';
@@ -156,24 +160,6 @@ export interface PlatformData {
   avg_order_value: number;
   total_customers?: number;
   total_products?: number;
-}
-
-export type DashboardPeriod = '7d' | '30d' | '90d' | '1y' | 'all';
-
-export function periodToDateRange(period: DashboardPeriod): { startDate?: string; endDate?: string } {
-  if (period === 'all') return {};
-  const end = new Date();
-  const start = new Date();
-  const days =
-    period === '7d' ? 7 :
-    period === '30d' ? 30 :
-    period === '90d' ? 90 :
-    365;
-  start.setUTCDate(end.getUTCDate() - days);
-  return {
-    startDate: start.toISOString(),
-    endDate: end.toISOString(),
-  };
 }
 
 export interface DailyData {
