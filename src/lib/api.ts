@@ -3,7 +3,7 @@ import { StorePlatform } from './integrations';
 import { supabase } from '@/integrations/supabase/client';
 import { periodToDateRange, type DashboardPeriod } from '@/lib/dashboardPeriod';
 import { isDemoMode } from '@/lib/integrations';
-import { getDemoDashboardData } from '@/lib/demoData';
+import { getDemoDashboardData, getDemoSales, getDemoSalesSummary } from '@/lib/demoData';
 
 export type { DashboardPeriod } from '@/lib/dashboardPeriod';
 export { periodToDateRange } from '@/lib/dashboardPeriod';
@@ -543,6 +543,31 @@ export const api = {
 
   // Overall stats - from synced PostgreSQL tables
   getStats: async (startDate?: string, endDate?: string): Promise<StatsResponse> => {
+    if (isDemoMode()) {
+      const demo = getDemoDashboardData();
+      return {
+        success: true,
+        data: {
+          overview: {
+            total_records: demo.total_orders,
+            total_orders: demo.total_orders,
+            total_customers: demo.total_customers,
+            total_products: demo.total_products,
+            total_revenue: demo.total_revenue,
+            avg_order_value: demo.avg_order_value,
+            earliest_order: demo.daily_data[0]?.date ?? new Date().toISOString(),
+            latest_order: demo.daily_data.at(-1)?.date ?? new Date().toISOString(),
+            platforms: demo.platforms.length,
+          },
+          by_source: demo.platforms.map((p) => ({
+            source: p.platform,
+            orders: p.total_orders,
+            revenue: p.total_revenue,
+          })),
+        },
+      };
+    }
+
     // Use external FastAPI if configured, otherwise use local DB
     if (API_BASE_URL) {
       try {
@@ -560,6 +585,10 @@ export const api = {
     startDate?: string,
     endDate?: string
   ): Promise<SalesSummaryResponse> => {
+    if (isDemoMode()) {
+      return getDemoSalesSummary(groupBy);
+    }
+
     if (API_BASE_URL) {
       try {
         const params = new URLSearchParams({ group_by: groupBy });
@@ -582,6 +611,10 @@ export const api = {
     limit?: number;
     offset?: number;
   }): Promise<SalesResponse> => {
+    if (isDemoMode()) {
+      return getDemoSales(options);
+    }
+
     if (API_BASE_URL) {
       try {
         const params = new URLSearchParams();
