@@ -126,7 +126,7 @@ async function validateShopifyCredentials(
   accessToken: string,
 ): Promise<{ ok: boolean; error?: string; shopName?: string }> {
   try {
-    const response = await fetch(`https://${storeUrl}/admin/api/2024-01/shop.json`, {
+    const response = await fetch(`https://${storeUrl}/admin/api/2026-01/shop.json`, {
       headers: { "X-Shopify-Access-Token": accessToken, "Content-Type": "application/json" },
     });
     if (!response.ok) {

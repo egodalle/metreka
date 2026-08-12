@@ -54,6 +54,11 @@ export default function AuthCallback() {
       }
 
       if (session) {
+        const flow = params.get('flow');
+        if (flow === 'recovery') {
+          navigate('/auth?reset=true', { replace: true });
+          return;
+        }
         navigate('/dashboard', { replace: true });
         return;
       }

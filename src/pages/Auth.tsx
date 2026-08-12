@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -9,26 +9,55 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
 import { Loader2, ArrowLeft, Mail, Lock, User } from 'lucide-react';
 
-type AuthMode = 'login' | 'register' | 'forgot-password';
+type AuthMode = 'login' | 'register' | 'forgot-password' | 'update-password';
+
+/** Google is disabled in supabase/config.toml until provider secrets are configured. */
+const GOOGLE_AUTH_ENABLED = import.meta.env.VITE_ENABLE_GOOGLE_AUTH === 'true';
 
 export default function Auth() {
   const [mode, setMode] = useState<AuthMode>('login');
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [name, setName] = useState('');
+  const [resetSent, setResetSent] = useState(false);
   const [isGoogleSubmitting, setIsGoogleSubmitting] = useState(false);
-  
+  const [searchParams, setSearchParams] = useSearchParams();
+
   const navigate = useNavigate();
   const { toast } = useToast();
-  const { signIn, signUp, signInWithGoogle, resetPassword, isAuthenticated, isLoading } = useAuth();
+  const {
+    signIn,
+    resetPassword,
+    updatePassword,
+    signInWithGoogle,
+    isAuthenticated,
+    isLoading,
+  } = useAuth();
 
-  // Redirect if already authenticated
+  // Password recovery deep-link from email (/auth?reset=true) or AuthCallback
   useEffect(() => {
-    if (!isLoading && isAuthenticated) {
+    const wantsReset = searchParams.get('reset') === 'true';
+    if (wantsReset) {
+      setMode('update-password');
+    }
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setMode('update-password');
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [searchParams]);
+
+  // Redirect authenticated users away from login/register (but not password update)
+  useEffect(() => {
+    if (!isLoading && isAuthenticated && mode !== 'update-password' && mode !== 'forgot-password') {
       navigate('/dashboard');
     }
-  }, [isAuthenticated, isLoading, navigate]);
+  }, [isAuthenticated, isLoading, navigate, mode]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -42,6 +71,23 @@ export default function Auth() {
           title: 'Reset email sent!',
           description: 'Check your inbox for password reset instructions.',
         });
+      } else if (mode === 'update-password') {
+        if (password.length < 6) {
+          throw new Error('Password must be at least 6 characters');
+        }
+        if (password !== confirmPassword) {
+          throw new Error('Passwords do not match');
+        }
+        await updatePassword(password);
+        toast({
+          title: 'Password updated',
+          description: 'You can now use your new password to sign in.',
+        });
+        setSearchParams({}, { replace: true });
+        setMode('login');
+        setPassword('');
+        setConfirmPassword('');
+        navigate('/dashboard', { replace: true });
       } else if (mode === 'login') {
         await signIn(email, password);
         toast({
@@ -93,6 +139,7 @@ export default function Auth() {
   const resetForm = () => {
     setEmail('');
     setPassword('');
+    setConfirmPassword('');
     setName('');
     setResetSent(false);
   };
@@ -107,6 +154,7 @@ export default function Auth() {
 
   const getTitle = () => {
     if (mode === 'forgot-password') return 'Reset Password';
+    if (mode === 'update-password') return 'Choose a New Password';
     if (mode === 'register') return 'Create Account';
     return 'Sign In';
   };
@@ -117,6 +165,7 @@ export default function Auth() {
         ? 'Check your email for reset instructions'
         : 'Enter your email to receive a password reset link';
     }
+    if (mode === 'update-password') return 'Enter and confirm your new password';
     if (mode === 'register') return 'Fill in your details to get started';
     return 'Enter your credentials to access your dashboard';
   };
@@ -178,26 +227,30 @@ export default function Auth() {
                     </div>
                   </div>
                 )}
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="email"
-                      type="email"
-                      placeholder="you@example.com"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="pl-10"
-                      required
-                      disabled={isSubmitting}
-                    />
+                {mode !== 'update-password' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="email"
+                        type="email"
+                        placeholder="you@example.com"
+                        value={email}
+                        onChange={(e) => setEmail(e.target.value)}
+                        className="pl-10"
+                        required
+                        disabled={isSubmitting}
+                      />
+                    </div>
                   </div>
-                </div>
-                {mode !== 'forgot-password' && (
+                )}
+                {(mode === 'login' || mode === 'register' || mode === 'update-password') && (
                   <div className="space-y-2">
                     <div className="flex items-center justify-between">
-                      <Label htmlFor="password">Password</Label>
+                      <Label htmlFor="password">
+                        {mode === 'update-password' ? 'New password' : 'Password'}
+                      </Label>
                       {mode === 'login' && (
                         <button
                           type="button"
@@ -225,13 +278,38 @@ export default function Auth() {
                     </div>
                   </div>
                 )}
+                {mode === 'update-password' && (
+                  <div className="space-y-2">
+                    <Label htmlFor="confirmPassword">Confirm password</Label>
+                    <div className="relative">
+                      <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        id="confirmPassword"
+                        type="password"
+                        placeholder="••••••••"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        className="pl-10"
+                        required
+                        minLength={6}
+                        disabled={isSubmitting}
+                      />
+                    </div>
+                  </div>
+                )}
                 <Button type="submit" className="w-full" disabled={isSubmitting}>
                   {isSubmitting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  {mode === 'forgot-password' ? 'Send Reset Link' : mode === 'login' ? 'Sign In' : 'Create Account'}
+                  {mode === 'forgot-password'
+                    ? 'Send Reset Link'
+                    : mode === 'update-password'
+                      ? 'Update Password'
+                      : mode === 'login'
+                        ? 'Sign In'
+                        : 'Create Account'}
                 </Button>
               </form>
             )}
-            {mode !== 'forgot-password' && (
+            {mode !== 'forgot-password' && mode !== 'update-password' && GOOGLE_AUTH_ENABLED && (
               <>
                 <div className="relative my-4">
                   <div className="absolute inset-0 flex items-center">
@@ -286,7 +364,7 @@ export default function Auth() {
                 </Button>
               </>
             )}
-            {mode !== 'forgot-password' && (
+            {mode !== 'forgot-password' && mode !== 'update-password' && (
               <div className="mt-4 text-center text-sm">
                 {mode === 'login' ? "Don't have an account? " : 'Already have an account? '}
                 <button

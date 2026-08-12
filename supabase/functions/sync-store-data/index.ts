@@ -187,7 +187,7 @@ async function syncShopifyData(
     // Fetch orders from Shopify
     console.log(`Fetching orders from Shopify store: ${connection.store_name}`);
     const ordersResponse = await fetch(
-      `${shopifyUrl}/admin/api/2024-01/orders.json?status=any&limit=250`,
+      `${shopifyUrl}/admin/api/2026-01/orders.json?status=any&limit=250`,
       { headers }
     );
     
@@ -245,7 +245,7 @@ async function syncShopifyData(
     // Fetch products from Shopify
     console.log(`Fetching products from Shopify store: ${connection.store_name}`);
     const productsResponse = await fetch(
-      `${shopifyUrl}/admin/api/2024-01/products.json?limit=250`,
+      `${shopifyUrl}/admin/api/2026-01/products.json?limit=250`,
       { headers }
     );
 
@@ -290,7 +290,7 @@ async function syncShopifyData(
     // Fetch customers from Shopify
     console.log(`Fetching customers from Shopify store: ${connection.store_name}`);
     const customersResponse = await fetch(
-      `${shopifyUrl}/admin/api/2024-01/customers.json?limit=250`,
+      `${shopifyUrl}/admin/api/2026-01/customers.json?limit=250`,
       { headers }
     );
 

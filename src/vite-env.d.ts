@@ -10,6 +10,7 @@ interface ImportMetaEnv {
   readonly VITE_DEMO_MODE?: string;
   readonly VITE_PADDLE_CLIENT_TOKEN?: string;
   readonly VITE_PADDLE_ENVIRONMENT?: 'sandbox' | 'production';
+  readonly VITE_ENABLE_GOOGLE_AUTH?: string;
 }
 
 interface ImportMeta {

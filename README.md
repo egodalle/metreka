@@ -1038,7 +1038,7 @@ Last Updated: December 2024
 
 Metreka is a standard Vite + React app. Host on [Vercel](https://vercel.com) (or any static host).
 
-**Production URL**: https://metreka.vercel.app (change `vercel.json` / env if you use a custom domain)
+**Production URL**: https://metreka-zvhr.vercel.app
 
 ### One-time setup
 
@@ -1046,11 +1046,11 @@ Metreka is a standard Vite + React app. Host on [Vercel](https://vercel.com) (or
 2. Set environment variables:
    - `VITE_SUPABASE_URL` = `https://wwxhmxrsrqlirjfbmnsk.supabase.co`
    - `VITE_SUPABASE_PUBLISHABLE_KEY` = your Supabase anon/publishable key
-   - `VITE_APP_URL` = `https://metreka.vercel.app` (or your domain)
+   - `VITE_APP_URL` = `https://metreka-zvhr.vercel.app` (or your domain)
 3. Supabase Dashboard → **Authentication → URL Configuration**:
    - Site URL: your production URL
    - Redirect URLs: `{production}/auth/callback`, `{production}/oauth/callback`, plus `http://localhost:8080/...` for local dev
-4. `npx supabase secrets set APP_URL=https://metreka.vercel.app` (for Paddle checkout redirects)
+4. `npx supabase secrets set APP_URL=https://metreka-zvhr.vercel.app` (for Paddle checkout redirects)
 
 ### Deploy
 
