@@ -1,5 +1,7 @@
 // Store integration client — sync status, demo mode, platform configs
 import { supabase } from '@/integrations/supabase/client';
+import { normalizeSyncStatus } from '@/lib/syncStatus';
+import { normalizeSyncStatus } from '@/lib/stores';
 
 const DEMO_FLAG_KEY = 'metreka_demo_mode';
 
@@ -159,9 +161,9 @@ export async function getSyncStatus(storeId: string): Promise<SyncStatus> {
     .limit(1)
     .maybeSingle();
 
-  const status = connection.sync_status;
+  const status = normalizeSyncStatus(connection.sync_status);
 
-  if (status === 'synced' || status === 'completed') {
+  if (status === 'completed') {
     return {
       status: 'completed',
       progress: 100,
@@ -172,7 +174,7 @@ export async function getSyncStatus(storeId: string): Promise<SyncStatus> {
     };
   }
 
-  if (status === 'error' || status === 'failed') {
+  if (status === 'failed') {
     return {
       status: 'failed',
       error: log?.error_message ?? 'Sync failed. Check your store credentials.',
@@ -195,6 +197,8 @@ export async function getSyncStatus(storeId: string): Promise<SyncStatus> {
     }
     return { status: 'syncing', message: 'Importing your store data...' };
   }
+
+  return { status: 'pending', message: 'Waiting for sync to start...' };
 }
 
 // Store listing/disconnect live in src/lib/stores.ts (Supabase-backed)

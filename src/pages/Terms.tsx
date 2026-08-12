@@ -21,7 +21,7 @@ const sections = [
   },
   {
     title: "Subscriptions and billing",
-    body: "Paid plans are billed monthly through Paddle. Fees are charged in advance. Trials convert to paid plans unless canceled before the trial ends. Refunds are handled according to our refund policy and applicable law. You may cancel anytime via the customer portal or by contacting support.",
+    body: "Paid plans are billed monthly through Paddle. Fees are charged in advance. New accounts may receive a free evaluation period (currently up to 7 days) that does not automatically convert to a paid subscription — you only pay if you choose a plan and complete checkout. Refunds are handled according to our refund policy and applicable law. You may cancel a paid subscription anytime via the customer portal or by contacting support.",
   },
   {
     title: "Acceptable use",
@@ -58,7 +58,7 @@ const Terms = () => {
                 Terms of <span className="text-gradient-primary">Service</span>
               </h1>
               <p className="text-lg text-muted-foreground mb-8 text-center">
-                Last updated: February 2026
+                Last updated: August 2026
               </p>
               <div className="glass rounded-2xl p-8 text-left space-y-6">
                 {sections.map((section) => (

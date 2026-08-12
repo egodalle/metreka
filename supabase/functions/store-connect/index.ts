@@ -556,6 +556,17 @@ Deno.serve(async (req) => {
     return json({ error: `Unknown action: ${action}` }, 400);
   } catch (error) {
     console.error("[STORE-CONNECT] error", error);
-    return json({ error: (error as Error).message ?? "Unexpected error" }, 500);
+    const message = (error as Error).message ?? "Unexpected error";
+    if (message.includes("STORE_CREDENTIALS_KEY")) {
+      return json(
+        {
+          error:
+            "Store connections are temporarily unavailable (server encryption key not configured). Please try again later or contact support.",
+          code: "store_credentials_key_missing",
+        },
+        503,
+      );
+    }
+    return json({ error: message }, 500);
   }
 });

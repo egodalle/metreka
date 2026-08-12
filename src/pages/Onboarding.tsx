@@ -14,7 +14,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
-import { Loader2, Store, ArrowRight, Check, ExternalLink, RefreshCw, ShieldCheck, Package, ShoppingCart, BarChart3, Users, Unlink, ArrowLeft } from 'lucide-react';
+import { Loader2, Store, ArrowRight, Check, ExternalLink, RefreshCw, ShieldCheck, Package, ShoppingCart, BarChart3, Users, Unlink, ArrowLeft, XCircle } from 'lucide-react';
 import {
   StorePlatform,
   platformConfigs,
@@ -99,9 +99,10 @@ export default function Onboarding() {
           });
         } else if (status.status === 'failed') {
           clearInterval(pollInterval);
+          refetchConnections();
           toast({
             title: 'Sync failed',
-            description: status.error || 'Failed to sync store data',
+            description: status.error || 'Failed to sync store data. You can fix credentials and try again.',
             variant: 'destructive',
           });
         }
@@ -508,6 +509,39 @@ export default function Onboarding() {
         );
 
       case 'syncing':
+        if (syncStatus?.status === 'failed') {
+          return (
+            <div className="space-y-6 py-4">
+              <div className="flex flex-col items-center space-y-4">
+                <div className="h-16 w-16 rounded-full bg-destructive/10 flex items-center justify-center">
+                  <XCircle className="h-8 w-8 text-destructive" />
+                </div>
+                <div className="text-center">
+                  <h3 className="font-semibold">Sync failed</h3>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    {syncStatus.error || 'We could not import your store data. Check credentials and try again.'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="space-y-3">
+                <Button
+                  className="w-full"
+                  onClick={() => {
+                    setSyncStatus(null);
+                    setStep('credentials');
+                  }}
+                >
+                  Fix credentials & retry
+                </Button>
+                <Button variant="outline" className="w-full" onClick={handleGoToDashboard}>
+                  Continue to dashboard
+                </Button>
+              </div>
+            </div>
+          );
+        }
+
         return (
           <div className="space-y-6 py-4">
             <div className="flex flex-col items-center space-y-4">
@@ -580,7 +614,7 @@ export default function Onboarding() {
       case 'credentials':
         return `Connect ${selectedPlatformConfig?.name}`;
       case 'syncing':
-        return 'Syncing Data';
+        return syncStatus?.status === 'failed' ? 'Sync Failed' : 'Syncing Data';
       case 'complete':
         return 'Setup Complete';
     }
@@ -599,7 +633,9 @@ export default function Onboarding() {
       case 'credentials':
         return 'Enter your API credentials to connect your store';
       case 'syncing':
-        return 'Importing your products, orders, and analytics';
+        return syncStatus?.status === 'failed'
+          ? 'Fix your credentials or continue and retry sync later from the dashboard'
+          : 'Importing your products, orders, and analytics';
       case 'complete':
         return 'Your store is connected and data is ready';
     }

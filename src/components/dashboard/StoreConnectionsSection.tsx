@@ -217,6 +217,7 @@
    const getSyncStatusBadge = (status: string | null) => {
      switch (status) {
        case 'completed':
+       case 'synced':
          return (
            <Badge variant="outline" className="text-green-500 border-green-500/30 gap-1">
              <CheckCircle2 className="w-3 h-3" />
@@ -231,6 +232,7 @@
            </Badge>
          );
        case 'failed':
+       case 'error':
          return (
            <Badge variant="outline" className="text-red-500 border-red-500/30 gap-1">
              <XCircle className="w-3 h-3" />

@@ -2,9 +2,11 @@
 import { supabase } from '@/integrations/supabase/client';
 import { isDemoMode } from '@/lib/integrations';
 import { getDemoStoreConnections } from '@/lib/demoData';
+import { normalizeSyncStatus, type SyncStatus } from '@/lib/syncStatus';
 
 export type StorePlatform = 'shopify' | 'lazada' | 'shopee';
-export type SyncStatus = 'pending' | 'syncing' | 'completed' | 'failed';
+export type { SyncStatus };
+export { normalizeSyncStatus };
 
 export interface StoreConnection {
   id: string;
@@ -108,7 +110,7 @@ export async function getStoreConnections(): Promise<StoreConnection[]> {
   return (data || []).map(row => ({
     ...row,
     platform: row.platform as StorePlatform,
-    sync_status: (row.sync_status || 'pending') as SyncStatus,
+    sync_status: normalizeSyncStatus(row.sync_status),
   })) as StoreConnection[];
 }
 
@@ -135,7 +137,7 @@ export async function createStoreConnection(
   return {
     ...data.connection,
     platform: data.connection.platform as StorePlatform,
-    sync_status: (data.connection.sync_status || 'pending') as SyncStatus,
+    sync_status: normalizeSyncStatus(data.connection.sync_status),
   } as StoreConnection;
 }
 
@@ -186,7 +188,7 @@ export async function completeOAuthConnection(
   return {
     ...data.connection,
     platform: data.connection.platform as StorePlatform,
-    sync_status: (data.connection.sync_status || 'pending') as SyncStatus,
+    sync_status: normalizeSyncStatus(data.connection.sync_status),
   } as StoreConnection;
 }
 
@@ -216,7 +218,7 @@ export async function updateStoreSync(
   return {
     ...data,
     platform: data.platform as StorePlatform,
-    sync_status: (data.sync_status || 'pending') as SyncStatus,
+    sync_status: normalizeSyncStatus(data.sync_status),
   } as StoreConnection;
 }
 
@@ -243,7 +245,7 @@ export async function getStoreConnection(storeId: string): Promise<StoreConnecti
   return {
     ...data,
     platform: data.platform as StorePlatform,
-    sync_status: (data.sync_status || 'pending') as SyncStatus,
+    sync_status: normalizeSyncStatus(data.sync_status),
   } as StoreConnection;
 }
 

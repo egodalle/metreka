@@ -67,7 +67,7 @@ See [`.env.example`](.env.example) for the full checklist (auth redirects, Paddl
 **Edge functions:**
 
 ```bash
-npx supabase functions deploy create-checkout check-subscription customer-portal paddle-webhook store-connect sync-store-data --project-ref wwxhmxrsrqlirjfbmnsk
+npx supabase functions deploy create-checkout check-subscription customer-portal paddle-webhook store-connect sync-store-data send-contact-email --project-ref wwxhmxrsrqlirjfbmnsk
 ```
 
 **Migrations:**
@@ -75,6 +75,22 @@ npx supabase functions deploy create-checkout check-subscription customer-portal
 ```bash
 npx supabase db push --linked
 ```
+
+### Beta ops checklist (required before inviting testers)
+
+1. **`STORE_CREDENTIALS_KEY`** — set on Edge Function secrets. Without it, store connect returns 503 and credentials cannot be saved.
+   ```bash
+   npx supabase secrets set STORE_CREDENTIALS_KEY="$(openssl rand -base64 32)" --project-ref wwxhmxrsrqlirjfbmnsk
+   ```
+2. **Scheduled sync (every 6h)** — pricing promises scheduled sync; it is **not** enabled until you run this once in the Supabase SQL editor (after setting `SYNC_CRON_SECRET` on the `sync-store-data` function to the same value):
+   ```sql
+   SELECT public.schedule_store_sync_jobs(
+     'https://wwxhmxrsrqlirjfbmnsk.supabase.co/functions/v1/sync-store-data',
+     'your-SYNC_CRON_SECRET-value'
+   );
+   ```
+   Requires `pg_cron` + `pg_net` extensions. Manual “Sync” on the dashboard still works without cron.
+3. **Contact form** — deploy `send-contact-email` (included in the deploy command above). Submissions always insert into `contact_submissions`. Optional `RESEND_API_KEY` (+ optional `CONTACT_TO_EMAIL` / `CONTACT_FROM_EMAIL`) emails you a copy; without Resend, check the table in Supabase.
 
 ### Auth URLs (Supabase)
 

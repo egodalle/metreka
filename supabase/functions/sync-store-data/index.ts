@@ -1011,7 +1011,9 @@ Deno.serve(async (req) => {
         .from('store_connections')
         .update({
           last_sync_at: new Date().toISOString(),
-          sync_status: syncResult.errors.length > 0 ? 'error' : 'synced',
+          // Canonical statuses match UI + sync_logs (completed/failed).
+          // Legacy rows may still have synced/error; frontend normalizes those.
+          sync_status: syncResult.errors.length > 0 ? 'failed' : 'completed',
         })
         .eq('id', connection.id);
     }
