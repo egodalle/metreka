@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api, { 
   DashboardData, 
+  DashboardPeriod,
   StatsResponse,
   SalesSummaryResponse,
   SalesResponse,
@@ -8,10 +9,10 @@ import api, {
 } from '@/lib/api';
 
 // Main dashboard data (composite of stats + summaries)
-export function useDashboard() {
+export function useDashboard(period: DashboardPeriod = '30d') {
   return useQuery<DashboardData>({
-    queryKey: ['dashboard'],
-    queryFn: () => api.getDashboard(),
+    queryKey: ['dashboard', period],
+    queryFn: () => api.getDashboard(period),
     staleTime: 30000,
     retry: 2,
   });

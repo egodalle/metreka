@@ -127,9 +127,10 @@ serve(async (req) => {
     const urls = portalData.data?.urls;
 
     const portalUrl =
-      urls?.subscriptions?.[0]?.cancel_subscription ??
+      urls?.general?.overview ??
       urls?.subscriptions?.[0]?.update_subscription_payment_method ??
-      urls?.general?.overview;
+      urls?.subscriptions?.[0]?.cancel_subscription;
+
 
     if (!portalUrl) {
       throw new Error("Paddle did not return a portal URL");

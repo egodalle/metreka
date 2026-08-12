@@ -23,7 +23,7 @@ const plans = [
     price: "$29",
     period: "/month",
     description: "Perfect for solo sellers",
-    features: ["1 store connection", "Daily data sync", "Core KPIs"],
+    features: ["1 store connection", "Manual + scheduled sync", "Core KPIs"],
     popular: false,
   },
   {
@@ -32,7 +32,7 @@ const plans = [
     price: "$59",
     period: "/month",
     description: "For multi-channel sellers",
-    features: ["Up to 3 stores", "Hourly sync", "Advanced analytics"],
+    features: ["Up to 3 stores", "Shopify + Lazada + Shopee", "Advanced analytics"],
     popular: true,
   },
   {
@@ -41,7 +41,7 @@ const plans = [
     price: "$79",
     period: "/month",
     description: "For agencies and brands",
-    features: ["Up to 5 stores", "Hourly sync", "API access"],
+    features: ["Up to 5 stores", "Full dashboard analytics", "Priority support"],
     popular: false,
   },
 ];

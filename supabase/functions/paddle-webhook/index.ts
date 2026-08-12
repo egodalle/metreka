@@ -93,14 +93,31 @@ serve(async (req) => {
 
   const event = JSON.parse(rawBody);
   const eventType = event.event_type as string;
+  const eventId = (event.event_id || event.notification_id || event.id) as string | undefined;
   const data = event.data ?? {};
-  log("event", { eventType, id: data.id });
+  log("event", { eventType, eventId, id: data.id });
 
   const supabase = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
     { auth: { persistSession: false } },
   );
+
+  // Idempotency: skip already-processed events
+  if (eventId) {
+    const { data: existing } = await supabase
+      .from("paddle_webhook_events")
+      .select("event_id")
+      .eq("event_id", eventId)
+      .maybeSingle();
+
+    if (existing) {
+      log("skip duplicate", { eventId });
+      return new Response(JSON.stringify({ received: true, duplicate: true }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+  }
 
   const subscriptionEvents = [
     "subscription.created",
@@ -113,6 +130,13 @@ serve(async (req) => {
   ];
 
   if (!subscriptionEvents.includes(eventType)) {
+    if (eventId) {
+      await supabase.from("paddle_webhook_events").upsert({
+        event_id: eventId,
+        event_type: eventType,
+        payload: { ignored: true },
+      });
+    }
     return new Response(JSON.stringify({ received: true }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
@@ -164,8 +188,10 @@ serve(async (req) => {
   }
 
   if (!userId) {
-    log("WARN", "Could not resolve user for subscription event");
-    return new Response(JSON.stringify({ received: true, warning: "user not resolved" }), {
+    // Return 500 so Paddle retries — avoids silently dropping a paid subscription
+    log("ERROR", "Could not resolve user for subscription event");
+    return new Response(JSON.stringify({ error: "user not resolved" }), {
+      status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
@@ -196,6 +222,15 @@ serve(async (req) => {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
+  }
+
+  if (eventId) {
+    const { error: eventError } = await supabase.from("paddle_webhook_events").upsert({
+      event_id: eventId,
+      event_type: eventType,
+      payload: { subscription_id: subscriptionId, user_id: userId, status },
+    });
+    if (eventError) log("WARN", `event log failed: ${eventError.message}`);
   }
 
   log("upserted subscription", { userId, status, plan: row.plan_name });

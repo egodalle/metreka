@@ -105,6 +105,10 @@ export type Database = {
           stripe_price_id: string | null
           stripe_product_id: string | null
           stripe_subscription_id: string | null
+          paddle_customer_id: string | null
+          paddle_subscription_id: string | null
+          paddle_price_id: string | null
+          paddle_product_id: string | null
           updated_at: string
           user_id: string
         }
@@ -120,6 +124,10 @@ export type Database = {
           stripe_price_id?: string | null
           stripe_product_id?: string | null
           stripe_subscription_id?: string | null
+          paddle_customer_id?: string | null
+          paddle_subscription_id?: string | null
+          paddle_price_id?: string | null
+          paddle_product_id?: string | null
           updated_at?: string
           user_id: string
         }
@@ -135,8 +143,33 @@ export type Database = {
           stripe_price_id?: string | null
           stripe_product_id?: string | null
           stripe_subscription_id?: string | null
+          paddle_customer_id?: string | null
+          paddle_subscription_id?: string | null
+          paddle_price_id?: string | null
+          paddle_product_id?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      paddle_webhook_events: {
+        Row: {
+          event_id: string
+          event_type: string
+          processed_at: string
+          payload: Json | null
+        }
+        Insert: {
+          event_id: string
+          event_type: string
+          processed_at?: string
+          payload?: Json | null
+        }
+        Update: {
+          event_id?: string
+          event_type?: string
+          processed_at?: string
+          payload?: Json | null
         }
         Relationships: []
       }

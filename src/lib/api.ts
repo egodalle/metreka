@@ -154,6 +154,26 @@ export interface PlatformData {
   total_revenue: number;
   total_units: number;
   avg_order_value: number;
+  total_customers?: number;
+  total_products?: number;
+}
+
+export type DashboardPeriod = '7d' | '30d' | '90d' | '1y' | 'all';
+
+export function periodToDateRange(period: DashboardPeriod): { startDate?: string; endDate?: string } {
+  if (period === 'all') return {};
+  const end = new Date();
+  const start = new Date();
+  const days =
+    period === '7d' ? 7 :
+    period === '30d' ? 30 :
+    period === '90d' ? 90 :
+    365;
+  start.setUTCDate(end.getUTCDate() - days);
+  return {
+    startDate: start.toISOString(),
+    endDate: end.toISOString(),
+  };
 }
 
 export interface DailyData {
@@ -217,7 +237,7 @@ function summaryBucketToItem(dimension: string, stats: SummaryBucket): SalesSumm
   };
 }
 
-async function getStatsFromDB(): Promise<StatsResponse> {
+async function getStatsFromDB(startDate?: string, endDate?: string): Promise<StatsResponse> {
   const connectedPlatforms = await fetchConnectedPlatforms();
   
   if (connectedPlatforms.length === 0) {
@@ -241,10 +261,15 @@ async function getStatsFromDB(): Promise<StatsResponse> {
   }
 
   // Fetch aggregated order stats (one row per line item)
-  const { data: orders, error: ordersError } = await supabase
+  let ordersQuery = supabase
     .from('synced_orders')
     .select('platform, external_order_id, total_amount, order_date, quantity')
     .in('platform', connectedPlatforms);
+
+  if (startDate) ordersQuery = ordersQuery.gte('order_date', startDate);
+  if (endDate) ordersQuery = ordersQuery.lte('order_date', endDate);
+
+  const { data: orders, error: ordersError } = await ordersQuery;
 
   if (ordersError) {
     console.error('Failed to fetch orders:', ordersError);
@@ -262,6 +287,9 @@ async function getStatsFromDB(): Promise<StatsResponse> {
     .from('synced_products')
     .select('id, platform')
     .in('platform', connectedPlatforms);
+
+  if (customersError) console.warn('Failed to fetch customers:', customersError.message);
+  if (productsError) console.warn('Failed to fetch products:', productsError.message);
 
   const orderData = (orders || []) as OrderRow[];
   const totalRevenue = orderData.reduce((sum, o) => sum + (Number(o.total_amount) || 0), 0);
@@ -517,7 +545,7 @@ export const api = {
   },
 
   // Overall stats - from synced PostgreSQL tables
-  getStats: async (): Promise<StatsResponse> => {
+  getStats: async (startDate?: string, endDate?: string): Promise<StatsResponse> => {
     // Use external FastAPI if configured, otherwise use local DB
     if (API_BASE_URL) {
       try {
@@ -526,7 +554,7 @@ export const api = {
         console.warn('FastAPI unavailable, falling back to local DB:', error);
       }
     }
-    return getStatsFromDB();
+    return getStatsFromDB(startDate, endDate);
   },
 
   // Sales summary by different dimensions
@@ -585,12 +613,30 @@ export const api = {
   },
 
   // Composite endpoint: Get full dashboard data
-  getDashboard: async (): Promise<DashboardData> => {
-    const [stats, platformSummary, dailySummary] = await Promise.all([
-      api.getStats(),
-      api.getSalesSummary('source'),
-      api.getSalesSummary('day'),
+  getDashboard: async (period: DashboardPeriod = '30d'): Promise<DashboardData> => {
+    const { startDate, endDate } = periodToDateRange(period);
+    const connectedPlatforms = await fetchConnectedPlatforms();
+
+    const [stats, platformSummary, dailySummary, customersRes, productsRes] = await Promise.all([
+      api.getStats(startDate, endDate),
+      api.getSalesSummary('source', startDate, endDate),
+      api.getSalesSummary('day', startDate, endDate),
+      connectedPlatforms.length
+        ? supabase.from('synced_customers').select('id, platform').in('platform', connectedPlatforms)
+        : Promise.resolve({ data: [] as { id: string; platform: string }[] }),
+      connectedPlatforms.length
+        ? supabase.from('synced_products').select('id, platform').in('platform', connectedPlatforms)
+        : Promise.resolve({ data: [] as { id: string; platform: string }[] }),
     ]);
+
+    const customersByPlatform = new Map<string, number>();
+    for (const row of customersRes.data || []) {
+      customersByPlatform.set(row.platform, (customersByPlatform.get(row.platform) || 0) + 1);
+    }
+    const productsByPlatform = new Map<string, number>();
+    for (const row of productsRes.data || []) {
+      productsByPlatform.set(row.platform, (productsByPlatform.get(row.platform) || 0) + 1);
+    }
 
     return {
       total_revenue: stats.data.overview.total_revenue,
@@ -604,6 +650,8 @@ export const api = {
         total_revenue: p.total_sales,
         total_units: p.total_units,
         avg_order_value: p.avg_order_value,
+        total_customers: customersByPlatform.get(p.dimension) || 0,
+        total_products: productsByPlatform.get(p.dimension) || 0,
       })),
       daily_data: dailySummary.data
         .map(d => ({

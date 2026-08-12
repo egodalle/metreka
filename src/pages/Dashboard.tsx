@@ -160,7 +160,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { signOut, session } = useAuth();
   const { toast } = useToast();
-  const [selectedPeriod, setSelectedPeriod] = useState("7d");
+  const [selectedPeriod, setSelectedPeriod] = useState<"7d" | "30d" | "90d" | "1y">("30d");
   const [activeTab, setActiveTab] = useState("overview");
   
   // Check subscription/trial access
@@ -237,7 +237,7 @@ const Dashboard = () => {
   }, [connectedPlatforms.length]);
   
   const { data: healthData, isLoading: healthLoading } = useHealthCheck();
-  const { data: dashboardData, isLoading: dashboardLoading, isError, error, refetch } = useDashboard();
+  const { data: dashboardData, isLoading: dashboardLoading, isError, error, refetch } = useDashboard(selectedPeriod);
   
   // Combined loading state: still loading if either connections or dashboard data loading
   const isLoading = storeConnectionsLoading || dashboardLoading;
@@ -355,13 +355,14 @@ const Dashboard = () => {
     };
   };
 
-  // Helper to get per-platform customer/product counts
-  // In production this would come from the API; in demo mode we use predefined values
+  // Helper to get per-platform customer/product counts from dashboard payload
   const getPlatformStats = (
     platform: string,
     data: typeof dashboardData,
   ): { customers: number; products: number } => {
-    if (!data || isDemoMode()) {
+    if (!data) return { customers: 0, products: 0 };
+
+    if (isDemoMode()) {
       const platformStatsMap: Record<string, { customers: number; products: number }> = {
         shopify: { customers: 523, products: 156 },
         shopee: { customers: 1456, products: 234 },
@@ -369,7 +370,15 @@ const Dashboard = () => {
       };
       return platformStatsMap[platform] || { customers: 0, products: 0 };
     }
-    // When only one store platform is connected, overview totals match that platform
+
+    const row = data.platforms?.find((p) => p.platform === platform);
+    if (row) {
+      return {
+        customers: row.total_customers ?? 0,
+        products: row.total_products ?? 0,
+      };
+    }
+
     const connectedCount = data.platforms?.length ?? 0;
     if (connectedCount <= 1) {
       return { customers: data.total_customers, products: data.total_products };
@@ -510,7 +519,10 @@ const Dashboard = () => {
             <Button variant="ghost" onClick={() => refetch()} className="gap-2" title="Reload dashboard from database">
               Refresh view
             </Button>
-            <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+            <Select
+              value={selectedPeriod}
+              onValueChange={(value) => setSelectedPeriod(value as "7d" | "30d" | "90d" | "1y")}
+            >
               <SelectTrigger className="w-32">
                 <SelectValue />
               </SelectTrigger>
