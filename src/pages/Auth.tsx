@@ -7,6 +7,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/integrations/supabase/client';
+import { getPostAuthPath } from '@/lib/postAuth';
 import { Loader2, ArrowLeft, Mail, Lock, User } from 'lucide-react';
 
 type AuthMode = 'login' | 'register' | 'forgot-password' | 'update-password';
@@ -55,7 +56,7 @@ export default function Auth() {
   // Redirect authenticated users away from login/register (but not password update)
   useEffect(() => {
     if (!isLoading && isAuthenticated && mode !== 'update-password' && mode !== 'forgot-password') {
-      navigate('/dashboard');
+      void getPostAuthPath().then((path) => navigate(path));
     }
   }, [isAuthenticated, isLoading, navigate, mode]);
 
@@ -92,9 +93,9 @@ export default function Auth() {
         await signIn(email, password);
         toast({
           title: 'Welcome back!',
-          description: 'Redirecting to dashboard...',
+          description: 'Redirecting...',
         });
-        navigate('/onboarding');
+        navigate(await getPostAuthPath());
       } else {
         if (!name.trim()) {
           throw new Error('Name is required');
@@ -114,7 +115,7 @@ export default function Auth() {
             title: 'Account created!',
             description: 'Redirecting to store setup...',
           });
-          navigate('/onboarding');
+          navigate(await getPostAuthPath());
         } else {
           toast({
             title: 'Check your email',

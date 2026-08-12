@@ -454,6 +454,9 @@ export default function Onboarding() {
                   required
                   disabled={connectStore.isPending}
                 />
+                {'help' in field && field.help ? (
+                  <p className="text-xs text-muted-foreground">{field.help}</p>
+                ) : null}
               </div>
             ))}
 
@@ -462,7 +465,7 @@ export default function Onboarding() {
                 <p className="text-sm font-medium">Prefer one-click authorization?</p>
                 <p className="text-xs text-muted-foreground">
                   {selectedPlatform === 'shopify'
-                    ? 'Enter your store domain below, then sign in on Shopify — we receive the access token automatically.'
+                    ? 'Enter your store domain above, then use OAuth if configured — otherwise paste an Admin API access token.'
                     : `Sign in on ${selectedPlatformConfig?.name} and we'll receive the access token automatically.`}
                 </p>
                 <Button

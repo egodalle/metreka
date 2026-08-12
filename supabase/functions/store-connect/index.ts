@@ -5,6 +5,10 @@ import {
   lazadaSign,
   resolveLazadaCredentials,
 } from "../_shared/lazada.ts";
+import {
+  parseShopeeCredentials,
+  validateShopeeCredentials,
+} from "../_shared/shopee.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -360,10 +364,15 @@ Deno.serve(async (req) => {
       }
 
       if (platform === "shopee") {
-        if (!credentials.shopId || !credentials.accessToken) {
-          return json({ error: "Shop ID and Access Token are required" }, 400);
+        const shopeeCreds = parseShopeeCredentials(credentials);
+        if (!shopeeCreds) {
+          return json({
+            error: "Partner ID, Partner Key, Shop ID, and Access Token are required",
+          }, 400);
         }
-        storeName = storeName ?? `Shopee Shop ${credentials.shopId}`;
+        const check = await validateShopeeCredentials(shopeeCreds);
+        if (!check.ok) return json({ error: check.error }, 400);
+        storeName = storeName ?? check.shopName ?? `Shopee Shop ${shopeeCreds.shopId}`;
       }
 
       const connection = await upsertConnection(admin, {

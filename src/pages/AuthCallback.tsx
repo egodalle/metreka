@@ -4,6 +4,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button';
 import { Loader2, AlertCircle } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
+import { getPostAuthPath } from '@/lib/postAuth';
 
 /**
  * Public callback for Supabase Auth OAuth (Google, etc.).
@@ -59,7 +60,7 @@ export default function AuthCallback() {
           navigate('/auth?reset=true', { replace: true });
           return;
         }
-        navigate('/dashboard', { replace: true });
+        navigate(await getPostAuthPath(), { replace: true });
         return;
       }
 

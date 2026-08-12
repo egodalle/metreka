@@ -1,11 +1,21 @@
 // Store integration client — sync status, demo mode, platform configs
 import { supabase } from '@/integrations/supabase/client';
 
-// Demo mode shows simulated dashboard data on /demo only (set VITE_DEMO_MODE=true)
-let demoMode: boolean = import.meta.env.VITE_DEMO_MODE === 'true';
+const DEMO_FLAG_KEY = 'metreka_demo_mode';
+
+// Demo mode shows simulated dashboard data on /demo (also set VITE_DEMO_MODE=true)
+let demoMode: boolean =
+  import.meta.env.VITE_DEMO_MODE === 'true' ||
+  (typeof sessionStorage !== 'undefined' && sessionStorage.getItem(DEMO_FLAG_KEY) === '1');
 
 export function setDemoMode(enabled: boolean): void {
   demoMode = enabled;
+  try {
+    if (enabled) sessionStorage.setItem(DEMO_FLAG_KEY, '1');
+    else sessionStorage.removeItem(DEMO_FLAG_KEY);
+  } catch {
+    // ignore storage errors (private mode)
+  }
 }
 
 export function isDemoMode() {

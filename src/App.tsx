@@ -36,7 +36,7 @@ const App = () => (
               <Route path="/auth" element={<Auth />} />
               <Route path="/auth/callback" element={<AuthCallback />} />
               <Route path="/onboarding" element={
-                <ProtectedRoute>
+                <ProtectedRoute allowDemo>
                   <Onboarding />
                 </ProtectedRoute>
               } />
@@ -49,7 +49,7 @@ const App = () => (
               <Route
                 path="/dashboard"
                 element={
-                  <ProtectedRoute>
+                  <ProtectedRoute allowDemo>
                     <Dashboard />
                   </ProtectedRoute>
                 }

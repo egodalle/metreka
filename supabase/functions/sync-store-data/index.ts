@@ -8,12 +8,21 @@ import {
   resolveLazadaCredentials,
   type LazadaCredentials,
 } from "../_shared/lazada.ts";
+import {
+  parseShopeeCredentials,
+  shopeeShopGet,
+} from "../_shared/shopee.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers':
     'authorization, x-client-info, apikey, content-type, x-metreka-sync-secret',
 };
+
+const SHOPIFY_API_VERSION = "2026-01";
+const SHOPIFY_PAGE_LIMIT = 250;
+const SHOPIFY_MAX_PAGES = 20; // safety cap (~5k records per resource)
+
 
 type AuthResult =
   | { authorized: true; userId: string | null; isPrivileged: true }
@@ -162,6 +171,36 @@ async function pruneSyncLogs(
   }
 }
 
+function parseShopifyNextUrl(linkHeader: string | null): string | null {
+  if (!linkHeader) return null;
+  // e.g. <https://shop.myshopify.com/admin/api/2026-01/orders.json?page_info=...&limit=250>; rel="next"
+  const match = linkHeader.match(/<([^>]+)>;\s*rel="next"/);
+  return match?.[1] ?? null;
+}
+
+async function fetchShopifyPages<T>(
+  initialUrl: string,
+  headers: Record<string, string>,
+  extract: (body: Record<string, unknown>) => T[],
+): Promise<{ items: T[]; error?: string }> {
+  const items: T[] = [];
+  let nextUrl: string | null = initialUrl;
+  let pages = 0;
+
+  while (nextUrl && pages < SHOPIFY_MAX_PAGES) {
+    pages += 1;
+    const response = await fetch(nextUrl, { headers });
+    if (!response.ok) {
+      return { items, error: `HTTP ${response.status} on page ${pages}` };
+    }
+    const body = await response.json() as Record<string, unknown>;
+    items.push(...extract(body));
+    nextUrl = parseShopifyNextUrl(response.headers.get("Link"));
+  }
+
+  return { items };
+}
+
 // Platform-specific sync handlers
 async function syncShopifyData(
   supabase: ReturnType<typeof createClient>,
@@ -184,18 +223,18 @@ async function syncShopifyData(
       'Content-Type': 'application/json',
     };
 
-    // Fetch orders from Shopify
+    // Fetch orders from Shopify (paginated)
     console.log(`Fetching orders from Shopify store: ${connection.store_name}`);
-    const ordersResponse = await fetch(
-      `${shopifyUrl}/admin/api/2026-01/orders.json?status=any&limit=250`,
-      { headers }
+    const ordersPage = await fetchShopifyPages(
+      `${shopifyUrl}/admin/api/${SHOPIFY_API_VERSION}/orders.json?status=any&limit=${SHOPIFY_PAGE_LIMIT}`,
+      headers,
+      (body) => (body.orders as unknown[]) || [],
     );
-    
-    if (ordersResponse.ok) {
-      const ordersData = await ordersResponse.json();
-      const orders = ordersData.orders || [];
-      
-      for (const order of orders) {
+    if (ordersPage.error) {
+      result.errors.push(`Failed to fetch orders: ${ordersPage.error}`);
+    }
+
+    for (const order of ordersPage.items as Array<Record<string, any>>) {
         const customer = shopifyOrderCustomer(order);
         for (const lineItem of order.line_items || []) {
           const orderRecord = {
@@ -237,23 +276,20 @@ async function syncShopifyData(
             result.orders++;
           }
         }
-      }
-    } else {
-      result.errors.push(`Failed to fetch orders: ${ordersResponse.status}`);
     }
 
-    // Fetch products from Shopify
+    // Fetch products from Shopify (paginated)
     console.log(`Fetching products from Shopify store: ${connection.store_name}`);
-    const productsResponse = await fetch(
-      `${shopifyUrl}/admin/api/2026-01/products.json?limit=250`,
-      { headers }
+    const productsPage = await fetchShopifyPages(
+      `${shopifyUrl}/admin/api/${SHOPIFY_API_VERSION}/products.json?limit=${SHOPIFY_PAGE_LIMIT}`,
+      headers,
+      (body) => (body.products as unknown[]) || [],
     );
+    if (productsPage.error) {
+      result.errors.push(`Failed to fetch products: ${productsPage.error}`);
+    }
 
-    if (productsResponse.ok) {
-      const productsData = await productsResponse.json();
-      const products = productsData.products || [];
-
-      for (const product of products) {
+    for (const product of productsPage.items as Array<Record<string, any>>) {
         const variant = product.variants?.[0] || {};
         const productRecord = {
           user_id: connection.user_id,
@@ -284,21 +320,20 @@ async function syncShopifyData(
         } else {
           result.products++;
         }
-      }
     }
 
-    // Fetch customers from Shopify
+    // Fetch customers from Shopify (paginated)
     console.log(`Fetching customers from Shopify store: ${connection.store_name}`);
-    const customersResponse = await fetch(
-      `${shopifyUrl}/admin/api/2026-01/customers.json?limit=250`,
-      { headers }
+    const customersPage = await fetchShopifyPages(
+      `${shopifyUrl}/admin/api/${SHOPIFY_API_VERSION}/customers.json?limit=${SHOPIFY_PAGE_LIMIT}`,
+      headers,
+      (body) => (body.customers as unknown[]) || [],
     );
+    if (customersPage.error) {
+      result.errors.push(`Failed to fetch customers: ${customersPage.error}`);
+    }
 
-    if (customersResponse.ok) {
-      const customersData = await customersResponse.json();
-      const customers = customersData.customers || [];
-
-      for (const customer of customers) {
+    for (const customer of customersPage.items as Array<Record<string, any>>) {
         const customerRecord = {
           user_id: connection.user_id,
           store_connection_id: connection.id,
@@ -327,7 +362,6 @@ async function syncShopifyData(
         } else {
           result.customers++;
         }
-      }
     }
 
   } catch (error) {
@@ -626,105 +660,198 @@ async function syncShopeeData(
   const result: SyncResult = { orders: 0, products: 0, customers: 0, errors: [] };
   
   try {
-    const credentials = await decryptCredentials(connection.credentials_encrypted);
+    const raw = await decryptCredentials(connection.credentials_encrypted);
+    const credentials = parseShopeeCredentials(raw as Record<string, string>);
 
-    if (!credentials?.accessToken || !credentials?.shopId) {
-      result.errors.push('Missing Shopee credentials');
+    if (!credentials) {
+      result.errors.push(
+        'Missing Shopee credentials (Partner ID, Partner Key, Shop ID, and Access Token are required)',
+      );
       return result;
     }
 
-    // Shopee API requires signed requests
-    const baseUrl = 'https://partner.shopeemobile.com/api/v2';
-    const timestamp = Math.floor(Date.now() / 1000);
+    const now = Math.floor(Date.now() / 1000);
+    const timeFrom = now - 30 * 24 * 60 * 60; // last 30 days
 
-    // Fetch orders
+    // Fetch order list (cursor pagination)
     console.log(`Fetching orders from Shopee store: ${connection.store_name}`);
-    const ordersUrl = `${baseUrl}/order/get_order_list?access_token=${credentials.accessToken}&shop_id=${credentials.shopId}&timestamp=${timestamp}`;
-    
-    const ordersResponse = await fetch(ordersUrl);
-    if (ordersResponse.ok) {
+    let cursor = "";
+    let orderPages = 0;
+    const orderSns: string[] = [];
+
+    while (orderPages < 20) {
+      orderPages += 1;
+      const listParams: Record<string, string | number> = {
+        time_range_field: "create_time",
+        time_from: timeFrom,
+        time_to: now,
+        page_size: 50,
+      };
+      if (cursor) listParams.cursor = cursor;
+
+      const ordersResponse = await shopeeShopGet(
+        credentials,
+        "/api/v2/order/get_order_list",
+        listParams,
+      );
+
+      if (!ordersResponse.ok) {
+        result.errors.push(`Shopee order list HTTP ${ordersResponse.status}`);
+        break;
+      }
+
       const ordersData = await ordersResponse.json();
-      const orders = ordersData.response?.order_list || [];
+      if (ordersData.error) {
+        result.errors.push(`Shopee order list: ${ordersData.message || ordersData.error}`);
+        break;
+      }
 
-      for (const order of orders) {
-        // Fetch order details for items
-        const detailUrl = `${baseUrl}/order/get_order_detail?access_token=${credentials.accessToken}&shop_id=${credentials.shopId}&order_sn_list=${order.order_sn}&timestamp=${timestamp}`;
-        const detailResponse = await fetch(detailUrl);
-        
-        if (detailResponse.ok) {
-          const detailData = await detailResponse.json();
-          const orderDetail = detailData.response?.order_list?.[0] || order;
-          const items = orderDetail.item_list || [orderDetail];
+      const batch = ordersData.response?.order_list || [];
+      for (const order of batch) {
+        if (order.order_sn) orderSns.push(order.order_sn);
+      }
 
-          for (const item of items) {
-            const orderRecord = {
-              user_id: connection.user_id,
-              store_connection_id: connection.id,
-              platform: 'shopee',
-              external_order_id: order.order_sn,
-              order_number: order.order_sn,
-              order_date: new Date(order.create_time * 1000).toISOString(),
-              customer_name: orderDetail.buyer_username,
-              product_id: String(item.item_id),
-              product_name: item.item_name,
-              sku: item.model_sku || item.item_sku,
-              quantity: item.model_quantity_purchased || 1,
-              unit_price: parseFloat(item.model_discounted_price) || 0,
-              total_amount: parseFloat(orderDetail.total_amount) || 0,
-              currency: orderDetail.currency || 'USD',
-              order_status: orderDetail.order_status || 'pending',
-              shipping_cost: parseFloat(orderDetail.actual_shipping_fee) || 0,
-              raw_data: { order_sn: order.order_sn },
-              synced_at: new Date().toISOString(),
-            };
+      const more = ordersData.response?.more;
+      cursor = ordersData.response?.next_cursor || "";
+      if (!more || !cursor) break;
+    }
 
-            const { error } = await supabase
-              .from('synced_orders')
-              .upsert(orderRecord, {
-                onConflict: 'user_id,platform,external_order_id,product_id',
-                ignoreDuplicates: false
-              });
+    // Fetch details in chunks of 50
+    for (let i = 0; i < orderSns.length; i += 50) {
+      const chunk = orderSns.slice(i, i + 50);
+      const detailResponse = await shopeeShopGet(
+        credentials,
+        "/api/v2/order/get_order_detail",
+        {
+          order_sn_list: chunk.join(","),
+          response_optional_fields: "item_list,buyer_user_id,buyer_username,total_amount,actual_shipping_fee,currency",
+        },
+      );
 
-            if (!error) result.orders++;
-          }
+      if (!detailResponse.ok) {
+        result.errors.push(`Shopee order detail HTTP ${detailResponse.status}`);
+        continue;
+      }
+
+      const detailData = await detailResponse.json();
+      if (detailData.error) {
+        result.errors.push(`Shopee order detail: ${detailData.message || detailData.error}`);
+        continue;
+      }
+
+      for (const orderDetail of detailData.response?.order_list || []) {
+        const items = orderDetail.item_list || [];
+        if (items.length === 0) continue;
+
+        let lineIndex = 0;
+        for (const item of items) {
+          const qty = Number(item.model_quantity_purchased) || 1;
+          const unitPrice = parseFloat(item.model_discounted_price ?? item.model_original_price) || 0;
+          const lineTotal = unitPrice * qty;
+
+          const orderRecord = {
+            user_id: connection.user_id,
+            store_connection_id: connection.id,
+            platform: 'shopee',
+            external_order_id: orderDetail.order_sn,
+            order_number: orderDetail.order_sn,
+            order_date: new Date((orderDetail.create_time || now) * 1000).toISOString(),
+            customer_name: orderDetail.buyer_username || null,
+            product_id: String(item.item_id ?? item.model_id ?? lineIndex),
+            product_name: item.item_name || item.model_name || 'Item',
+            sku: item.model_sku || item.item_sku || null,
+            quantity: qty,
+            unit_price: unitPrice,
+            // Line-level amount only — do NOT use order total_amount per line
+            total_amount: lineTotal,
+            currency: orderDetail.currency || 'USD',
+            order_status: orderDetail.order_status || 'pending',
+            // Attribute shipping once on the first line item
+            shipping_cost: lineIndex === 0 ? (parseFloat(orderDetail.actual_shipping_fee) || 0) : 0,
+            raw_data: { order_sn: orderDetail.order_sn, item_id: item.item_id },
+            synced_at: new Date().toISOString(),
+          };
+
+          const { error } = await supabase
+            .from('synced_orders')
+            .upsert(orderRecord, {
+              onConflict: 'user_id,platform,external_order_id,product_id',
+              ignoreDuplicates: false
+            });
+
+          if (!error) result.orders++;
+          else result.errors.push(`Order ${orderDetail.order_sn}: ${error.message}`);
+          lineIndex += 1;
         }
       }
     }
 
-    // Fetch products
+    // Fetch products (item list + base info)
     console.log(`Fetching products from Shopee store: ${connection.store_name}`);
-    const productsUrl = `${baseUrl}/product/get_item_list?access_token=${credentials.accessToken}&shop_id=${credentials.shopId}&timestamp=${timestamp}&offset=0&page_size=100&item_status=NORMAL`;
-    
-    const productsResponse = await fetch(productsUrl);
+    const productsResponse = await shopeeShopGet(
+      credentials,
+      "/api/v2/product/get_item_list",
+      {
+        offset: 0,
+        page_size: 100,
+        item_status: "NORMAL",
+      },
+    );
+
     if (productsResponse.ok) {
       const productsData = await productsResponse.json();
-      const items = productsData.response?.item || [];
+      if (productsData.error) {
+        result.errors.push(`Shopee products: ${productsData.message || productsData.error}`);
+      } else {
+        const itemIds = (productsData.response?.item || [])
+          .map((item: { item_id?: number }) => item.item_id)
+          .filter(Boolean);
 
-      for (const item of items) {
-        const productRecord = {
-          user_id: connection.user_id,
-          store_connection_id: connection.id,
-          platform: 'shopee',
-          external_product_id: String(item.item_id),
-          name: item.item_name || `Product ${item.item_id}`,
-          sku: item.item_sku,
-          price: parseFloat(item.price_info?.[0]?.current_price) || 0,
-          inventory_quantity: item.stock_info?.[0]?.current_stock || 0,
-          image_url: item.image?.image_url_list?.[0] || null,
-          status: item.item_status || 'active',
-          raw_data: { item_id: item.item_id },
-          synced_at: new Date().toISOString(),
-        };
+        if (itemIds.length > 0) {
+          const baseInfoRes = await shopeeShopGet(
+            credentials,
+            "/api/v2/product/get_item_base_info",
+            { item_id_list: itemIds.slice(0, 50).join(",") },
+          );
 
-        const { error } = await supabase
-          .from('synced_products')
-          .upsert(productRecord, {
-            onConflict: 'user_id,platform,external_product_id',
-            ignoreDuplicates: false
-          });
+          if (baseInfoRes.ok) {
+            const baseInfo = await baseInfoRes.json();
+            for (const item of baseInfo.response?.item_list || []) {
+              const price =
+                parseFloat(item.price_info?.[0]?.current_price) ||
+                parseFloat(item.price_info?.[0]?.original_price) ||
+                0;
+              const productRecord = {
+                user_id: connection.user_id,
+                store_connection_id: connection.id,
+                platform: 'shopee',
+                external_product_id: String(item.item_id),
+                name: item.item_name || `Product ${item.item_id}`,
+                sku: item.item_sku || null,
+                price,
+                inventory_quantity: item.stock_info_v2?.summary_info?.total_available_stock
+                  ?? item.stock_info?.[0]?.current_stock
+                  ?? 0,
+                image_url: item.image?.image_url_list?.[0] || null,
+                status: item.item_status || 'active',
+                raw_data: { item_id: item.item_id },
+                synced_at: new Date().toISOString(),
+              };
 
-        if (!error) result.products++;
+              const { error } = await supabase
+                .from('synced_products')
+                .upsert(productRecord, {
+                  onConflict: 'user_id,platform,external_product_id',
+                  ignoreDuplicates: false
+                });
+
+              if (!error) result.products++;
+            }
+          }
+        }
       }
+    } else {
+      result.errors.push(`Shopee products HTTP ${productsResponse.status}`);
     }
 
   } catch (error) {

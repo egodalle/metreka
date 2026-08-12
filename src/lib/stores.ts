@@ -29,7 +29,7 @@ export const platformConfigs: PlatformConfig[] = [
   {
     id: 'shopify',
     name: 'Shopify',
-    description: 'Connect with an Admin API access token',
+    description: 'Connect with your store domain + Admin API access token (recommended)',
     icon: '🛒',
     connectionMethod: 'api_key',
   },
@@ -43,16 +43,22 @@ export const platformConfigs: PlatformConfig[] = [
   {
     id: 'shopee',
     name: 'Shopee',
-    description: 'Connect with API credentials',
+    description: 'Connect with Partner ID, Partner Key, Shop ID, and Access Token',
     icon: '🏪',
     connectionMethod: 'api_key',
   },
 ];
 
-export const apiKeyFields: Record<string, { key: string; label: string; placeholder: string; type: string }[]> = {
+export const apiKeyFields: Record<string, { key: string; label: string; placeholder: string; type: string; help?: string }[]> = {
   shopify: [
     { key: 'storeUrl', label: 'Store domain', placeholder: 'my-store.myshopify.com', type: 'text' },
-    { key: 'accessToken', label: 'Admin API access token', placeholder: 'shpat_...', type: 'password' },
+    {
+      key: 'accessToken',
+      label: 'Admin API access token',
+      placeholder: 'shpat_...',
+      type: 'password',
+      help: 'Shopify admin → Settings → Apps → Develop apps → your app → API credentials. Scopes: read_orders, read_products, read_customers.',
+    },
   ],
   lazada: [
     { key: 'appKey', label: 'App Key', placeholder: 'Enter your App Key', type: 'text' },
