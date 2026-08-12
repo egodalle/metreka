@@ -1,5 +1,7 @@
 // Store connections API using Supabase
 import { supabase } from '@/integrations/supabase/client';
+import { isDemoMode } from '@/lib/integrations';
+import { getDemoStoreConnections } from '@/lib/demoData';
 
 export type StorePlatform = 'shopify' | 'lazada' | 'shopee';
 export type SyncStatus = 'pending' | 'syncing' | 'completed' | 'failed';
@@ -93,6 +95,10 @@ export async function getOAuthStatus(): Promise<OAuthStatus> {
 
 // Fetch all store connections for the current user
 export async function getStoreConnections(): Promise<StoreConnection[]> {
+  if (isDemoMode()) {
+    return getDemoStoreConnections();
+  }
+
   const { data, error } = await supabase
     .from('store_connections')
     .select('*')

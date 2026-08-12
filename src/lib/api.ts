@@ -2,6 +2,8 @@
 import { StorePlatform } from './integrations';
 import { supabase } from '@/integrations/supabase/client';
 import { periodToDateRange, type DashboardPeriod } from '@/lib/dashboardPeriod';
+import { isDemoMode } from '@/lib/integrations';
+import { getDemoDashboardData } from '@/lib/demoData';
 
 export type { DashboardPeriod } from '@/lib/dashboardPeriod';
 export { periodToDateRange } from '@/lib/dashboardPeriod';
@@ -514,6 +516,15 @@ async function getSalesFromDB(options?: {
 export const api = {
   // Health check
   healthCheck: async (): Promise<HealthResponse> => {
+    if (isDemoMode()) {
+      return {
+        status: 'healthy',
+        timestamp: new Date().toISOString(),
+        bigquery_connected: true,
+        total_records: 2319,
+      };
+    }
+
     const connectedPlatforms = await fetchConnectedPlatforms();
     
     // Check if we have synced data
@@ -600,6 +611,10 @@ export const api = {
 
   // Composite endpoint: Get full dashboard data
   getDashboard: async (period: DashboardPeriod = '30d'): Promise<DashboardData> => {
+    if (isDemoMode()) {
+      return getDemoDashboardData();
+    }
+
     const { startDate, endDate } = periodToDateRange(period);
     const connectedPlatforms = await fetchConnectedPlatforms();
 
