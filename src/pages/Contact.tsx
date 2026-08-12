@@ -48,6 +48,9 @@ const Contact = () => {
       });
 
       if (error) throw error;
+      if (data && typeof data === "object" && "error" in data && data.error) {
+        throw new Error(String(data.error));
+      }
 
       setIsSuccess(true);
       setName("");

@@ -2,6 +2,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useMemo, useCallback } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { User, Session } from '@supabase/supabase-js';
+import { setDemoMode } from '@/lib/integrations';
 
 interface AuthContextType {
   user: User | null;
@@ -68,6 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signIn = useCallback(async (email: string, password: string) => {
     const { error } = await supabase.auth.signInWithPassword({ email, password });
     if (error) throw error;
+    setDemoMode(false);
   }, []);
 
   const signUp = useCallback(async (email: string, password: string, name?: string) => {
@@ -80,9 +82,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
     });
     if (error) throw error;
+    setDemoMode(false);
   }, []);
 
   const signInWithGoogle = useCallback(async () => {
+    setDemoMode(false);
     const redirectTo = `${window.location.origin}/auth/callback`;
 
     const { data, error } = await supabase.auth.signInWithOAuth({
@@ -111,6 +115,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signOut = useCallback(async () => {
     const { error } = await supabase.auth.signOut();
     if (error) throw error;
+    setDemoMode(false);
   }, []);
 
   const resetPassword = useCallback(async (email: string) => {

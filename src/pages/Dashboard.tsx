@@ -201,14 +201,18 @@ const Dashboard = () => {
     return () => window.removeEventListener("metreka:checkout-completed", onCompleted);
   }, [queryClient, session?.user?.id, toast]);
 
-  // Show paywall if access check is done and user has no access
+  // Show paywall if access check is done and user has no access (skip in demo)
   useEffect(() => {
+    if (isDemoMode()) {
+      setShowPaywall(false);
+      return;
+    }
     if (!accessLoading && !hasAccess) {
       setShowPaywall(true);
-    } else if (subscription?.subscribed) {
+    } else if (subscription?.subscribed || subscription?.isTrialing) {
       setShowPaywall(false);
     }
-  }, [accessLoading, hasAccess, subscription?.subscribed]);
+  }, [accessLoading, hasAccess, subscription?.subscribed, subscription?.isTrialing]);
   
   // Get actual store connections from the database
   const { data: storeConnections = [], isLoading: storeConnectionsLoading } = useStoreConnections();
