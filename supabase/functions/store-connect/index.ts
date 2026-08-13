@@ -258,30 +258,72 @@ async function upsertConnection(
   return data;
 }
 
-async function triggerSync(storeConnectionId: string) {
-  const url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/sync-store-data`;
-  const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-  const cronSecret = Deno.env.get("SYNC_CRON_SECRET");
-  const headers: Record<string, string> = {
-    "Content-Type": "application/json",
-    apikey: Deno.env.get("SUPABASE_ANON_KEY") ?? "",
-    Authorization: `Bearer ${serviceKey}`,
-  };
-  if (cronSecret) {
-    headers["X-Metreka-Sync-Secret"] = cronSecret;
-  }
-  try {
-    const response = await fetch(url, {
-      method: "POST",
-      headers,
-      body: JSON.stringify({ store_connection_id: storeConnectionId }),
-    });
-    if (!response.ok) {
-      const text = await response.text();
-      console.error("[STORE-CONNECT] sync-store-data failed", response.status, text);
+/**
+ * Kick off sync-store-data without blocking the HTTP response.
+ * Awaiting the full Shopify sync here previously left connections stuck on
+ * "syncing" — the browser aborted store-connect before sync logs were written.
+ */
+function triggerSyncInBackground(
+  storeConnectionId: string,
+  opts: {
+    userAuthHeader: string;
+    admin: ReturnType<typeof createClient>;
+  },
+) {
+  const run = async () => {
+    const url = `${Deno.env.get("SUPABASE_URL")}/functions/v1/sync-store-data`;
+    const cronSecret = Deno.env.get("SYNC_CRON_SECRET");
+    const anonKey =
+      Deno.env.get("SUPABASE_ANON_KEY") ??
+      Deno.env.get("SUPABASE_PUBLISHABLE_KEY") ??
+      "";
+
+    // Prefer the caller's JWT (owns the store). Cron secret enables the
+    // privileged path when configured. Avoid relying solely on
+    // SUPABASE_SERVICE_ROLE_KEY — nested calls often break with sb_secret keys.
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+      apikey: anonKey,
+      Authorization: opts.userAuthHeader,
+    };
+    if (cronSecret) {
+      headers["X-Metreka-Sync-Secret"] = cronSecret;
     }
-  } catch (error) {
-    console.error("Failed to trigger sync:", error);
+
+    try {
+      console.log("[STORE-CONNECT] starting background sync", storeConnectionId);
+      const response = await fetch(url, {
+        method: "POST",
+        headers,
+        body: JSON.stringify({ store_connection_id: storeConnectionId }),
+      });
+      if (!response.ok) {
+        const text = await response.text();
+        console.error("[STORE-CONNECT] sync-store-data failed", response.status, text);
+        await opts.admin
+          .from("store_connections")
+          .update({ sync_status: "failed" })
+          .eq("id", storeConnectionId);
+      } else {
+        console.log("[STORE-CONNECT] background sync finished OK", storeConnectionId);
+      }
+    } catch (error) {
+      console.error("Failed to trigger sync:", error);
+      await opts.admin
+        .from("store_connections")
+        .update({ sync_status: "failed" })
+        .eq("id", storeConnectionId);
+    }
+  };
+
+  const promise = run();
+  const edgeRuntime = (globalThis as { EdgeRuntime?: { waitUntil: (p: Promise<unknown>) => void } })
+    .EdgeRuntime;
+  if (edgeRuntime?.waitUntil) {
+    edgeRuntime.waitUntil(promise);
+  } else {
+    // Local/serve fallback — do not block the response on sync completion
+    promise.catch(() => {});
   }
 }
 
@@ -388,7 +430,10 @@ Deno.serve(async (req) => {
         .update({ sync_status: "syncing" })
         .eq("id", connection.id);
 
-      await triggerSync(connection.id as string);
+      triggerSyncInBackground(connection.id as string, {
+        userAuthHeader: authHeader,
+        admin,
+      });
       return json({ connection: { ...connection, sync_status: "syncing" } });
     }
 
@@ -479,8 +524,15 @@ Deno.serve(async (req) => {
           storeUrl: shop,
           credentials: { accessToken, scope: tokenData.scope ?? SHOPIFY_SCOPES },
         });
-        await triggerSync(connection.id as string);
-        return json({ connection });
+        await admin
+          .from("store_connections")
+          .update({ sync_status: "syncing" })
+          .eq("id", connection.id);
+        triggerSyncInBackground(connection.id as string, {
+          userAuthHeader: authHeader,
+          admin,
+        });
+        return json({ connection: { ...connection, sync_status: "syncing" } });
       }
 
       if (platform === "lazada") {
@@ -527,8 +579,15 @@ Deno.serve(async (req) => {
               : "",
           },
         });
-        await triggerSync(connection.id as string);
-        return json({ connection });
+        await admin
+          .from("store_connections")
+          .update({ sync_status: "syncing" })
+          .eq("id", connection.id);
+        triggerSyncInBackground(connection.id as string, {
+          userAuthHeader: authHeader,
+          admin,
+        });
+        return json({ connection: { ...connection, sync_status: "syncing" } });
       }
 
       return json({ error: "Unsupported OAuth platform" }, 400);
@@ -549,7 +608,10 @@ Deno.serve(async (req) => {
         .from("store_connections")
         .update({ sync_status: "syncing" })
         .eq("id", storeConnectionId);
-      await triggerSync(storeConnectionId);
+      triggerSyncInBackground(storeConnectionId, {
+        userAuthHeader: authHeader,
+        admin,
+      });
       return json({ success: true });
     }
 
