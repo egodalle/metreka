@@ -6,7 +6,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { Mail, Send, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { z } from "zod";
@@ -17,13 +18,27 @@ const contactSchema = z.object({
   message: z.string().trim().min(1, "Message is required").max(2000, "Message must be less than 2000 characters"),
 });
 
+const TOPIC_PREFILL: Record<string, string> = {
+  demo:
+    "Hi Metreka team,\n\nI'd like to schedule a demo call to see the product.\n\nMy store platform(s):\nMonthly order volume:\nBest times to talk:\n\nThanks!",
+  beta:
+    "Hi Metreka team,\n\nI'm interested in joining the beta program.\n\nPlatform:\nMonthly orders:\nWebsite:\n\nThanks!",
+};
+
 const Contact = () => {
+  const [searchParams] = useSearchParams();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
   const { toast } = useToast();
+
+  useEffect(() => {
+    const topic = (searchParams.get("topic") || "").toLowerCase();
+    const prefill = TOPIC_PREFILL[topic];
+    if (prefill) setMessage(prefill);
+  }, [searchParams]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,7 +103,9 @@ const Contact = () => {
                 Get in <span className="text-gradient-primary">Touch</span>
               </h1>
               <p className="text-lg text-muted-foreground mb-8">
-                We'd love to hear from you. Reach out for support, partnerships, or just to say hello.
+                {searchParams.get("topic") === "demo"
+                  ? "Tell us a bit about your store and when you're free — we'll follow up to schedule a call."
+                  : "We'd love to hear from you. Reach out for support, partnerships, or just to say hello."}
               </p>
               
               {isSuccess ? (

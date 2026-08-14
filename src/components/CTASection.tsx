@@ -1,7 +1,27 @@
 import { Button } from "@/components/ui/button";
 import { ArrowRight, Mail, Calendar, MessageSquare } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+
+/** Optional real Calendly URL; when unset, Book a Demo goes to /contact. */
+const CALENDLY_URL = (import.meta.env.VITE_CALENDLY_URL as string | undefined)?.trim() || "";
 
 const CTASection = () => {
+  const navigate = useNavigate();
+
+  const handleApplyForBeta = () => {
+    // mailto + _blank opens a blank tab in most browsers — send users to signup instead
+    navigate("/auth");
+  };
+
+  const handleBookDemo = () => {
+    if (CALENDLY_URL) {
+      window.open(CALENDLY_URL, "_blank", "noopener,noreferrer");
+      return;
+    }
+    // calendly.com/metreka/demo 404s — use in-app contact until a real link is configured
+    navigate("/contact?topic=demo");
+  };
+
   return (
     <section className="relative py-24 overflow-hidden">
       {/* Background */}
@@ -34,7 +54,7 @@ const CTASection = () => {
                 variant="hero" 
                 size="xl" 
                 className="group"
-                onClick={() => window.open("mailto:hello@metreka.com?subject=Beta%20Access%20Application&body=Hi%20Metreka%20Team%2C%0A%0AI'm%20interested%20in%20joining%20the%20beta%20program.%0A%0AMy%20store%20details%3A%0A-%20Platform%3A%20%0A-%20Monthly%20orders%3A%20%0A-%20Website%3A%20%0A%0AThanks!", "_blank")}
+                onClick={handleApplyForBeta}
               >
                 <MessageSquare className="w-5 h-5" />
                 Apply for Beta Access
@@ -43,10 +63,10 @@ const CTASection = () => {
               <Button 
                 variant="hero-outline" 
                 size="xl"
-                onClick={() => window.open("https://calendly.com/metreka/demo", "_blank")}
+                onClick={handleBookDemo}
               >
                 <Calendar className="w-5 h-5" />
-                Book a Demo Call
+                {CALENDLY_URL ? "Book a Demo Call" : "Request a Demo Call"}
               </Button>
             </div>
 

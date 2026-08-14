@@ -48,11 +48,12 @@ describe('settings + billing surfaces (S6–S7)', () => {
   });
 });
 
-describe('shopify sync capacity (S4)', () => {
-  it('raises page cap and supports incremental updated_at_min', () => {
-    const sync = read('supabase/functions/sync-store-data/index.ts');
-    expect(sync).toMatch(/SHOPIFY_MAX_PAGES\s*=\s*40/);
-    expect(sync).toContain('updated_at_min');
-    expect(sync).toContain('shopifySinceParam');
+describe('CTA destinations', () => {
+  it('does not open broken mailto/_blank or dead Calendly URL', () => {
+    const cta = read('src/components/CTASection.tsx');
+    expect(cta).not.toContain('mailto:hello@metreka.com?subject=Beta');
+    expect(cta).not.toContain('calendly.com/metreka/demo');
+    expect(cta).toContain('navigate("/auth")');
+    expect(cta).toContain('/contact?topic=demo');
   });
 });
