@@ -149,12 +149,19 @@ export function useCustomerPortal() {
       return { url: data.url as string };
     },
     onSuccess: (result) => {
-      window.open(result.url, '_blank', 'noopener,noreferrer');
+      const opened = window.open(result.url, '_blank', 'noopener,noreferrer');
+      if (!opened) {
+        // Popup blocked — navigate in the same tab
+        window.location.assign(result.url);
+      }
     },
     onError: (error) => {
+      const message = error instanceof Error ? error.message : 'Failed to open subscription management';
       toast({
         title: 'Portal access failed',
-        description: error instanceof Error ? error.message : 'Failed to open subscription management',
+        description: message.includes('Subscribe') || message.includes('billing account')
+          ? 'Subscribe to a plan first. The billing portal is only available after checkout.'
+          : message,
         variant: 'destructive',
       });
     },

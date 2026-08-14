@@ -77,14 +77,23 @@ serve(async (req) => {
       const customersData = await customersResponse.json();
       const customers = customersData.data || [];
       if (customers.length === 0) {
-        throw new Error("No Paddle customer found. Subscribe to a plan first.");
+        return new Response(
+          JSON.stringify({
+            error: "No billing account yet. Subscribe to a plan first to manage billing.",
+            code: "no_paddle_customer",
+          }),
+          {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 400,
+          },
+        );
       }
       customerId = customers[0].id;
     }
 
     if (!subscriptionId) {
       const subscriptionsResponse = await fetch(
-        `${apiBase}/subscriptions?customer_id=${customerId}&status=active`,
+        `${apiBase}/subscriptions?customer_id=${customerId}`,
         {
           headers: {
             Authorization: `Bearer ${paddleApiKey}`,
@@ -95,7 +104,13 @@ serve(async (req) => {
 
       if (subscriptionsResponse.ok) {
         const subscriptionsData = await subscriptionsResponse.json();
-        subscriptionId = subscriptionsData.data?.[0]?.id;
+        const subs = (subscriptionsData.data || []) as Array<{ id: string; status: string }>;
+        const preferred =
+          subs.find((s) => s.status === "active") ||
+          subs.find((s) => s.status === "trialing") ||
+          subs.find((s) => s.status === "past_due") ||
+          subs[0];
+        subscriptionId = preferred?.id;
       }
     }
 

@@ -8,6 +8,7 @@ import { Badge } from '@/components/ui/badge';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import { useHasAccess, useCustomerPortal } from '@/hooks/useSubscription';
+import { PaywallModal } from '@/components/PaywallModal';
 import { supabase } from '@/integrations/supabase/client';
 import { isDemoMode } from '@/lib/integrations';
 import {
@@ -18,6 +19,7 @@ import {
   RefreshCw,
   Store,
   CreditCard,
+  TrendingUp,
 } from 'lucide-react';
 
 type BillingItem = {
@@ -35,6 +37,7 @@ export default function Settings() {
   const { user, signOut, isAuthenticated } = useAuth();
   const { subscription, isTrialing, daysLeftInTrial, hasAccess } = useHasAccess();
   const customerPortal = useCustomerPortal();
+  const [showPaywall, setShowPaywall] = useState(false);
 
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
@@ -141,8 +144,15 @@ export default function Settings() {
       ? 'trial'
       : 'none';
 
+  const canOpenPortal = Boolean(subscription?.subscribed);
+
   return (
     <div className="min-h-screen bg-background">
+      <PaywallModal
+        open={showPaywall}
+        trialExpired={!isTrialing}
+        onOpenChange={setShowPaywall}
+      />
       <header className="border-b border-border/50 bg-background/80 backdrop-blur-sm sticky top-0 z-40">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -216,24 +226,41 @@ export default function Settings() {
               )}
             </div>
             <div className="flex flex-wrap gap-2">
-              <Button
-                variant="outline"
-                className="gap-2"
-                onClick={() => customerPortal.mutate()}
-                disabled={customerPortal.isPending || isDemoMode()}
-              >
-                {customerPortal.isPending ? (
-                  <RefreshCw className="w-4 h-4 animate-spin" />
-                ) : (
-                  <CreditCard className="w-4 h-4" />
-                )}
-                Open billing portal
-              </Button>
+              {canOpenPortal ? (
+                <Button
+                  variant="outline"
+                  className="gap-2"
+                  onClick={() => customerPortal.mutate()}
+                  disabled={customerPortal.isPending || isDemoMode()}
+                >
+                  {customerPortal.isPending ? (
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <CreditCard className="w-4 h-4" />
+                  )}
+                  Open billing portal
+                </Button>
+              ) : (
+                <Button
+                  variant="outline"
+                  className="gap-2"
+                  onClick={() => setShowPaywall(true)}
+                  disabled={isDemoMode()}
+                >
+                  <TrendingUp className="w-4 h-4" />
+                  Choose a plan
+                </Button>
+              )}
               <Button variant="outline" className="gap-2" onClick={() => navigate('/onboarding')}>
                 <Store className="w-4 h-4" />
                 Manage stores
               </Button>
             </div>
+            {!canOpenPortal && !isDemoMode() && (
+              <p className="text-xs text-muted-foreground">
+                The Paddle billing portal is available after you subscribe. Trial accounts manage access by choosing a plan.
+              </p>
+            )}
           </CardContent>
         </Card>
 

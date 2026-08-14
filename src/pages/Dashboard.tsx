@@ -453,7 +453,13 @@ const Dashboard = () => {
                     Manage stores
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onClick={() => customerPortal.mutate()}
+                    onClick={() => {
+                      if (subscription?.subscribed) {
+                        customerPortal.mutate();
+                      } else {
+                        setShowPaywall(true);
+                      }
+                    }}
                     disabled={customerPortal.isPending}
                   >
                     {customerPortal.isPending ? (
@@ -461,7 +467,7 @@ const Dashboard = () => {
                     ) : (
                       <Settings className="mr-2 h-4 w-4" />
                     )}
-                    Manage subscription
+                    {subscription?.subscribed ? 'Manage subscription' : 'Choose a plan'}
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => setShowPaywall(true)}>
                     <TrendingUp className="mr-2 h-4 w-4" />
