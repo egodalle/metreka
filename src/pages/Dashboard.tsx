@@ -17,7 +17,7 @@ import { ShopifyLogo, ShopeeLogo, LazadaLogo, StoreLogo } from "@/components/Sto
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
   TrendingUp, DollarSign, 
-  Users, ShoppingCart, Package, Activity, Settings, Plus, LogOut, CreditCard,
+  Users, ShoppingCart, Package, Activity, Settings, Plus, LogOut, CreditCard, Sparkles,
    ArrowUpRight, ArrowDownRight, BarChart3, AlertCircle, RefreshCw, PieChart
 } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -461,7 +461,7 @@ const Dashboard = () => {
                     ) : subscription?.subscribed ? (
                       <CreditCard className="mr-2 h-4 w-4" />
                     ) : (
-                      <TrendingUp className="mr-2 h-4 w-4" />
+                      <Sparkles className="mr-2 h-4 w-4" />
                     )}
                     {subscription?.subscribed ? 'Manage subscription' : 'Choose a plan'}
                   </DropdownMenuItem>
