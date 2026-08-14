@@ -17,7 +17,7 @@ import { ShopifyLogo, ShopeeLogo, LazadaLogo, StoreLogo } from "@/components/Sto
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
   TrendingUp, DollarSign, 
-  Users, ShoppingCart, Package, Activity, Settings, Plus, LogOut,
+  Users, ShoppingCart, Package, Activity, Settings, Plus, LogOut, CreditCard,
    ArrowUpRight, ArrowDownRight, BarChart3, AlertCircle, RefreshCw, PieChart
 } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -458,8 +458,10 @@ const Dashboard = () => {
                   >
                     {customerPortal.isPending ? (
                       <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                    ) : subscription?.subscribed ? (
+                      <CreditCard className="mr-2 h-4 w-4" />
                     ) : (
-                      <Settings className="mr-2 h-4 w-4" />
+                      <TrendingUp className="mr-2 h-4 w-4" />
                     )}
                     {subscription?.subscribed ? 'Manage subscription' : 'Choose a plan'}
                   </DropdownMenuItem>
