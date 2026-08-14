@@ -16,6 +16,7 @@ export interface StoreConnection {
   store_url: string | null;
   sync_status: SyncStatus;
   last_sync_at: string | null;
+  last_sync_error?: string | null;
   is_active: boolean;
   created_at: string;
   updated_at: string;
@@ -107,10 +108,32 @@ export async function getStoreConnections(): Promise<StoreConnection[]> {
     .order('created_at', { ascending: false });
 
   if (error) throw error;
-  return (data || []).map(row => ({
+  const rows = data || [];
+  const ids = rows.map((r) => r.id);
+  const errorByStore = new Map<string, string | null>();
+
+  if (ids.length > 0) {
+    const { data: logs } = await supabase
+      .from('sync_logs')
+      .select('store_connection_id, status, error_message, started_at')
+      .in('store_connection_id', ids)
+      .order('started_at', { ascending: false });
+
+    for (const log of logs || []) {
+      if (!errorByStore.has(log.store_connection_id)) {
+        errorByStore.set(
+          log.store_connection_id,
+          log.status === 'failed' ? (log.error_message || 'Sync failed') : null,
+        );
+      }
+    }
+  }
+
+  return rows.map((row) => ({
     ...row,
     platform: row.platform as StorePlatform,
     sync_status: normalizeSyncStatus(row.sync_status),
+    last_sync_error: errorByStore.get(row.id) ?? null,
   })) as StoreConnection[];
 }
 

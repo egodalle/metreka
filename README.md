@@ -67,7 +67,7 @@ See [`.env.example`](.env.example) for the full checklist (auth redirects, Paddl
 **Edge functions:**
 
 ```bash
-npx supabase functions deploy create-checkout check-subscription customer-portal paddle-webhook store-connect sync-store-data send-contact-email --project-ref wwxhmxrsrqlirjfbmnsk
+npx supabase functions deploy create-checkout check-subscription customer-portal paddle-webhook store-connect sync-store-data send-contact-email billing-history --project-ref wwxhmxrsrqlirjfbmnsk
 ```
 
 **Migrations:**
@@ -118,6 +118,9 @@ Smoke coverage today:
 - Paddle client-token presence
 - Subscription price IDs stay aligned with edge functions
 - Shopee credential parse + HMAC signing
+- Marketing honesty (starting price, no hourly/real-time claims, Sync stores label)
+- Settings route + billing-history customer scoping
+- Shopify sync page cap + incremental `updated_at_min`
 
 ## Project layout
 

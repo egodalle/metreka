@@ -284,7 +284,7 @@ const DashboardPreviewSection = () => {
 
           {/* Bottom note */}
           <p className="text-center text-sm text-muted-foreground mt-6">
-            * Sample data shown. Your actual dashboard will display real-time data from your connected stores.
+            * Sample data shown. Your actual dashboard will display data synced from your connected stores.
           </p>
         </div>
       </div>

@@ -312,6 +312,11 @@
                            </span>
                          </div>
                        )}
+                       {connection.sync_status === 'failed' && connection.last_sync_error && (
+                         <p className="text-xs text-red-500 break-words">
+                           {connection.last_sync_error}
+                         </p>
+                       )}
                      </div>
                      <div className="flex gap-2">
                        <Button

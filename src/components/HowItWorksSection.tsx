@@ -47,7 +47,7 @@ const steps = [
   {
     number: "03",
     title: "Automatic Data Sync",
-    description: "Your orders, products, customers, and revenue data sync automatically. Choose daily, hourly, or real-time sync based on your plan.",
+    description: "Your orders, products, customers, and revenue data sync on a schedule (about every 6 hours) plus anytime you click Sync in the dashboard.",
     icon: RefreshCw,
     visual: (
       <div className="mt-4 space-y-2">

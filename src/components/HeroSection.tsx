@@ -29,7 +29,7 @@ const HeroSection = () => {
     { icon: TrendingUp, value: 16, suffix: "+", label: "KPIs Tracked" },
     { icon: ShoppingCart, value: 3, suffix: "", label: "Platforms" },
     { icon: Users, value: 10000, suffix: "+", label: "Orders/Month" },
-    { icon: DollarSign, value: 59, prefix: "$", suffix: "", label: "Starting At" },
+    { icon: DollarSign, value: 29, prefix: "$", suffix: "", label: "Starting At" },
   ];
 
   return (

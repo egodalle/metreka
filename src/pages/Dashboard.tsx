@@ -266,7 +266,7 @@ const Dashboard = () => {
         await syncStore.mutateAsync(store.id);
       }
       toast({
-        title: "Syncing from Shopify",
+        title: "Syncing stores",
         description: "Pulling your latest orders. This may take 10–20 seconds…",
       });
       // Edge function runs in background; allow time before refetching DB
@@ -449,6 +449,10 @@ const Dashboard = () => {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuLabel>Account</DropdownMenuLabel>
+                  <DropdownMenuItem onClick={() => navigate("/settings")}>
+                    <Settings className="mr-2 h-4 w-4" />
+                    Settings
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => navigate("/onboarding")}>
                     <Plus className="mr-2 h-4 w-4" />
                     Manage stores
@@ -509,7 +513,7 @@ const Dashboard = () => {
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
           <div>
             <h2 className="text-3xl font-bold">Dashboard</h2>
-            <p className="text-muted-foreground mt-1">Data from your connected stores. Sync to pull new Shopify orders.</p>
+            <p className="text-muted-foreground mt-1">Data from your connected stores. Sync to pull the latest orders and catalog.</p>
           </div>
           
           <div className="flex items-center gap-3">
@@ -520,7 +524,7 @@ const Dashboard = () => {
               className="gap-2"
             >
               <RefreshCw className={`w-4 h-4 ${syncStore.isPending ? "animate-spin" : ""}`} />
-              {syncStore.isPending ? "Syncing…" : "Sync from Shopify"}
+              {syncStore.isPending ? "Syncing…" : "Sync stores"}
             </Button>
             <Button variant="ghost" onClick={() => refetch()} className="gap-2" title="Reload dashboard from database">
               Refresh view

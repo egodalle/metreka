@@ -14,11 +14,11 @@ const dashboards = [
     name: "Overview",
     subtitle: "Executive Dashboard",
     icon: LayoutDashboard,
-    description: "Real-time business health metrics across all connected stores",
+    description: "Live business health metrics across all connected stores",
     color: "from-primary to-accent",
     kpis: [
       { name: "Total Revenue", icon: DollarSign, description: "Revenue with trend data" },
-      { name: "Total Orders", icon: ShoppingCart, description: "Real-time order count" },
+      { name: "Total Orders", icon: ShoppingCart, description: "Synced order count" },
       { name: "Avg Order Value", icon: Target, description: "Revenue / Orders" },
       { name: "Revenue by Platform", icon: PieChart, description: "Platform breakdown" },
     ],
@@ -87,7 +87,7 @@ const DashboardsSection = () => {
             16+ <span className="text-gradient-primary">KPIs</span> That Matter
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Analytics dashboards powered by real-time multi-platform data
+            Analytics dashboards powered by multi-platform store data
           </p>
         </div>
 

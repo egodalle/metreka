@@ -21,7 +21,15 @@ const corsHeaders = {
 
 const SHOPIFY_API_VERSION = "2026-01";
 const SHOPIFY_PAGE_LIMIT = 250;
-const SHOPIFY_MAX_PAGES = 20; // safety cap (~5k records per resource)
+const SHOPIFY_MAX_PAGES = 40; // safety cap (~10k records per resource)
+const INCREMENTAL_LOOKBACK_MS = 2 * 24 * 60 * 60 * 1000; // overlap to avoid gaps
+
+/** When last_sync_at exists, pull updates since then (minus lookback). */
+function shopifySinceParam(lastSyncAt: string | null | undefined): string {
+  if (!lastSyncAt) return "";
+  const since = new Date(new Date(lastSyncAt).getTime() - INCREMENTAL_LOOKBACK_MS).toISOString();
+  return `&updated_at_min=${encodeURIComponent(since)}`;
+}
 
 
 type AuthResult =
@@ -222,11 +230,15 @@ async function syncShopifyData(
       'X-Shopify-Access-Token': credentials.accessToken,
       'Content-Type': 'application/json',
     };
+    const since = shopifySinceParam(connection.last_sync_at);
+    if (since) {
+      console.log(`Incremental Shopify sync since ${connection.last_sync_at} (with lookback)`);
+    }
 
     // Fetch orders from Shopify (paginated)
     console.log(`Fetching orders from Shopify store: ${connection.store_name}`);
     const ordersPage = await fetchShopifyPages(
-      `${shopifyUrl}/admin/api/${SHOPIFY_API_VERSION}/orders.json?status=any&limit=${SHOPIFY_PAGE_LIMIT}`,
+      `${shopifyUrl}/admin/api/${SHOPIFY_API_VERSION}/orders.json?status=any&limit=${SHOPIFY_PAGE_LIMIT}${since}`,
       headers,
       (body) => (body.orders as unknown[]) || [],
     );
@@ -281,7 +293,7 @@ async function syncShopifyData(
     // Fetch products from Shopify (paginated)
     console.log(`Fetching products from Shopify store: ${connection.store_name}`);
     const productsPage = await fetchShopifyPages(
-      `${shopifyUrl}/admin/api/${SHOPIFY_API_VERSION}/products.json?limit=${SHOPIFY_PAGE_LIMIT}`,
+      `${shopifyUrl}/admin/api/${SHOPIFY_API_VERSION}/products.json?limit=${SHOPIFY_PAGE_LIMIT}${since}`,
       headers,
       (body) => (body.products as unknown[]) || [],
     );
@@ -325,7 +337,7 @@ async function syncShopifyData(
     // Fetch customers from Shopify (paginated)
     console.log(`Fetching customers from Shopify store: ${connection.store_name}`);
     const customersPage = await fetchShopifyPages(
-      `${shopifyUrl}/admin/api/${SHOPIFY_API_VERSION}/customers.json?limit=${SHOPIFY_PAGE_LIMIT}`,
+      `${shopifyUrl}/admin/api/${SHOPIFY_API_VERSION}/customers.json?limit=${SHOPIFY_PAGE_LIMIT}${since}`,
       headers,
       (body) => (body.customers as unknown[]) || [],
     );

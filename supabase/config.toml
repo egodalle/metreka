@@ -36,3 +36,6 @@ verify_jwt = false
 
 [functions.paddle-webhook]
 verify_jwt = false
+
+[functions.billing-history]
+verify_jwt = false
