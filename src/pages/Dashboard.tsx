@@ -17,7 +17,7 @@ import { ShopifyLogo, ShopeeLogo, LazadaLogo, StoreLogo } from "@/components/Sto
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
   TrendingUp, DollarSign, 
-  Users, ShoppingCart, Package, Activity, Bell, Settings, Search, Plus, LogOut,
+  Users, ShoppingCart, Package, Activity, Settings, Plus, LogOut,
    ArrowUpRight, ArrowDownRight, BarChart3, AlertCircle, RefreshCw, PieChart
 } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -429,12 +429,6 @@ const Dashboard = () => {
               
               <div className="h-6 w-px bg-border" />
               
-              <Button variant="ghost" size="icon">
-                <Search className="w-5 h-5" />
-              </Button>
-              <Button variant="ghost" size="icon">
-                <Bell className="w-5 h-5" />
-              </Button>
               <ThemeToggle />
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
