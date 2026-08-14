@@ -57,3 +57,12 @@ describe('CTA destinations', () => {
     expect(cta).toContain('/contact?topic=demo');
   });
 });
+
+describe('shopify sync capacity (S4)', () => {
+  it('raises page cap and supports incremental updated_at_min', () => {
+    const sync = read('supabase/functions/sync-store-data/index.ts');
+    expect(sync).toMatch(/SHOPIFY_MAX_PAGES\s*=\s*40/);
+    expect(sync).toContain('updated_at_min');
+    expect(sync).toContain('shopifySinceParam');
+  });
+});
