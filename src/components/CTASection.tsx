@@ -18,7 +18,7 @@ const CTASection = () => {
       window.open(CALENDLY_URL, "_blank", "noopener,noreferrer");
       return;
     }
-    // calendly.com/metreka/demo 404s — use in-app contact until a real link is configured
+    // Previous calendly demo path 404'd — use in-app contact until a real link is configured
     navigate("/contact?topic=demo");
   };
 
