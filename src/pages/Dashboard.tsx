@@ -16,7 +16,7 @@ import {
 import { ShopifyLogo, ShopeeLogo, LazadaLogo, StoreLogo } from "@/components/StoreLogos";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
-  ArrowLeft, TrendingUp, DollarSign, 
+  TrendingUp, DollarSign, 
   Users, ShoppingCart, Package, Activity, Bell, Settings, Search, Plus, LogOut,
    ArrowUpRight, ArrowDownRight, BarChart3, AlertCircle, RefreshCw, PieChart
 } from "lucide-react";
@@ -407,11 +407,6 @@ const Dashboard = () => {
         <div className="container mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
-              <Button variant="ghost" onClick={() => navigate("/")} className="gap-2">
-                <ArrowLeft className="w-4 h-4" />
-                Back
-              </Button>
-              <div className="h-6 w-px bg-border" />
               <h1 className="text-xl font-bold text-gradient-primary">Metreka</h1>
               {isDemoMode() && (
                 <Badge variant="secondary" className="bg-amber-500/10 text-amber-600 border-amber-500/20">
